@@ -5,8 +5,8 @@ const HEADER_PARTS = ".view-header .view-header-left .view-action, .view-header 
 
 /**
  * Tracks the floating parts of Obsidian's phone UI over the element — the navbar below and the
- * header buttons above — keeps --th-bottom-inset equal to how much the navbar covers, and reports
- * them all as boxes the jar bounces off.
+ * header buttons above — keeps --th-bottom-inset equal to how much the navbar covers. The navbar is
+ * a shelf for every win; the header buttons only stop wins that already landed, so the jar can fill from the top.
  */
 export class ScreenChrome {
 	private readonly resizer = new ResizeObserver(() => this.measure());
@@ -18,7 +18,7 @@ export class ScreenChrome {
 	constructor(
 		private readonly element: HTMLElement,
 		private readonly header: HTMLElement,
-		private readonly onBoxes: (boxes: Box[]) => void,
+		private readonly onChange: (shelves: Box[], ledges: Box[]) => void,
 	) {
 		this.resizer.observe(element);
 		this.mutations.observe(document.body, { attributes: true, attributeFilter: ["class"] });
@@ -30,13 +30,14 @@ export class ScreenChrome {
 		const parts = [...this.header.querySelectorAll<HTMLElement>(HEADER_PARTS)];
 		this.track(navbar ? [navbar, ...parts] : parts);
 		const shelf = navbar ? this.box(navbar) : null;
-		const boxes = [...parts.flatMap((part) => this.box(part) ?? []), ...(shelf ? [shelf] : [])];
+		const shelves = shelf ? [shelf] : [];
+		const ledges = parts.flatMap((part) => this.box(part) ?? []);
 		const inset = shelf ? Math.max(0, Math.ceil(this.element.getBoundingClientRect().height - shelf.top)) : 0;
-		const key = JSON.stringify([boxes, inset]);
+		const key = JSON.stringify([shelves, ledges, inset]);
 		if (key === this.last) return;
 		this.last = key;
 		this.element.style.setProperty("--th-bottom-inset", `${inset}px`);
-		this.onBoxes(boxes);
+		this.onChange(shelves, ledges);
 	}
 
 	destroy(): void {

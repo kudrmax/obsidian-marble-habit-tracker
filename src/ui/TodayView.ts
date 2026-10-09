@@ -85,7 +85,10 @@ export class TodayView extends ItemView {
 		this.scrollEl = root.createDiv("th-today-scroll");
 		this.columnEl = this.scrollEl.createDiv("th-column");
 		this.jar = new JarCanvas(root, this.jarOptions());
-		this.chrome = new ScreenChrome(root, this.containerEl, (boxes) => this.jar?.setObstacles(boxes));
+		this.chrome = new ScreenChrome(root, this.containerEl, (shelves, ledges) => {
+			this.jar?.setObstacles(shelves);
+			this.jar?.setLedges(ledges);
+		});
 		this.registerEvent(this.app.workspace.on("layout-change", () => this.chrome?.measure()));
 		this.registerDomEvent(window, "resize", () => this.chrome?.measure());
 		this.addAction("plus", "New habit", () => this.ui.newHabit());

@@ -185,4 +185,25 @@ describe("JarPhysics", () => {
 		settle(physics);
 		expect(physics.get("small")?.x).toBeCloseTo(200, 0);
 	});
+
+	it("lets falling bodies pass through ledges and landed ones bounce off them", () => {
+		const physics = new JarPhysics(200, 300);
+		physics.setLedges([{ left: 0, top: 100, right: 200, bottom: 120, radius: 4 }]);
+		physics.add({ id: "a", x: 100, y: 0, r: 12 });
+		settle(physics);
+		const a = physics.get("a");
+		expect(a?.y).toBeCloseTo(288, 0);
+		expect(a?.landed).toBe(true);
+		physics.setGravity({ x: 0, y: -0.45 });
+		settle(physics);
+		expect(physics.get("a")?.y).toBeCloseTo(132, 0);
+	});
+
+	it("does not land a body while it is inside a ledge", () => {
+		const physics = new JarPhysics(200, 300);
+		physics.setLedges([{ left: 0, top: 270, right: 200, bottom: 300, radius: 0 }]);
+		physics.add({ id: "a", x: 100, y: 288, r: 12 });
+		physics.step();
+		expect(physics.get("a")?.landed).toBe(false);
+	});
 });

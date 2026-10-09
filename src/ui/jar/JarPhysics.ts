@@ -21,6 +21,8 @@ export interface Body {
 	py: number;
 	inside: boolean;
 	passing: boolean;
+	/** Has touched the floor, a shelf or a landed body; only landed bodies bump into ledges. */
+	landed: boolean;
 }
 
 /** A solid rounded rectangle the bodies bounce off. */
@@ -41,12 +43,14 @@ const REST_SPEED = 0.05;
 const REST_FRAMES = 30;
 const GRAVITY_EPSILON = 0.01;
 const SQUEEZE = 2;
+const CONTACT = 1;
 
 export class JarPhysics {
 	private readonly items = new Map<string, Body>();
 	private readonly targets = new Map<string, Point>();
 	private gravity: Point = EARTH;
 	private obstacles: readonly Box[] = [];
+	private ledges: readonly Box[] = [];
 	private quietFrames = 0;
 
 	constructor(
@@ -65,6 +69,12 @@ export class JarPhysics {
 		this.quietFrames = 0;
 	}
 
+	/** Boxes that falling bodies pass through and landed bodies bounce off. */
+	setLedges(ledges: readonly Box[]): void {
+		this.ledges = ledges;
+		this.quietFrames = 0;
+	}
+
 	setGravity(gravity: Point): void {
 		const changed = Math.abs(gravity.x - this.gravity.x) + Math.abs(gravity.y - this.gravity.y) > GRAVITY_EPSILON;
 		this.gravity = gravity;
@@ -72,7 +82,7 @@ export class JarPhysics {
 	}
 
 	add(input: BodyInput): void {
-		this.items.set(input.id, { ...input, px: input.x, py: input.y, inside: input.y >= input.r, passing: input.passing ?? false });
+		this.items.set(input.id, { ...input, px: input.x, py: input.y, inside: input.y >= input.r, passing: input.passing ?? false, landed: false });
 		this.quietFrames = 0;
 	}
 
@@ -136,6 +146,7 @@ export class JarPhysics {
 		for (const body of free) {
 			if (body.passing) body.passing = free.some((other) => other !== body && overlaps(body, other)) || this.obstacles.some((box) => touches(body, box));
 		}
+		for (const body of free) if (!body.landed && !body.passing) body.landed = this.lands(body, free);
 		let fastest = 0;
 		let hardest = 0;
 		free.forEach((body, index) => {
@@ -145,6 +156,18 @@ export class JarPhysics {
 		});
 		this.quietFrames = fastest < REST_SPEED ? this.quietFrames + 1 : 0;
 		return hardest;
+	}
+
+	private solidFor(body: Body): readonly Box[] {
+		if (body.passing) return [];
+		return body.landed ? [...this.obstacles, ...this.ledges] : this.obstacles;
+	}
+
+	private lands(body: Body, free: readonly Body[]): boolean {
+		if (this.ledges.some((box) => touches(body, box))) return false;
+		if (body.y >= this.height - body.r - CONTACT) return true;
+		const near = { ...body, r: body.r + CONTACT };
+		return this.obstacles.some((box) => touches(near, box)) || free.some((other) => other !== body && other.landed && overlaps(near, other));
 	}
 
 	private separate(a: Body, b: Body): void {
@@ -167,11 +190,12 @@ export class JarPhysics {
 	}
 
 	private contain(body: Body): void {
-		if (!body.passing) for (const box of this.obstacles) pushOut(body, box);
+		const solid = this.solidFor(body);
+		for (const box of solid) pushOut(body, box);
 		if (body.x < body.r) body.x = body.r;
 		if (body.x > this.width - body.r) body.x = this.width - body.r;
 		if (body.y > this.height - body.r) body.y = this.height - body.r;
-		if (!body.passing) for (const box of this.obstacles) if (touches(body, box)) squeeze(body, box, this.width);
+		for (const box of solid) if (touches(body, box)) squeeze(body, box, this.width);
 		if (!body.inside) {
 			body.inside = body.y >= body.r;
 			return;
