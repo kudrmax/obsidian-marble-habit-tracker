@@ -4,7 +4,6 @@ import { DayMark, FULL, TINY, isDone, missed } from "../domain/DayMark";
 import { Habit } from "../domain/Habit";
 import { HabitColor } from "../domain/HabitColor";
 import { buildJar } from "../domain/Jar";
-import { BottomInset } from "./BottomInset";
 import { colorClass } from "./colors";
 import { chip, icon, iconButton } from "./components";
 import { DayWatcher } from "./DayWatcher";
@@ -16,6 +15,7 @@ import { JarCanvas, JarItem } from "./jar/JarCanvas";
 import { EARTH, Point } from "./jar/JarPhysics";
 import { TiltSensor } from "./jar/TiltSensor";
 import { visibleEntries } from "./order";
+import { ScreenChrome } from "./ScreenChrome";
 import { REASONS, celebrationLine, closeDayTitle, closedDayLine, offersShrink, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
 
@@ -37,7 +37,7 @@ export class TodayView extends ItemView {
 	private columnEl!: HTMLElement;
 	private captionEl: HTMLElement | null = null;
 	private jar: JarCanvas | null = null;
-	private inset: BottomInset | null = null;
+	private chrome: ScreenChrome | null = null;
 	private menu: string | null = null;
 	private asking: string | null = null;
 	private other: string | null = null;
@@ -85,9 +85,9 @@ export class TodayView extends ItemView {
 		this.scrollEl = root.createDiv("th-today-scroll");
 		this.columnEl = this.scrollEl.createDiv("th-column");
 		this.jar = new JarCanvas(root, this.jarOptions());
-		this.inset = new BottomInset(root, (shelf) => this.jar?.setObstacles(shelf ? [shelf] : []));
-		this.registerEvent(this.app.workspace.on("layout-change", () => this.inset?.measure()));
-		this.registerDomEvent(window, "resize", () => this.inset?.measure());
+		this.chrome = new ScreenChrome(root, this.containerEl, (boxes) => this.jar?.setObstacles(boxes));
+		this.registerEvent(this.app.workspace.on("layout-change", () => this.chrome?.measure()));
+		this.registerDomEvent(window, "resize", () => this.chrome?.measure());
 		this.addAction("plus", "New habit", () => this.ui.newHabit());
 		this.registerEvent(
 			this.app.workspace.on("css-change", () => {
@@ -105,8 +105,8 @@ export class TodayView extends ItemView {
 
 	override async onClose(): Promise<void> {
 		this.tilt.stop();
-		this.inset?.destroy();
-		this.inset = null;
+		this.chrome?.destroy();
+		this.chrome = null;
 		this.jar?.destroy();
 		this.jar = null;
 		window.clearTimeout(this.holdTimer);

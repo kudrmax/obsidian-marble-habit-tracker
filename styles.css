@@ -251,7 +251,10 @@ button.th-swatch.is-on { box-shadow: 0 0 0 3px var(--th-bg), 0 0 0 5px var(--th-
 /* Today */
 .tiny-habits.th-today { position: relative; height: 100%; padding: 0; overflow: hidden; }
 .th-today-scroll { position: absolute; inset: 0; z-index: 1; overflow-y: auto; }
-.th-column { max-width: var(--th-column); margin: 0 auto; padding: 8px var(--th-gutter) calc(var(--th-jar-reserve) + var(--th-bottom-inset, 0px)); box-sizing: border-box; }
+.is-phone .mod-root .workspace-leaf-content[data-type="tiny-habits-grid"] { --view-top-spacing: 0; }
+.is-phone.is-floating-nav .workspace-leaf-content[data-type="tiny-habits-grid"] .th-today,
+.is-phone.auto-full-screen .workspace-leaf-content[data-type="tiny-habits-grid"] .th-today { --th-top-inset: calc(var(--safe-area-inset-top) + var(--view-header-height) + 8px); }
+.th-column { max-width: var(--th-column); margin: 0 auto; padding: calc(8px + var(--th-top-inset, 0px)) var(--th-gutter) calc(var(--th-jar-reserve) + var(--th-bottom-inset, 0px)); box-sizing: border-box; }
 .th-today-header { padding: 8px 0 20px; }
 .th-ring-header { display: flex; flex-direction: column; align-items: center; padding: 18px 0 26px; text-align: center; animation: th-in 300ms ease; }
 .th-ring { position: relative; width: 168px; height: 168px; margin-bottom: 18px; }
