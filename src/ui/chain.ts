@@ -5,6 +5,7 @@ import { LocalDate } from "../domain/LocalDate";
 export interface CellLook {
 	readonly mark?: DayMark;
 	readonly scheduled: boolean;
+	readonly existed: boolean;
 	readonly joinLeft: boolean;
 	readonly joinRight: boolean;
 }
@@ -15,6 +16,7 @@ export function cellLook(habit: Habit, date: LocalDate): CellLook {
 	return {
 		mark,
 		scheduled: habit.isScheduled(date),
+		existed: !date.isBefore(habit.createdOn),
 		joinLeft: done && isDone(habit.markOn(date.addDays(-1))),
 		joinRight: done && isDone(habit.markOn(date.addDays(1))),
 	};

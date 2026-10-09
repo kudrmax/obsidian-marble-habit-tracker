@@ -13,9 +13,14 @@ describe("cellLook", () => {
 	});
 
 	it("reports empty and unscheduled days", () => {
-		expect(cellLook(habit, d("2026-10-07"))).toEqual({ mark: undefined, scheduled: true, joinLeft: false, joinRight: false });
+		expect(cellLook(habit, d("2026-10-07"))).toEqual({ mark: undefined, scheduled: true, existed: true, joinLeft: false, joinRight: false });
 		const weekend = habitNote("Фото", { schedule: [{ value: ["sat"], since: "2026-10-01" }] });
 		expect(cellLook(weekend, d("2026-10-09")).scheduled).toBe(false);
 		expect(cellLook(weekend, d("2026-10-10")).scheduled).toBe(true);
+	});
+
+	it("marks days before the habit existed", () => {
+		expect(cellLook(habit, d("2026-09-30")).existed).toBe(false);
+		expect(cellLook(habit, d("2026-10-01")).existed).toBe(true);
 	});
 });
