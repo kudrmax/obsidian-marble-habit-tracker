@@ -2,6 +2,8 @@ import { App, Modal, Notice } from "obsidian";
 import { HabitService } from "../application/HabitService";
 import { NewHabit } from "../domain/Habit";
 import { WEEKDAYS } from "../domain/LocalDate";
+import { ColorPicker } from "./ColorPicker";
+import { colorClass } from "./colors";
 import { WeekdayPicker } from "./WeekdayPicker";
 
 export class HabitFormModal extends Modal {
@@ -14,24 +16,39 @@ export class HabitFormModal extends Modal {
 
 	override onOpen(): void {
 		const { contentEl } = this;
-		contentEl.addClass("th-modal");
-		contentEl.createEl("h3", { text: "Новая привычка" });
-		const field = (label: string, placeholder = "") => {
-			contentEl.createDiv({ cls: "th-label", text: label });
-			const input = contentEl.createEl("input", { cls: "th-field", type: "text" });
+		this.modalEl.addClass("th-modal-shell");
+		contentEl.addClass("th-modal", "th-form", "th-habit", colorClass(undefined));
+		contentEl.createDiv({ cls: "th-modal-title", text: "New habit" });
+		contentEl.createDiv({ cls: "th-modal-hint", text: "Write it as a recipe: an anchor you already do, then something tiny." });
+
+		const line = (lead: string, placeholder: string, optional = false) => {
+			const row = contentEl.createDiv("th-recipe-input");
+			row.createSpan({ cls: "th-recipe-lead", text: lead });
+			const input = row.createEl("input", { cls: "th-input", type: "text" });
 			input.placeholder = placeholder;
+			if (optional) row.createSpan({ cls: "th-optional", text: "optional" });
 			return input;
 		};
-		const anchor = field("После того как я…");
-		const tiny = field("я сделаю (нано)");
-		const full = field("а стремлюсь к (полное)", "необязательно");
-		const celebration = field("и отпраздную", "необязательно");
-		contentEl.createDiv({ cls: "th-label", text: "дни" });
-		const days = new WeekdayPicker(contentEl, WEEKDAYS);
-		const name = field("название");
+		const anchor = line("After I", "pour my morning coffee");
+		const tiny = line("I'll", "do 2 squats");
+		const full = line("Aiming for", "a 15 minute workout", true);
+		const celebration = line("Then I celebrate", "say “Yes!”", true);
 
-		const buttons = contentEl.createDiv("th-buttons");
-		buttons.createEl("button", { cls: "mod-cta", text: "Создать" }).addEventListener("click", () => {
+		contentEl.createDiv({ cls: "th-field-label", text: "Name" });
+		const name = contentEl.createEl("input", { cls: "th-input th-input-block", type: "text" });
+		name.placeholder = "Morning workout";
+		contentEl.createDiv({ cls: "th-field-label", text: "Days" });
+		const days = new WeekdayPicker(contentEl, WEEKDAYS);
+		contentEl.createDiv({ cls: "th-field-label", text: "Color" });
+		let tint = colorClass(undefined);
+		const color = new ColorPicker(contentEl, undefined, (picked) => {
+			contentEl.removeClass(tint);
+			tint = colorClass(picked);
+			contentEl.addClass(tint);
+		});
+
+		const actions = contentEl.createDiv("th-actions-row");
+		actions.createEl("button", { cls: "th-pill th-pill-habit", text: "Create habit" }).addEventListener("click", () => {
 			void this.submit({
 				name: name.value,
 				anchor: anchor.value,
@@ -39,6 +56,7 @@ export class HabitFormModal extends Modal {
 				full: full.value,
 				celebration: celebration.value,
 				days: days.days,
+				color: color.color,
 			});
 		});
 		window.setTimeout(() => anchor.focus(), 0);

@@ -1,12 +1,10 @@
 import { Habit } from "../domain/Habit";
 import { LocalDate, WEEKDAYS } from "../domain/LocalDate";
 
-const YEAR_DAYS = 364;
-
 export function calendarStart(habit: Habit, today: LocalDate): LocalDate {
 	const marks = habit.marks();
-	const candidates = [today.addDays(-YEAR_DAYS), habit.createdOn, ...(marks.length ? [marks[marks.length - 1][0]] : [])];
-	return candidates.reduce((earliest, date) => (date.isBefore(earliest) ? date : earliest));
+	const firstMark = marks.length ? marks[marks.length - 1][0] : today;
+	return [habit.createdOn, firstMark, today].reduce((earliest, date) => (date.isBefore(earliest) ? date : earliest));
 }
 
 export function calendarWeeks(from: LocalDate, today: LocalDate): Array<Array<LocalDate | undefined>> {

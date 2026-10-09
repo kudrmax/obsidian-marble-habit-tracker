@@ -3,25 +3,24 @@ import { LocalDate, Weekday } from "../domain/LocalDate";
 import { Schedule } from "../domain/Schedule";
 import { Breakdown } from "../domain/Stats";
 
-const WEEKDAY_SHORT: Record<Weekday, string> = { mon: "пн", tue: "вт", wed: "ср", thu: "чт", fri: "пт", sat: "сб", sun: "вс" };
-const MONTH_SHORT = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
-const MONTH_LONG = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
+const WEEKDAY_SHORT: Record<Weekday, string> = { mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun" };
+const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export const PART_LABELS: Record<Part, string> = {
-	anchor: "якорь",
-	tiny: "нано",
-	full: "полное",
-	celebration: "празднование",
-	schedule: "расписание",
+	anchor: "Anchor",
+	tiny: "Tiny habit",
+	full: "Full habit",
+	celebration: "Celebration",
+	schedule: "Schedule",
 };
 
-export const LEVEL_LABELS = { tiny: "нано", full: "полное" } as const;
+export const LEVEL_LABELS = { tiny: "Tiny", full: "Full" } as const;
 
 export const BREAKDOWN_LABELS: Record<keyof Breakdown, string> = {
-	tiny: "нано",
-	full: "полное",
-	missed: "не получилось",
-	empty: "пусто",
+	tiny: "Tiny",
+	full: "Full",
+	missed: "Didn't happen",
+	empty: "Not marked",
 };
 
 export function weekdayShort(day: Weekday): string {
@@ -29,21 +28,23 @@ export function weekdayShort(day: Weekday): string {
 }
 
 export function scheduleLabel(schedule: Schedule): string {
-	return schedule.isEveryDay ? "каждый день" : schedule.weekdays.map(weekdayShort).join(", ");
+	return schedule.isEveryDay ? "Every day" : schedule.weekdays.map(weekdayShort).join(", ");
+}
+
+export function monthShort(date: LocalDate): string {
+	return MONTH_SHORT[date.month - 1];
 }
 
 export function dayMonth(date: LocalDate): string {
-	return `${date.day} ${MONTH_SHORT[date.month - 1]}`;
+	return `${MONTH_SHORT[date.month - 1]} ${date.day}`;
 }
 
 export function longDate(date: LocalDate): string {
-	return `${weekdayShort(date.weekday())}, ${date.day} ${MONTH_LONG[date.month - 1]}`;
+	return `${weekdayShort(date.weekday())}, ${dayMonth(date)}`;
 }
 
-export function recipeLine(habit: Habit): string {
-	const full = habit.text("full").current();
-	const tiny = `нано: ${habit.text("tiny").current() ?? ""}`;
-	return full ? `${tiny} · полное: ${full}` : tiny;
+export function anchorLine(habit: Habit): string {
+	return `After I ${habit.text("anchor").current() ?? ""}`;
 }
 
 export function celebrationText(habit: Habit, kind: "tiny" | "full"): { title: string; subtitle: string } {

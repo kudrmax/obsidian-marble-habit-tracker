@@ -1,4 +1,4 @@
-import { ItemView, Notice, WorkspaceLeaf } from "obsidian";
+import { ItemView, Notice, WorkspaceLeaf, setIcon } from "obsidian";
 import { HabitEntry } from "../application/ports";
 import { FULL, TINY, missed } from "../domain/DayMark";
 import { Habit } from "../domain/Habit";
@@ -7,10 +7,13 @@ import { needsRedesign } from "../domain/RedesignRule";
 import { computeStats } from "../domain/Stats";
 import { celebrate } from "./CelebrationOverlay";
 import { cellLook } from "./chain";
-import { celebrationText, recipeLine, weekdayShort } from "./format";
+import { DayState, chainLayout, dayState } from "./chainLayout";
+import { drawChain } from "./ChainRenderer";
+import { colorClass } from "./colors";
+import { DayWatcher } from "./DayWatcher";
+import { anchorLine, celebrationText, weekdayShort } from "./format";
 import { MissReasonModal } from "./MissReasonModal";
 import { visibleEntries } from "./order";
-import { DayWatcher } from "./DayWatcher";
 import { ScrollAnchor } from "./ScrollAnchor";
 import { UiContext } from "./UiContext";
 
@@ -19,14 +22,21 @@ export const HABITS_VIEW = "tiny-habits-grid";
 const PAGE_DAYS = 60;
 const LONG_PRESS_MS = 500;
 const LOAD_MORE_THRESHOLD_PX = 200;
-
 const DAY_CHECK_MS = 60_000;
+
+function weekendClasses(day: LocalDate): string[] {
+	const weekday = day.weekday();
+	if (weekday === "sat") return ["is-weekend", "is-sat"];
+	if (weekday === "sun") return ["is-weekend", "is-sun"];
+	return [];
+}
 
 export class HabitsView extends ItemView {
 	private daysShown = PAGE_DAYS;
 	private scroller: HTMLElement | null = null;
 	private readonly anchor = new ScrollAnchor();
 	private readonly resizes = new ResizeObserver(() => this.applyAnchor());
+	private retryScheduled = false;
 
 	constructor(
 		leaf: WorkspaceLeaf,
@@ -45,7 +55,7 @@ export class HabitsView extends ItemView {
 	}
 
 	override getDisplayText(): string {
-		return "Привычки";
+		return "Habits";
 	}
 
 	override getIcon(): string {
@@ -68,20 +78,21 @@ export class HabitsView extends ItemView {
 	private render(): void {
 		const root = this.contentEl;
 		root.empty();
-		root.addClass("tiny-habits");
+		root.addClass("tiny-habits", "th-grid-view");
 		const header = root.createDiv("th-header");
-		header.createDiv({ cls: "th-title", text: "Привычки" });
-		const actions = header.createDiv("th-actions");
-		this.button(actions, "‹", "Раньше", () => this.page(-1));
-		this.button(actions, "›", "Позже", () => this.page(1));
-		this.button(actions, "+", "Новая привычка", () => this.ui.newHabit());
+		header.createDiv({ cls: "th-title", text: "Habits" });
+		const actions = header.createDiv("th-header-actions");
+		this.iconButton(actions, "chevron-left", "Earlier", () => this.page(-1));
+		this.iconButton(actions, "chevron-right", "Later", () => this.page(1));
+		this.iconButton(actions, "plus", "New habit", () => this.ui.newHabit());
 
 		const entries = visibleEntries(this.ui.repository.list());
 		if (entries.length === 0) {
 			this.scroller = null;
 			const empty = root.createDiv("th-empty");
-			empty.createDiv({ text: "Привычек пока нет" });
-			this.button(empty, "Новая привычка", "Новая привычка", () => this.ui.newHabit());
+			empty.createDiv({ cls: "th-empty-title", text: "No habits yet" });
+			empty.createDiv({ cls: "th-empty-hint", text: "Start with something you can do in under 30 seconds, right after something you already do." });
+			empty.createEl("button", { cls: "th-pill th-pill-primary", text: "New habit" }).addEventListener("click", () => this.ui.newHabit());
 			return;
 		}
 
@@ -97,16 +108,15 @@ export class HabitsView extends ItemView {
 
 		const dates = scroller.createDiv("th-row th-dates");
 		for (const day of days) {
-			const cell = dates.createDiv(day.equals(today) ? "th-date is-today" : "th-date");
-			cell.createDiv({ text: weekdayShort(day.weekday()) });
+			const cell = dates.createDiv({ cls: ["th-date", ...weekendClasses(day)] });
+			cell.toggleClass("is-today", day.equals(today));
 			cell.createDiv({ cls: "th-date-number", text: String(day.day) });
+			cell.createDiv({ cls: "th-date-weekday", text: weekdayShort(day.weekday()) });
 		}
-		for (const entry of entries) {
+		entries.forEach((entry, index) => {
 			this.renderName(names, entry);
-			const row = scroller.createDiv("th-row");
-			if (entry.kind === "broken") continue;
-			for (const day of days) this.renderCell(row, entry.path, entry.habit, day);
-		}
+			this.renderRow(scroller, entry, days, index === entries.length - 1);
+		});
 		this.applyAnchor();
 		scroller.addEventListener("scroll", () => {
 			this.anchor.remember(scroller);
@@ -118,30 +128,60 @@ export class HabitsView extends ItemView {
 		const cell = parent.createDiv("th-name");
 		if (entry.kind === "broken") {
 			cell.addClass("is-broken");
+			cell.setAttribute("aria-label", entry.problem);
+			cell.createDiv({ cls: "th-name-anchor", text: "Can't read this note" });
 			cell.createDiv({ cls: "th-name-title", text: entry.name });
-			cell.createDiv({ cls: "th-name-sub", text: `Не удалось прочитать: ${entry.problem}` });
 			cell.addEventListener("click", () => void this.app.workspace.openLinkText(entry.path, "", "tab"));
 			return;
 		}
-		const title = cell.createDiv({ cls: "th-name-title", text: entry.habit.name });
-		if (needsRedesign(entry.habit, this.ui.settings().redesignThreshold)) title.createSpan({ cls: "th-redesign", text: " ↻" });
-		cell.createDiv({ cls: "th-name-sub", text: recipeLine(entry.habit) });
+		const { habit } = entry;
+		cell.addClass("th-habit", colorClass(habit.color));
+		cell.createDiv({ cls: "th-name-anchor", text: anchorLine(habit) });
+		const title = cell.createDiv({ cls: "th-name-title", text: habit.name });
+		if (needsRedesign(habit, this.ui.settings().redesignThreshold)) {
+			const hint = title.createSpan({ cls: "th-redesign", attr: { "aria-label": "Recipe needs a redesign" } });
+			setIcon(hint, "refresh-ccw");
+		}
 		cell.addEventListener("click", () => this.ui.openHabit(entry.path));
 	}
 
-	private renderCell(row: HTMLElement, path: string, habit: Habit, day: LocalDate): void {
-		const look = cellLook(habit, day);
-		const cell = row.createDiv("th-cell");
-		cell.toggleClass("is-off", !look.scheduled && !look.mark);
-		cell.toggleClass("join-left", look.joinLeft);
-		cell.toggleClass("join-right", look.joinRight);
-		if (look.mark) cell.addClass(`is-${look.mark.kind}`);
-		cell.createDiv("th-dot");
-		this.bindCell(
-			cell,
-			() => void this.tap(path, habit, day),
-			() => this.openMiss(path, habit, day),
-		);
+	private renderRow(scroller: HTMLElement, entry: HabitEntry, days: readonly LocalDate[], last: boolean): void {
+		const row = scroller.createDiv("th-row th-habit-row");
+		const habit = entry.kind === "ok" ? entry.habit : undefined;
+		if (habit) row.addClass("th-habit", colorClass(habit.color));
+		const states: DayState[] = [];
+		for (const day of days) {
+			const cell = row.createDiv({ cls: ["th-cell", ...weekendClasses(day)] });
+			cell.toggleClass("is-last", last);
+			if (!habit) {
+				cell.addClass("is-inert");
+				continue;
+			}
+			const state = dayState(cellLook(habit, day));
+			states.push(state);
+			if (state === "before") {
+				cell.addClass("is-inert");
+				continue;
+			}
+			this.bindCell(
+				cell,
+				() => void this.tap(entry.path, habit, day),
+				() => this.openMiss(entry.path, habit, day),
+			);
+		}
+		if (!habit) return;
+		const chain = drawChain(row, days.length, chainLayout(states));
+		if (chain) row.prepend(chain);
+		else this.retryWhenStylesLoad();
+	}
+
+	private retryWhenStylesLoad(): void {
+		if (this.retryScheduled) return;
+		this.retryScheduled = true;
+		window.requestAnimationFrame(() => {
+			this.retryScheduled = false;
+			this.refresh();
+		});
 	}
 
 	private bindCell(cell: HTMLElement, onTap: () => void, onLongPress: () => void): void {
@@ -181,6 +221,7 @@ export class HabitsView extends ItemView {
 		const anchor = habit.text("anchor");
 		new MissReasonModal(this.app, {
 			habitName: habit.name,
+			color: habit.color,
 			date: day,
 			anchor: anchor.at(day) ?? anchor.current() ?? "",
 			reason: mark?.kind === "missed" ? mark.reason : undefined,
@@ -196,6 +237,8 @@ export class HabitsView extends ItemView {
 		if (!mark || mark.kind === "missed") return;
 		celebrate({
 			...celebrationText(habit, mark.kind),
+			full: mark.kind === "full",
+			color: habit.color,
 			streak: computeStats(habit, this.ui.service.today()).current?.length ?? 0,
 			confetti: this.ui.settings().confetti,
 		});
@@ -218,9 +261,9 @@ export class HabitsView extends ItemView {
 		this.scroller?.scrollBy({ left: direction * this.scroller.clientWidth, behavior: "smooth" });
 	}
 
-	private button(parent: HTMLElement, text: string, label: string, onClick: () => void): void {
-		const button = parent.createEl("button", { cls: "th-button", text });
-		button.setAttribute("aria-label", label);
+	private iconButton(parent: HTMLElement, icon: string, label: string, onClick: () => void): void {
+		const button = parent.createDiv({ cls: "clickable-icon th-icon-button", attr: { "aria-label": label } });
+		setIcon(button, icon);
 		button.addEventListener("click", onClick);
 	}
 }

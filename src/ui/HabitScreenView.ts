@@ -1,26 +1,28 @@
 import { ItemView, Notice, ViewStateResult, WorkspaceLeaf } from "obsidian";
 import { HabitEntry } from "../application/ports";
-import { Habit, Part, TEXT_PARTS } from "../domain/Habit";
-import { LocalDate } from "../domain/LocalDate";
+import { Habit, Part, TextPart } from "../domain/Habit";
+import { LocalDate, WEEKDAYS } from "../domain/LocalDate";
 import { missesInARow, needsRedesign } from "../domain/RedesignRule";
 import { HabitStats, WINDOW_DAYS, computeStats } from "../domain/Stats";
 import { calendarStart, calendarWeeks } from "./calendar";
+import { ColorPicker } from "./ColorPicker";
+import { colorClass } from "./colors";
 import { ScheduleModal, TextComponentModal } from "./ComponentModal";
-import { BREAKDOWN_LABELS, PART_LABELS, dayMonth, describeChange, scheduleLabel } from "./format";
-import { PartPickerModal } from "./PartPickerModal";
 import { DayWatcher } from "./DayWatcher";
+import { BREAKDOWN_LABELS, dayMonth, describeChange, monthShort, scheduleLabel, weekdayShort } from "./format";
+import { PartPickerModal } from "./PartPickerModal";
 import { UiContext } from "./UiContext";
 
 export const HABIT_VIEW = "tiny-habits-habit";
 
-const BREAKDOWN_ORDER = ["tiny", "full", "missed", "empty"] as const;
-const STREAK_BAR_PX = 200;
-
-function section(root: HTMLElement, title: string): void {
-	root.createEl("h4", { cls: "th-section", text: title });
-}
-
+const BREAKDOWN_ORDER = ["full", "tiny", "missed", "empty"] as const;
 const DAY_CHECK_MS = 60_000;
+
+function section(root: HTMLElement, title: string): HTMLElement {
+	const block = root.createDiv("th-section");
+	block.createDiv({ cls: "th-section-title", text: title });
+	return block;
+}
 
 export class HabitScreenView extends ItemView {
 	private path = "";
@@ -44,7 +46,7 @@ export class HabitScreenView extends ItemView {
 	override getDisplayText(): string {
 		const entry = this.entry();
 		if (entry?.kind === "ok") return entry.habit.name;
-		return entry?.name ?? "Привычка";
+		return entry?.name ?? "Habit";
 	}
 
 	override getIcon(): string {
@@ -79,41 +81,54 @@ export class HabitScreenView extends ItemView {
 	private render(): void {
 		const root = this.contentEl;
 		root.empty();
-		root.addClass("tiny-habits", "th-screen");
 		const entry = this.entry();
-		if (!entry) {
-			root.createDiv({ cls: "th-empty", text: "Привычка не найдена" });
-			return;
-		}
-		if (entry.kind === "broken") {
-			root.createDiv({ cls: "th-empty", text: `Не удалось прочитать: ${entry.problem}` });
+		if (!entry || entry.kind === "broken") {
+			const page = root.createDiv("tiny-habits th-screen");
+			page.createDiv({ cls: "th-empty-title", text: entry ? "Can't read this habit" : "Habit not found" });
+			if (entry) page.createDiv({ cls: "th-empty-hint", text: entry.problem });
 			return;
 		}
 		const habit = entry.habit;
 		const today = this.ui.service.today();
 		const stats = computeStats(habit, today);
-		root.createDiv({ cls: "th-screen-title", text: habit.name });
-		root.createDiv({ cls: "th-muted", text: scheduleLabel(habit.currentSchedule) });
-		this.renderRecipe(root, habit);
-		if (needsRedesign(habit, this.ui.settings().redesignThreshold)) this.renderRedesign(root, habit);
-		this.renderStats(root, stats);
-		this.renderCalendar(root, habit, today);
-		this.renderStreaks(root, stats);
-		this.renderMisses(root, habit);
-		this.renderHistory(root, habit);
-		this.renderFooter(root);
+		const page = root.createDiv({ cls: ["tiny-habits", "th-screen", "th-habit", colorClass(habit.color)] });
+		page.createDiv({ cls: "th-screen-title", text: habit.name });
+		this.renderRecipe(page, habit);
+		if (needsRedesign(habit, this.ui.settings().redesignThreshold)) this.renderRedesign(page, habit);
+		this.renderStats(page, stats);
+		this.renderCalendar(page, habit, today);
+		this.renderStreaks(page, stats);
+		this.renderMisses(page, habit);
+		this.renderHistory(page, habit);
+		this.renderFooter(page);
 	}
 
-	private renderRecipe(root: HTMLElement, habit: Habit): void {
-		const recipe = root.createDiv("th-recipe");
-		const row = (part: Part, value: string | undefined) => {
-			const line = recipe.createDiv("th-recipe-row");
-			line.createSpan({ cls: "th-recipe-key", text: PART_LABELS[part] });
-			line.createSpan({ cls: value ? "th-recipe-value" : "th-recipe-value is-empty", text: value ?? "добавить" });
-			line.addEventListener("click", () => this.editPart(part));
+	private renderRecipe(page: HTMLElement, habit: Habit): void {
+		const recipe = page.createDiv("th-recipe");
+		const sentence = recipe.createDiv("th-recipe-sentence");
+		sentence.appendText("After I ");
+		this.editable(sentence, "anchor", habit.text("anchor").current());
+		sentence.appendText(", I'll ");
+		this.editable(sentence, "tiny", habit.text("tiny").current());
+		sentence.appendText(".");
+
+		const details = recipe.createDiv("th-recipe-details");
+		const detail = (label: string, fill: (value: HTMLElement) => void) => {
+			const row = details.createDiv("th-recipe-detail");
+			row.createDiv({ cls: "th-recipe-label", text: label });
+			fill(row.createDiv("th-recipe-value"));
 		};
-		for (const part of TEXT_PARTS) row(part, habit.text(part).current());
-		row("schedule", scheduleLabel(habit.currentSchedule));
+		detail("Aiming for", (value) => this.editable(value, "full", habit.text("full").current()));
+		detail("Celebrate", (value) => this.editable(value, "celebration", habit.text("celebration").current()));
+		detail("Schedule", (value) => this.editable(value, "schedule", scheduleLabel(habit.currentSchedule)));
+		detail("Color", (value) => {
+			new ColorPicker(value, habit.color, (color) => void this.run(() => this.ui.service.setColor(this.path, color)));
+		});
+	}
+
+	private editable(parent: HTMLElement, part: Part, value: string | undefined): void {
+		const span = parent.createSpan({ cls: value ? "th-editable" : "th-editable is-empty", text: value ?? "add" });
+		span.addEventListener("click", () => this.editPart(part));
 	}
 
 	private editPart(part: Part): void {
@@ -125,57 +140,64 @@ export class HabitScreenView extends ItemView {
 			new ScheduleModal(this.app, entry.habit.currentSchedule, {
 				replace: (days, because) => service.replaceSchedule(path, days, because),
 				correct: (days) => service.correctSchedule(path, days),
-			}).open();
+			}, entry.habit.color).open();
 			return;
 		}
-		new TextComponentModal(this.app, part, entry.habit.text(part).current(), {
-			replace: (value, because) => service.replaceText(path, part, value, because),
-			correct: (value) => service.correctText(path, part, value),
-		}).open();
+		const textPart: TextPart = part;
+		new TextComponentModal(this.app, textPart, entry.habit.text(textPart).current(), {
+			replace: (value, because) => service.replaceText(path, textPart, value, because),
+			correct: (value) => service.correctText(path, textPart, value),
+		}, entry.habit.color).open();
 	}
 
-	private renderRedesign(root: HTMLElement, habit: Habit): void {
-		const banner = root.createDiv("th-banner");
-		banner.createSpan({
-			text: `${missesInARow(habit)} «не получилось» подряд после последнего выполнения. Может, переделать рецепт?`,
-		});
-		banner.createEl("button", { cls: "mod-cta", text: "Переделать" }).addEventListener("click", () => {
+	private renderRedesign(page: HTMLElement, habit: Habit): void {
+		const banner = page.createDiv("th-banner");
+		const text = banner.createDiv("th-banner-text");
+		text.createDiv({ cls: "th-banner-title", text: `${missesInARow(habit)} misses in a row` });
+		text.createDiv({ cls: "th-banner-hint", text: "It's the recipe, not you. Try a different anchor or make it even tinier." });
+		banner.createEl("button", { cls: "th-pill th-pill-habit", text: "Redesign" }).addEventListener("click", () => {
 			new PartPickerModal(this.app, (part) => this.editPart(part)).open();
 		});
 	}
 
-	private renderStats(root: HTMLElement, stats: HabitStats): void {
-		section(root, `Последние ${WINDOW_DAYS} дней`);
-		const tiles = root.createDiv("th-tiles");
+	private renderStats(page: HTMLElement, stats: HabitStats): void {
+		const block = section(page, `Last ${WINDOW_DAYS} days`);
+		const tiles = block.createDiv("th-tiles");
 		const tile = (value: string, label: string) => {
 			const item = tiles.createDiv("th-tile");
 			item.createDiv({ cls: "th-tile-value", text: value });
-			item.createDiv({ cls: "th-muted", text: label });
+			item.createDiv({ cls: "th-tile-label", text: label });
 		};
 		const { window: period } = stats;
-		tile(period.percent === null ? "—" : `${period.percent}%`, `${period.done} из ${period.scheduled} запланированных дней`);
-		tile(String(stats.current?.length ?? 0), "текущая серия");
-		tile(String(stats.best), "лучшая серия");
-		tile(String(stats.total), "всего выполнений");
-		const bar = root.createDiv("th-bar");
-		const legend = root.createDiv("th-legend");
+		tile(period.percent === null ? "—" : `${period.percent}%`, `${period.done} of ${period.scheduled} planned days`);
+		tile(String(stats.current?.length ?? 0), "Current streak");
+		tile(String(stats.best), "Best streak");
+		tile(String(stats.total), "Times done");
+		const bar = block.createDiv("th-bar");
+		const legend = block.createDiv("th-legend");
 		for (const kind of BREAKDOWN_ORDER) {
 			const count = period.breakdown[kind];
 			if (count) bar.createDiv(`th-bar-part is-${kind}`).style.flexGrow = String(count);
-			const item = legend.createSpan(`th-legend-item is-${kind}`);
+			const item = legend.createDiv(`th-legend-item is-${kind}`);
 			item.createSpan("th-legend-dot");
-			item.appendText(`${BREAKDOWN_LABELS[kind]} ${count}`);
+			item.createSpan({ text: `${BREAKDOWN_LABELS[kind]} ${count}` });
 		}
 	}
 
-	private renderCalendar(root: HTMLElement, habit: Habit, today: LocalDate): void {
-		section(root, "Календарь");
+	private renderCalendar(page: HTMLElement, habit: Habit, today: LocalDate): void {
+		const block = section(page, "Calendar");
 		const changes = habit.changes();
 		const changed = new Set(changes.map((change) => change.date.toString()));
-		const scroller = root.createDiv("th-calendar-scroller");
+		const wrap = block.createDiv("th-calendar-wrap");
+		const weekdays = wrap.createDiv("th-calendar-weekdays");
+		weekdays.createDiv("th-calendar-month");
+		WEEKDAYS.forEach((day, index) => weekdays.createDiv({ cls: "th-calendar-weekday", text: index % 2 === 0 ? weekdayShort(day) : "" }));
+		const scroller = wrap.createDiv("th-calendar-scroller");
 		const calendar = scroller.createDiv("th-calendar");
-		for (const week of calendarWeeks(calendarStart(habit, today), today)) {
+		calendarWeeks(calendarStart(habit, today), today).forEach((week, weekIndex) => {
 			const column = calendar.createDiv("th-calendar-week");
+			const monthStart = week.find((date) => date?.day === 1) ?? (weekIndex === 0 ? week.find((date) => date) : undefined);
+			column.createDiv({ cls: "th-calendar-month", text: monthStart ? monthShort(monthStart) : "" });
 			for (const date of week) {
 				const cell = column.createDiv("th-calendar-day");
 				if (!date) {
@@ -183,7 +205,8 @@ export class HabitScreenView extends ItemView {
 					continue;
 				}
 				const mark = habit.markOn(date);
-				cell.addClass(mark ? `is-${mark.kind}` : habit.isScheduled(date) ? "is-empty" : "is-off");
+				const state = mark ? mark.kind : date.isBefore(habit.createdOn) ? "before" : habit.isScheduled(date) ? "empty" : "off";
+				cell.addClass(`is-${state}`);
 				cell.setAttribute("aria-label", dayMonth(date));
 				if (!changed.has(date.toString())) continue;
 				cell.addClass("is-changed");
@@ -196,7 +219,7 @@ export class HabitScreenView extends ItemView {
 					);
 				});
 			}
-		}
+		});
 		const scrollToToday = () => {
 			scroller.scrollLeft = scroller.scrollWidth;
 		};
@@ -204,64 +227,70 @@ export class HabitScreenView extends ItemView {
 		window.requestAnimationFrame(scrollToToday);
 	}
 
-	private renderStreaks(root: HTMLElement, stats: HabitStats): void {
-		section(root, "Серии");
+	private renderStreaks(page: HTMLElement, stats: HabitStats): void {
+		const block = section(page, "Streaks");
 		if (stats.streaks.length === 0) {
-			root.createDiv({ cls: "th-muted", text: "Пока нет" });
+			block.createDiv({ cls: "th-quiet", text: "Your first streak starts with one tiny day." });
 			return;
 		}
 		const longest = Math.max(...stats.streaks.map((streak) => streak.length));
 		for (const streak of stats.streaks) {
 			const isCurrent = streak === stats.current;
-			const row = root.createDiv("th-streak");
-			const bar = row.createDiv(isCurrent ? "th-streak-bar is-current" : "th-streak-bar");
-			bar.style.width = `${Math.max(6, Math.round((streak.length / longest) * STREAK_BAR_PX))}px`;
-			row.createSpan({
-				text: `${streak.length} · ${dayMonth(streak.start)} – ${isCurrent ? "сейчас" : dayMonth(streak.end)}`,
-			});
+			const row = block.createDiv("th-streak");
+			const track = row.createDiv("th-streak-track");
+			const bar = track.createDiv(isCurrent ? "th-streak-bar is-current" : "th-streak-bar");
+			bar.style.width = `${(streak.length / longest) * 100}%`;
+			row.createDiv({ cls: "th-streak-length", text: `${streak.length} ${streak.length === 1 ? "day" : "days"}` });
+			row.createDiv({ cls: "th-streak-dates", text: `${dayMonth(streak.start)} – ${isCurrent ? "now" : dayMonth(streak.end)}` });
 		}
 	}
 
-	private renderMisses(root: HTMLElement, habit: Habit): void {
-		section(root, "Не получилось");
+	private renderMisses(page: HTMLElement, habit: Habit): void {
+		const block = section(page, "What got in the way");
 		const misses = habit.marks().flatMap(([date, mark]) => (mark.kind === "missed" ? [{ date, reason: mark.reason }] : []));
 		if (misses.length === 0) {
-			root.createDiv({ cls: "th-muted", text: "Пока нет" });
+			block.createDiv({ cls: "th-quiet", text: "Nothing yet." });
 			return;
 		}
+		const list = block.createDiv("th-list");
 		for (const miss of misses) {
-			const row = root.createDiv("th-list-row");
-			row.createSpan({ cls: "th-list-date", text: dayMonth(miss.date) });
-			row.createSpan({ text: miss.reason });
+			const row = list.createDiv("th-list-row");
+			row.createDiv({ cls: "th-list-date", text: dayMonth(miss.date) });
+			row.createDiv({ cls: "th-list-text", text: miss.reason });
 		}
 	}
 
-	private renderHistory(root: HTMLElement, habit: Habit): void {
-		section(root, "История рецепта");
+	private renderHistory(page: HTMLElement, habit: Habit): void {
+		const block = section(page, "Recipe history");
+		const list = block.createDiv("th-list");
 		for (const change of habit.changes()) {
-			const row = root.createDiv("th-list-row");
-			row.createSpan({ cls: "th-list-date", text: dayMonth(change.date) });
-			const body = row.createDiv();
+			const row = list.createDiv("th-list-row");
+			row.createDiv({ cls: "th-list-date", text: dayMonth(change.date) });
+			const body = row.createDiv("th-list-text");
 			body.createDiv({ text: describeChange(change) });
-			if (change.because) body.createDiv({ cls: "th-muted", text: change.because });
+			if (change.because) body.createDiv({ cls: "th-list-note", text: change.because });
 		}
-		const created = root.createDiv("th-list-row");
-		created.createSpan({ cls: "th-list-date", text: dayMonth(habit.createdOn) });
-		created.createSpan({ text: "создана" });
+		const created = list.createDiv("th-list-row");
+		created.createDiv({ cls: "th-list-date", text: dayMonth(habit.createdOn) });
+		created.createDiv({ cls: "th-list-text", text: "Habit created" });
 	}
 
-	private renderFooter(root: HTMLElement): void {
-		const footer = root.createDiv("th-buttons th-footer");
-		footer.createEl("button", { text: "Открыть заметку" }).addEventListener("click", () => {
+	private renderFooter(page: HTMLElement): void {
+		const footer = page.createDiv("th-actions-row th-footer");
+		footer.createEl("button", { cls: "th-pill", text: "Open note" }).addEventListener("click", () => {
 			void this.app.workspace.openLinkText(this.path, "", "tab");
 		});
-		footer.createEl("button", { text: "Архивировать" }).addEventListener("click", () => void this.archive());
+		footer.createEl("button", { cls: "th-pill", text: "Archive" }).addEventListener("click", () => {
+			void this.run(async () => {
+				await this.ui.service.archive(this.path);
+				this.leaf.detach();
+			});
+		});
 	}
 
-	private async archive(): Promise<void> {
+	private async run(action: () => Promise<unknown>): Promise<void> {
 		try {
-			await this.ui.service.archive(this.path);
-			this.leaf.detach();
+			await action();
 		} catch (error) {
 			new Notice(error instanceof Error ? error.message : String(error));
 		}

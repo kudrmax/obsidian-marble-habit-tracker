@@ -12,13 +12,8 @@ describe("calendar", () => {
 		expect(weeks[1][5]).toBeUndefined();
 	});
 
-	it("starts a year back, or earlier if the habit is older", () => {
-		expect(calendarStart(habitNote("Зарядка"), d("2026-10-09")).toString()).toBe("2025-10-10");
-		const old = habitNote("Зарядка", {
-			schedule: [{ value: ["mon"], since: "2024-01-01" }],
-			anchor: [{ value: "Кружка", since: "2024-01-01" }],
-			tiny: [{ value: "2", since: "2024-01-01" }],
-		});
-		expect(calendarStart(old, d("2026-10-09")).toString()).toBe("2024-01-01");
+	it("starts at the beginning of the habit's history", () => {
+		expect(calendarStart(habitNote("Workout"), d("2026-10-09")).toString()).toBe("2026-10-01");
+		expect(calendarStart(habitNote("Workout", { done_tiny: ["2026-09-20"] }), d("2026-10-09")).toString()).toBe("2026-09-20");
 	});
 });

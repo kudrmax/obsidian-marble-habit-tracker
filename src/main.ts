@@ -26,9 +26,9 @@ export default class TinyHabitsPlugin extends Plugin implements SettingsHost {
 
 		this.registerView(HABITS_VIEW, (leaf) => new HabitsView(leaf, ui));
 		this.registerView(HABIT_VIEW, (leaf) => new HabitScreenView(leaf, ui));
-		this.addRibbonIcon("sprout", "Привычки", () => void this.openGrid());
-		this.addCommand({ id: "open", name: "Открыть привычки", callback: () => void this.openGrid() });
-		this.addCommand({ id: "new", name: "Новая привычка", callback: () => ui.newHabit() });
+		this.addRibbonIcon("sprout", "Habits", () => void this.openGrid());
+		this.addCommand({ id: "open", name: "Open habits", callback: () => void this.openGrid() });
+		this.addCommand({ id: "new", name: "New habit", callback: () => ui.newHabit() });
 		this.addSettingTab(new SettingsTab(this.app, this));
 
 		const refreshIfHabit = (...paths: string[]) => {

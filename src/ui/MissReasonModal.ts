@@ -1,9 +1,12 @@
 import { App, Modal } from "obsidian";
+import { HabitColor } from "../domain/HabitColor";
 import { LocalDate } from "../domain/LocalDate";
+import { colorClass } from "./colors";
 import { longDate } from "./format";
 
 export interface MissReasonInput {
 	readonly habitName: string;
+	readonly color?: HabitColor;
 	readonly date: LocalDate;
 	readonly anchor: string;
 	readonly reason?: string;
@@ -22,20 +25,18 @@ export class MissReasonModal extends Modal {
 
 	override onOpen(): void {
 		const { contentEl, input } = this;
-		contentEl.addClass("th-modal");
-		contentEl.createEl("h3", { text: "Почему не получилось?" });
-		contentEl.createDiv({ cls: "th-muted", text: `${input.habitName} · ${longDate(input.date)}` });
-		if (input.anchor) {
-			contentEl.createDiv({ cls: "th-label", text: "якорь" });
-			contentEl.createDiv({ cls: "th-anchor", text: input.anchor });
-		}
-		const field = contentEl.createEl("input", { cls: "th-field", type: "text" });
-		field.placeholder = "Что помешало?";
+		this.modalEl.addClass("th-modal-shell");
+		contentEl.addClass("th-modal", "th-habit", colorClass(input.color));
+		contentEl.createDiv({ cls: "th-modal-eyebrow", text: `${input.habitName} · ${longDate(input.date)}` });
+		contentEl.createDiv({ cls: "th-modal-title", text: "What got in the way?" });
+		if (input.anchor) contentEl.createDiv({ cls: "th-modal-hint", text: `After I ${input.anchor}` });
+		const field = contentEl.createEl("input", { cls: "th-input th-input-hero", type: "text" });
+		field.placeholder = "Write the reason";
 		field.value = input.reason ?? "";
 
-		const buttons = contentEl.createDiv("th-buttons");
-		buttons.createEl("button", { text: "Отмена" }).addEventListener("click", () => this.close());
-		const save = buttons.createEl("button", { cls: "mod-cta", text: "Сохранить" });
+		const actions = contentEl.createDiv("th-actions-row");
+		actions.createEl("button", { cls: "th-pill", text: "Cancel" }).addEventListener("click", () => this.close());
+		const save = actions.createEl("button", { cls: "th-pill th-pill-habit", text: "Save" });
 		const sync = () => {
 			save.disabled = field.value.trim() === "";
 		};
@@ -54,15 +55,16 @@ export class MissReasonModal extends Modal {
 		});
 
 		if (input.reason !== undefined) {
-			const fixes = contentEl.createDiv("th-buttons th-fixes");
-			const fix = (text: string, action: () => void) =>
-				fixes.createEl("button", { text }).addEventListener("click", () => {
+			contentEl.createDiv({ cls: "th-modal-divider-label", text: "Actually did it?" });
+			const fixes = contentEl.createDiv("th-actions-row");
+			const fix = (text: string, action: () => void, cls = "th-pill") =>
+				fixes.createEl("button", { cls, text }).addEventListener("click", () => {
 					this.close();
 					action();
 				});
-			fix("Сделал нано", () => input.onDone("tiny"));
-			fix("Сделал полное", () => input.onDone("full"));
-			fix("Очистить", () => input.onClear());
+			fix("Tiny", () => input.onDone("tiny"), "th-pill th-pill-habit");
+			fix("Full ✦", () => input.onDone("full"), "th-pill th-pill-habit");
+			fix("Clear day", () => input.onClear());
 		}
 		sync();
 		window.setTimeout(() => field.focus(), 0);

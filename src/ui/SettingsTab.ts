@@ -18,8 +18,8 @@ export class SettingsTab extends PluginSettingTab {
 		const { containerEl, host } = this;
 		containerEl.empty();
 		new Setting(containerEl)
-			.setName("Папка привычек")
-			.setDesc("Одна заметка — одна привычка. Подпапки не учитываются.")
+			.setName("Habits folder")
+			.setDesc("One note per habit. Subfolders are ignored.")
 			.addText((text) =>
 				text.setValue(host.settings.folder).onChange(async (value) => {
 					host.settings.folder = value.trim() || DEFAULT_SETTINGS.folder;
@@ -27,8 +27,8 @@ export class SettingsTab extends PluginSettingTab {
 				}),
 			);
 		new Setting(containerEl)
-			.setName("Подсказка «переделай рецепт»")
-			.setDesc("Сколько «не получилось» подряд после последнего выполнения")
+			.setName("Suggest a redesign after")
+			.setDesc("Number of misses in a row since the last success")
 			.addText((text) => {
 				text.inputEl.type = "number";
 				text.setValue(String(host.settings.redesignThreshold)).onChange(async (value) => {
@@ -38,7 +38,7 @@ export class SettingsTab extends PluginSettingTab {
 					await host.saveSettings();
 				});
 			});
-		new Setting(containerEl).setName("Конфетти").addToggle((toggle) =>
+		new Setting(containerEl).setName("Confetti").addToggle((toggle) =>
 			toggle.setValue(host.settings.confetti).onChange(async (value) => {
 				host.settings.confetti = value;
 				await host.saveSettings();
