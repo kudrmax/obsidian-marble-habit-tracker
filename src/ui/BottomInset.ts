@@ -1,15 +1,22 @@
-const NAVBAR = ".mobile-navbar";
-const GAP = 8;
+import { Pill } from "./jar/JarPhysics";
 
-/** Keeps --th-bottom-inset equal to how much of the element the floating mobile navbar covers. */
+const NAVBAR = ".mobile-navbar";
+
+/**
+ * Tracks the floating mobile navbar over the element: keeps --th-bottom-inset equal to how much of
+ * the element it covers and reports its shape so the jar can treat it as a shelf.
+ */
 export class BottomInset {
 	private readonly resizer = new ResizeObserver(() => this.measure());
 	private readonly mutations = new MutationObserver(() => this.measure());
 	private readonly onTransition = () => this.measure();
 	private navbar: HTMLElement | null = null;
-	private inset = -1;
+	private last = "";
 
-	constructor(private readonly element: HTMLElement) {
+	constructor(
+		private readonly element: HTMLElement,
+		private readonly onShelf: (shelf: Pill | null) => void,
+	) {
 		this.resizer.observe(element);
 		this.mutations.observe(document.body, { attributes: true, attributeFilter: ["class"] });
 		this.measure();
@@ -17,10 +24,13 @@ export class BottomInset {
 
 	measure(): void {
 		this.track(document.querySelector<HTMLElement>(NAVBAR));
-		const inset = this.covered();
-		if (inset === this.inset) return;
-		this.inset = inset;
+		const shelf = this.shelf();
+		const inset = shelf ? Math.max(0, Math.ceil(this.element.getBoundingClientRect().height - (shelf.y - shelf.radius))) : 0;
+		const key = JSON.stringify([shelf, inset]);
+		if (key === this.last) return;
+		this.last = key;
 		this.element.style.setProperty("--th-bottom-inset", `${inset}px`);
+		this.onShelf(shelf);
 	}
 
 	destroy(): void {
@@ -29,11 +39,16 @@ export class BottomInset {
 		this.track(null);
 	}
 
-	private covered(): number {
+	private shelf(): Pill | null {
 		const navbar = this.navbar;
-		if (!navbar || navbar.getClientRects().length === 0) return 0;
-		const overlap = this.element.getBoundingClientRect().bottom - navbar.getBoundingClientRect().top;
-		return overlap > 0 ? Math.ceil(overlap) + GAP : 0;
+		if (!navbar || navbar.getClientRects().length === 0) return null;
+		const area = this.element.getBoundingClientRect();
+		const box = navbar.getBoundingClientRect();
+		if (box.top >= area.bottom || box.bottom <= area.top || box.height === 0) return null;
+		const radius = box.height / 2;
+		const left = box.left - area.left + radius;
+		const right = box.right - area.left - radius;
+		return { left, right: Math.max(left, right), y: box.top - area.top + radius, radius };
 	}
 
 	private track(navbar: HTMLElement | null): void {

@@ -23,6 +23,14 @@ export interface Body {
 	passing: boolean;
 }
 
+/** A pill lying horizontally: the segment (left, y)–(right, y) grown by radius. */
+export interface Pill {
+	readonly left: number;
+	readonly right: number;
+	readonly y: number;
+	readonly radius: number;
+}
+
 export const EARTH: Point = { x: 0, y: 0.45 };
 
 const DAMPING = 0.985;
@@ -36,6 +44,7 @@ export class JarPhysics {
 	private readonly items = new Map<string, Body>();
 	private readonly targets = new Map<string, Point>();
 	private gravity: Point = EARTH;
+	private obstacles: readonly Pill[] = [];
 	private quietFrames = 0;
 
 	constructor(
@@ -46,6 +55,11 @@ export class JarPhysics {
 	resize(width: number, height: number): void {
 		this.width = width;
 		this.height = height;
+		this.quietFrames = 0;
+	}
+
+	setObstacles(obstacles: readonly Pill[]): void {
+		this.obstacles = obstacles;
 		this.quietFrames = 0;
 	}
 
@@ -149,6 +163,7 @@ export class JarPhysics {
 	}
 
 	private contain(body: Body): void {
+		for (const pill of this.obstacles) pushOut(body, pill);
 		if (body.x < body.r) body.x = body.r;
 		if (body.x > this.width - body.r) body.x = this.width - body.r;
 		if (body.y > this.height - body.r) body.y = this.height - body.r;
@@ -162,4 +177,20 @@ export class JarPhysics {
 
 function overlaps(a: Body, b: Body): boolean {
 	return Math.hypot(b.x - a.x, b.y - a.y) < a.r + b.r;
+}
+
+function pushOut(body: Body, pill: Pill): void {
+	const x = Math.max(pill.left, Math.min(pill.right, body.x));
+	const dx = body.x - x;
+	const dy = body.y - pill.y;
+	const min = pill.radius + body.r;
+	const distanceSquared = dx * dx + dy * dy;
+	if (distanceSquared >= min * min) return;
+	const distance = Math.sqrt(distanceSquared);
+	if (distance === 0) {
+		body.y = pill.y - min;
+		return;
+	}
+	body.x = x + (dx / distance) * min;
+	body.y = pill.y + (dy / distance) * min;
 }

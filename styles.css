@@ -291,7 +291,7 @@ button.th-done-row {
 .th-done-text { flex: 1 1 auto; font-size: 14px; color: var(--th-muted); }
 .th-done-toggle { font-size: var(--th-small-size); color: var(--th-faint); }
 
-.th-jar { position: absolute; top: 0; left: 0; z-index: 2; width: 100%; height: calc(100% - var(--th-bottom-inset, 0px)); pointer-events: none; }
+.th-jar { position: absolute; top: 0; left: 0; z-index: 2; width: 100%; height: 100%; pointer-events: none; }
 .th-caption {
 	position: absolute;
 	left: 50%;

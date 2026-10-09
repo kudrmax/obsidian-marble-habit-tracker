@@ -29,10 +29,10 @@ This document wins over `docs/superpowers/specs/2026-10-09-best-habit-experience
 ## The jar
 
 - Lives at the bottom of the Today view, behind the list, full width.
-- **Derived from history, not stored.** For every habit, walk its scheduled days oldest → newest and split done days into runs (a scheduled day without done breaks a run; off-schedule days neither break nor extend). Inside a run, every 4×7 = 28 days make one **big** ball, every remaining full 7 make one **medium** ball, the rest are **small** balls. Done days outside runs are small balls. "Did more" days keep a spark on small balls.
+- **Derived from history, not stored.** For every habit, take its done days oldest → newest, gaps don't matter. Every 4×7 = 28 days make one **big** ball, every remaining full 7 make one **medium** ball, the rest are **small** balls. "Did more" days keep a spark on small balls.
 - Sizes (diameter): small 24 px, medium 44 px, big 68 px.
 - Physics: circles under gravity, verlet integration, 3 collision passes, damping 0.985, gravity 0.45 px/frame². Settles in ~5 s; the loop stops when nothing moves.
-- A new mark drops a small ball from the tapped circle. If that completes 7 in a row, the 7 balls of that run fly together and are replaced by one medium ball (and 4 medium → one big) with a short caption "Read · 7 in a row".
+- A new mark drops a small ball from the tapped circle. If that makes 7 of that habit, the 7 small balls fly together and are replaced by one medium ball (and 4 medium → one big) with a short caption "Read · 7 wins".
 - Undoing today's mark removes today's ball.
 - If it lags, cache the derived pile per habit (key: path + mtime). Not before.
 

@@ -19,46 +19,31 @@ interface DoneDay {
 	readonly full: boolean;
 }
 
+/** Every 7 done days of a habit merge into a medium ball and every 28 into a big one, gaps or not. */
 export function buildJar(habit: Habit, today: LocalDate): JarPiece[] {
-	return collectRuns(habit, today).flatMap((run) => piecesOf(run, today));
+	return piecesOf(doneDays(habit, today), today);
 }
 
-function collectRuns(habit: Habit, today: LocalDate): DoneDay[][] {
-	const marks = habit.marks();
-	if (marks.length === 0) return [];
-	const firstMark = marks[marks.length - 1][0];
-	const start = firstMark.isBefore(habit.createdOn) ? firstMark : habit.createdOn;
-	const runs: DoneDay[][] = [];
-	let run: DoneDay[] = [];
-	const close = () => {
-		if (run.length) runs.push(run);
-		run = [];
-	};
-	for (let date = start; !date.isAfter(today); date = date.addDays(1)) {
-		const mark = habit.markOn(date);
-		if (isDone(mark)) {
-			run.push({ date, full: mark?.kind === "full" });
-			continue;
-		}
-		const unansweredToday = !mark && date.equals(today);
-		if (habit.isScheduled(date) && !unansweredToday) close();
-	}
-	close();
-	return runs;
+function doneDays(habit: Habit, today: LocalDate): DoneDay[] {
+	return habit
+		.marks()
+		.filter(([date, mark]) => isDone(mark) && !date.isAfter(today))
+		.map(([date, mark]) => ({ date, full: mark.kind === "full" }))
+		.reverse();
 }
 
-function piecesOf(run: readonly DoneDay[], today: LocalDate): JarPiece[] {
+function piecesOf(days: readonly DoneDay[], today: LocalDate): JarPiece[] {
 	const pieces: JarPiece[] = [];
 	const block = (from: number, length: number, size: JarSize) => {
-		const last = run[from + length - 1];
-		pieces.push({ id: `${size}:${run[from].date}`, size, full: false, today: last.date.equals(today) });
+		const last = days[from + length - 1];
+		pieces.push({ id: `${size}:${days[from].date}`, size, full: false, today: last.date.equals(today) });
 	};
-	const bigs = Math.floor(run.length / MONTH_RUN);
+	const bigs = Math.floor(days.length / MONTH_RUN);
 	for (let index = 0; index < bigs; index++) block(index * MONTH_RUN, MONTH_RUN, "big");
-	const rest = run.length - bigs * MONTH_RUN;
+	const rest = days.length - bigs * MONTH_RUN;
 	const mediums = Math.floor(rest / WEEK_RUN);
 	for (let index = 0; index < mediums; index++) block(bigs * MONTH_RUN + index * WEEK_RUN, WEEK_RUN, "medium");
-	for (const day of run.slice(bigs * MONTH_RUN + mediums * WEEK_RUN)) {
+	for (const day of days.slice(bigs * MONTH_RUN + mediums * WEEK_RUN)) {
 		pieces.push({ id: `small:${day.date}`, size: "small", full: day.full, today: day.date.equals(today) });
 	}
 	return pieces;

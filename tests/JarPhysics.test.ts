@@ -138,4 +138,14 @@ describe("JarPhysics", () => {
 		physics.step();
 		expect(physics.get("a")?.y).toBeLessThan(150);
 	});
+
+	it("rests on a pill and rolls off its ends", () => {
+		const physics = new JarPhysics(400, 300);
+		physics.setObstacles([{ left: 100, right: 300, y: 250, radius: 20 }]);
+		physics.add({ id: "on", x: 200, y: 0, r: 12 });
+		physics.add({ id: "beside", x: 30, y: 0, r: 12 });
+		settle(physics);
+		expect(physics.get("on")?.y).toBeCloseTo(218, 0);
+		expect(physics.get("beside")?.y).toBeCloseTo(288, 0);
+	});
 });

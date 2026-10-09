@@ -81,7 +81,7 @@ export class TodayView extends ItemView {
 		this.scrollEl = root.createDiv("th-today-scroll");
 		this.columnEl = this.scrollEl.createDiv("th-column");
 		this.jar = new JarCanvas(root, this.jarOptions());
-		this.inset = new BottomInset(root);
+		this.inset = new BottomInset(root, (shelf) => this.jar?.setObstacles(shelf ? [shelf] : []));
 		this.registerEvent(this.app.workspace.on("layout-change", () => this.inset?.measure()));
 		this.registerDomEvent(window, "resize", () => this.inset?.measure());
 		this.addAction("plus", "New habit", () => this.ui.newHabit());
@@ -396,7 +396,7 @@ export class TodayView extends ItemView {
 		if (!habit) return;
 		this.captionEl?.remove();
 		window.clearTimeout(this.captionTimer);
-		const text = `${habit.name} · ${item.size === "big" ? "28" : "7"} in a row`;
+		const text = `${habit.name} · ${item.size === "big" ? "28" : "7"} wins`;
 		this.captionEl = this.contentEl.createDiv({ cls: ["th-caption", "th-habit", colorClass(habit.color)], text });
 		this.captionTimer = window.setTimeout(() => {
 			this.captionEl?.remove();

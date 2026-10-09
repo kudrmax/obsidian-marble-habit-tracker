@@ -1,7 +1,7 @@
 import { JarSize } from "../../domain/Jar";
 import { AssetSpec, JAR_DIAMETER, JarMaterial, assetKey, assetSvg } from "./JarAssets";
 import { Hsl, hsl } from "./color";
-import { JarPhysics, Point } from "./JarPhysics";
+import { JarPhysics, Pill, Point } from "./JarPhysics";
 
 export interface JarItem {
 	readonly key: string;
@@ -80,6 +80,11 @@ export class JarCanvas {
 	setOptions(options: JarOptions): void {
 		if (options.material !== this.options.material || hsl(options.background) !== hsl(this.options.background)) this.sprites.clear();
 		this.options = options;
+		this.wake();
+	}
+
+	setObstacles(obstacles: readonly Pill[]): void {
+		this.physics.setObstacles(obstacles);
 		this.wake();
 	}
 
