@@ -47,10 +47,6 @@ export class SettingsTab extends PluginSettingTab {
 			.setDesc("Tilt your phone and the wins roll around the jar.")
 			.addToggle((toggle) => toggle.setValue(host.settings.tilt).onChange((value) => save((settings) => (settings.tilt = value))));
 		new Setting(containerEl)
-			.setName("Wins bump into text")
-			.setDesc("Wins land on titles, habits and circles instead of passing behind them.")
-			.addToggle((toggle) => toggle.setValue(host.settings.bumpText).onChange((value) => save((settings) => (settings.bumpText = value))));
-		new Setting(containerEl)
 			.setName("Vibration")
 			.setDesc("A light tap when you answer, when wins bump and when they merge.")
 			.addToggle((toggle) => toggle.setValue(host.settings.haptics).onChange((value) => save((settings) => (settings.haptics = value))));

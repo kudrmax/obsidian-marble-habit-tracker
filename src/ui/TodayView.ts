@@ -13,7 +13,7 @@ import { Haptics } from "./Haptics";
 import { anchorLine } from "./format";
 import { Hsl, parseColor } from "./jar/color";
 import { JarCanvas, JarItem } from "./jar/JarCanvas";
-import { Box, EARTH, Point } from "./jar/JarPhysics";
+import { EARTH, Point } from "./jar/JarPhysics";
 import { TiltSensor } from "./jar/TiltSensor";
 import { visibleEntries } from "./order";
 import { REASONS, celebrationLine, closeDayTitle, closedDayLine, offersShrink, todayEntries } from "./today";
@@ -28,8 +28,6 @@ const DAY_CHECK_MS = 60_000;
 const SVG_NS = "http://www.w3.org/2000/svg";
 const RING_RADIUS = 50;
 const RING_GAP = 9;
-const TEXT_PARTS = ".th-title, .th-row-title, .th-row-sub, .th-done-text, .th-done-toggle, .th-ring-sub";
-const ROUND_PARTS = ".th-mark, .th-answer, .th-done-dots, .th-ring";
 const FALLBACK_COLOR: Hsl = { h: 258, s: 88, l: 66 };
 
 type Answer = "miss" | "more" | "done";
@@ -40,7 +38,6 @@ export class TodayView extends ItemView {
 	private captionEl: HTMLElement | null = null;
 	private jar: JarCanvas | null = null;
 	private inset: BottomInset | null = null;
-	private shelf: Box | null = null;
 	private menu: string | null = null;
 	private asking: string | null = null;
 	private other: string | null = null;
@@ -88,11 +85,7 @@ export class TodayView extends ItemView {
 		this.scrollEl = root.createDiv("th-today-scroll");
 		this.columnEl = this.scrollEl.createDiv("th-column");
 		this.jar = new JarCanvas(root, this.jarOptions());
-		this.inset = new BottomInset(root, (shelf) => {
-			this.shelf = shelf;
-			this.updateObstacles();
-		});
-		this.registerDomEvent(this.scrollEl, "scroll", () => this.updateObstacles());
+		this.inset = new BottomInset(root, (shelf) => this.jar?.setObstacles(shelf ? [shelf] : []));
 		this.registerEvent(this.app.workspace.on("layout-change", () => this.inset?.measure()));
 		this.registerDomEvent(window, "resize", () => this.inset?.measure());
 		this.addAction("plus", "New habit", () => this.ui.newHabit());
@@ -168,31 +161,6 @@ export class TodayView extends ItemView {
 			if (visible) this.renderRow(column, entry.path, entry.habit);
 		}
 		if (hidden.length) this.renderDoneRow(column, hidden);
-		this.updateObstacles();
-	}
-
-	private updateObstacles(): void {
-		if (!this.jar) return;
-		const text = this.ui.settings().bumpText ? this.textBoxes() : [];
-		this.jar.setObstacles(this.shelf ? [...text, this.shelf] : text);
-	}
-
-	private textBoxes(): Box[] {
-		const area = this.contentEl.getBoundingClientRect();
-		const box = (rect: DOMRect, radius: number): Box[] => {
-			if (rect.width === 0 || rect.height === 0 || rect.bottom < area.top || rect.top > area.bottom) return [];
-			return [{ left: rect.left - area.left, top: rect.top - area.top, right: rect.right - area.left, bottom: rect.bottom - area.top, radius }];
-		};
-		const range = document.createRange();
-		const text = [...this.columnEl.querySelectorAll<HTMLElement>(TEXT_PARTS)].flatMap((element) => {
-			range.selectNodeContents(element);
-			return box(range.getBoundingClientRect(), 4);
-		});
-		const round = [...this.columnEl.querySelectorAll<HTMLElement>(ROUND_PARTS)].flatMap((element) => {
-			const rect = element.getBoundingClientRect();
-			return box(rect, Math.min(rect.width, rect.height) / 2);
-		});
-		return [...text, ...round];
 	}
 
 	private renderRing(column: HTMLElement, habits: readonly Habit[], justClosed: boolean): void {
