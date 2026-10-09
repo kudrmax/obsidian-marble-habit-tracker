@@ -7,6 +7,7 @@ import { calendarStart, calendarWeeks } from "./calendar";
 import { colorClass } from "./colors";
 import { DayWatcher } from "./DayWatcher";
 import { EditSheet, EditTarget } from "./EditSheet";
+import { HABITS_VIEW } from "./TodayView";
 import { RECIPE_LABELS, dayMonth, describeChange, monthShort, recipeDays } from "./format";
 import { UiContext } from "./UiContext";
 
@@ -43,6 +44,10 @@ export class HabitScreenView extends ItemView {
 
 	override getIcon(): string {
 		return "sprout";
+	}
+
+	override async onOpen(): Promise<void> {
+		this.addAction("sprout", "Habits", () => void this.leaf.setViewState({ type: HABITS_VIEW, active: true }));
 	}
 
 	override getState(): Record<string, unknown> {
