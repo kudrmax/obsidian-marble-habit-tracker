@@ -30,20 +30,20 @@ export class FrontmatterHabitRepository implements HabitRepository {
 
 	async update(path: string, change: (habit: Habit) => Habit): Promise<Habit> {
 		const file = this.app.vault.getAbstractFileByPath(path);
-		if (!(file instanceof TFile)) throw new DomainError("Привычка не найдена");
+		if (!(file instanceof TFile)) throw new DomainError("Habit not found");
 		let updated: Habit | undefined;
 		await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
 			updated = change(this.decodeFresh(file, frontmatter));
 			encodeHabit(updated, frontmatter);
 		});
-		if (!updated) throw new DomainError("Привычка не найдена");
+		if (!updated) throw new DomainError("Habit not found");
 		return updated;
 	}
 
 	async create(habit: Habit): Promise<string> {
 		const folder = this.folderPath();
 		const path = normalizePath(`${folder}/${habit.name}.md`);
-		if (this.app.vault.getAbstractFileByPath(path)) throw new DomainError(`Привычка «${habit.name}» уже есть`);
+		if (this.app.vault.getAbstractFileByPath(path)) throw new DomainError(`Habit "${habit.name}" already exists`);
 		if (!this.app.vault.getAbstractFileByPath(folder)) await this.app.vault.createFolder(folder);
 		const file = await this.app.vault.create(path, "");
 		await this.app.fileManager.processFrontMatter(file, (frontmatter) => encodeHabit(habit, frontmatter));
@@ -58,7 +58,7 @@ export class FrontmatterHabitRepository implements HabitRepository {
 		try {
 			return decodeHabit(file.basename, frontmatter);
 		} catch (error) {
-			if (error instanceof HabitDecodeError) throw new DomainError(`Привычка не читается: ${error.message}`);
+			if (error instanceof HabitDecodeError) throw new DomainError(`Habit can't be read: ${error.message}`);
 			throw error;
 		}
 	}

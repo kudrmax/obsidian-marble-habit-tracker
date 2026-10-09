@@ -6,7 +6,7 @@ export class Schedule {
 
 	constructor(days: Iterable<Weekday>) {
 		this.days = new Set(days);
-		if (this.days.size === 0) throw new DomainError("В расписании нужен хотя бы один день");
+		if (this.days.size === 0) throw new DomainError("Pick at least one day");
 	}
 
 	static everyDay(): Schedule {

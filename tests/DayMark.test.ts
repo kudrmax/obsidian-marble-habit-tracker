@@ -15,7 +15,7 @@ describe("DayMark", () => {
 
 	it("requires a reason for a missed day", () => {
 		expect(missed("  проспал ")).toEqual({ kind: "missed", reason: "проспал" });
-		expect(() => missed("   ")).toThrow("причин");
+		expect(() => missed("   ")).toThrow("reason");
 	});
 
 	it("treats tiny and full as done", () => {

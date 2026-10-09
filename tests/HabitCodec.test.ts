@@ -82,14 +82,14 @@ describe("decodeHabit", () => {
 	});
 
 	it.each([
-		["no properties", undefined, "свойств"],
-		["no anchor", { anchor: undefined }, "якорь"],
+		["no properties", undefined, "no habit properties"],
+		["no anchor", { anchor: undefined }, "Anchor is missing"],
 		["anchor not a list", { anchor: "Кружка" }, "anchor"],
 		["bad date", { done_tiny: ["2026-13-01"] }, "done_tiny"],
 		["two marks on one day", { done_full: ["2026-10-08"] }, "2026-10-08"],
-		["missed without reason", { missed: [{ date: "2026-10-07" }] }, "причин"],
+		["missed without reason", { missed: [{ date: "2026-10-07" }] }, "reason"],
 		["unknown weekday", { schedule: [{ value: ["funday"], since: "2026-09-01" }] }, "funday"],
-		["empty schedule", { schedule: [{ value: [], since: "2026-09-01" }] }, "день"],
+		["empty schedule", { schedule: [{ value: [], since: "2026-09-01" }] }, "at least one day"],
 		[
 			"two versions on one day",
 			{
@@ -98,7 +98,7 @@ describe("decodeHabit", () => {
 					{ value: "b", since: "2026-09-01" },
 				],
 			},
-			"одной датой",
+			"same since date",
 		],
 		["order not a number", { order: "first" }, "order"],
 	])("reports %s", (_label, patch, message) => {

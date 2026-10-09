@@ -15,7 +15,7 @@ const DONE_FULL = "done_full";
 const MISSED = "missed";
 
 export function decodeHabit(name: string, frontmatter: Frontmatter | null | undefined): Habit {
-	if (!frontmatter) throw new HabitDecodeError("нет свойств привычки");
+	if (!frontmatter) throw new HabitDecodeError("no habit properties");
 	try {
 		const text = Object.fromEntries(TEXT_PARTS.map((part) => [part, readVersions(frontmatter, part, readText)])) as Record<
 			TextPart,
@@ -77,14 +77,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function list(frontmatter: Frontmatter, key: string): unknown[] {
 	const value = frontmatter[key];
 	if (value === undefined || value === null) return [];
-	if (!Array.isArray(value)) throw new HabitDecodeError(`${key}: ожидается список`);
+	if (!Array.isArray(value)) throw new HabitDecodeError(`${key}: expected a list`);
 	return value;
 }
 
 function readOrder(value: unknown): number | undefined {
 	if (value === undefined || value === null) return undefined;
 	if (typeof value === "number" && Number.isFinite(value)) return value;
-	throw new HabitDecodeError(`order: ожидается число, а не «${String(value)}»`);
+	throw new HabitDecodeError(`order: expected a number, got "${String(value)}"`);
 }
 
 function readColor(value: unknown): HabitColor | undefined {
@@ -98,20 +98,20 @@ function readDate(value: unknown, where: string): LocalDate {
 		return LocalDate.of(value.getUTCFullYear(), value.getUTCMonth() + 1, value.getUTCDate());
 	}
 	const date = typeof value === "string" ? LocalDate.parse(value.trim()) : null;
-	if (!date) throw new HabitDecodeError(`${where}: некорректная дата «${String(value)}»`);
+	if (!date) throw new HabitDecodeError(`${where}: invalid date "${String(value)}"`);
 	return date;
 }
 
 function readText(value: unknown, where: string): string {
 	if (typeof value === "string") return value.trim();
 	if (typeof value === "number") return String(value);
-	throw new HabitDecodeError(`${where}: ожидается текст`);
+	throw new HabitDecodeError(`${where}: expected text`);
 }
 
 function readSchedule(value: unknown, where: string): Schedule {
-	if (!Array.isArray(value)) throw new HabitDecodeError(`${where}: ожидается список дней`);
+	if (!Array.isArray(value)) throw new HabitDecodeError(`${where}: expected a list of days`);
 	const days = value.map((day) => {
-		if (!WEEKDAYS.includes(day as Weekday)) throw new HabitDecodeError(`${where}: неизвестный день «${String(day)}»`);
+		if (!WEEKDAYS.includes(day as Weekday)) throw new HabitDecodeError(`${where}: unknown day "${String(day)}"`);
 		return day as Weekday;
 	});
 	return new Schedule(days);
@@ -124,7 +124,7 @@ function readVersions<T>(
 	same?: (a: T, b: T) => boolean,
 ): Component<T> {
 	const versions = list(frontmatter, key).map((item): Version<T> => {
-		if (!isRecord(item)) throw new HabitDecodeError(`${key}: ожидаются записи с value и since`);
+		if (!isRecord(item)) throw new HabitDecodeError(`${key}: expected entries with value and since`);
 		const because = item.replaced_because;
 		return {
 			value: readValue(item.value, key),
@@ -142,13 +142,13 @@ function readMarks(frontmatter: Frontmatter): Map<string, DayMark> {
 		const id = date.toString();
 		const existing = marks.get(id);
 		if (existing && JSON.stringify(existing) === JSON.stringify(mark)) return;
-		if (existing) throw new HabitDecodeError(`${key}: у дня ${id} уже есть другая отметка`);
+		if (existing) throw new HabitDecodeError(`${key}: ${id} already has another mark`);
 		marks.set(id, mark);
 	};
 	for (const value of list(frontmatter, DONE_TINY)) add(readDate(value, DONE_TINY), TINY, DONE_TINY);
 	for (const value of list(frontmatter, DONE_FULL)) add(readDate(value, DONE_FULL), FULL, DONE_FULL);
 	for (const item of list(frontmatter, MISSED)) {
-		if (!isRecord(item)) throw new HabitDecodeError(`${MISSED}: ожидаются записи с date и reason`);
+		if (!isRecord(item)) throw new HabitDecodeError(`${MISSED}: expected entries with date and reason`);
 		add(readDate(item.date, MISSED), missed(typeof item.reason === "string" ? item.reason : ""), MISSED);
 	}
 	return marks;

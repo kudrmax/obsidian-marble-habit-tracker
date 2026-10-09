@@ -64,7 +64,7 @@ describe("Component", () => {
 				{ value: "a", since: d("2026-09-01") },
 				{ value: "b", since: d("2026-09-01") },
 			]),
-		).toThrow("одной датой");
+		).toThrow("same since date");
 		expect(() =>
 			Component.of([
 				{ value: "a", since: d("2026-09-01") },

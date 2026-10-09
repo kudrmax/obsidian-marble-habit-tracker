@@ -28,8 +28,8 @@ describe("Habit", () => {
 		const input = { name: "Зарядка", anchor: "Кофе", tiny: "1", days: WEEKDAYS };
 		expect(() => Habit.create({ ...input, name: " " }, created)).toThrow(DomainError);
 		expect(() => Habit.create({ ...input, name: "a/b" }, created)).toThrow(DomainError);
-		expect(() => Habit.create({ ...input, anchor: " " }, created)).toThrow("якорь");
-		expect(() => Habit.create({ ...input, tiny: "" }, created)).toThrow("нанодействие");
+		expect(() => Habit.create({ ...input, anchor: " " }, created)).toThrow("anchor");
+		expect(() => Habit.create({ ...input, tiny: "" }, created)).toThrow("Tiny habit");
 		expect(() => Habit.create({ ...input, days: [] }, created)).toThrow(DomainError);
 	});
 

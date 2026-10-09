@@ -15,8 +15,8 @@ export class InMemoryHabitRepository implements HabitRepository {
 
 	async update(path: string, change: (habit: Habit) => Habit): Promise<Habit> {
 		const entry = this.entries.get(path);
-		if (!entry) throw new DomainError("Привычка не найдена");
-		if (entry.kind === "broken") throw new DomainError(`Привычка не читается: ${entry.problem}`);
+		if (!entry) throw new DomainError("Habit not found");
+		if (entry.kind === "broken") throw new DomainError(`Habit can't be read: ${entry.problem}`);
 		const habit = change(entry.habit);
 		this.entries.set(path, { kind: "ok", path, habit });
 		return habit;
@@ -24,7 +24,7 @@ export class InMemoryHabitRepository implements HabitRepository {
 
 	async create(habit: Habit): Promise<string> {
 		const path = `Habits/${habit.name}.md`;
-		if (this.entries.has(path)) throw new DomainError(`Привычка «${habit.name}» уже есть`);
+		if (this.entries.has(path)) throw new DomainError(`Habit "${habit.name}" already exists`);
 		this.entries.set(path, { kind: "ok", path, habit });
 		return path;
 	}

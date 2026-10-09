@@ -10,7 +10,7 @@ export const FULL: DayMark = { kind: "full" };
 
 export function missed(reason: string): DayMark {
 	const text = reason.trim();
-	if (!text) throw new DomainError("Укажи причину, почему не получилось");
+	if (!text) throw new DomainError("Write down a reason");
 	return { kind: "missed", reason: text };
 }
 
@@ -22,5 +22,5 @@ export function nextMark(mark: DayMark | undefined): DayMark | undefined {
 	if (mark === undefined) return TINY;
 	if (mark.kind === "tiny") return FULL;
 	if (mark.kind === "full") return undefined;
-	throw new DomainError("Пропуск меняется явно, а не тапом");
+	throw new DomainError("A missed day is changed from its reason window");
 }

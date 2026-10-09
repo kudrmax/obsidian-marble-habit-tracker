@@ -10,8 +10,8 @@ export type TextPart = (typeof TEXT_PARTS)[number];
 export type Part = TextPart | "schedule";
 
 const REQUIRED_TEXT: ReadonlyArray<[TextPart, string]> = [
-	["anchor", "Не заполнен якорь"],
-	["tiny", "Не заполнено нанодействие"],
+	["anchor", "Anchor is missing"],
+	["tiny", "Tiny habit is missing"],
 ];
 const FORBIDDEN_NAME_CHARS = /[\\/:*?"<>|#^[\]]/;
 
@@ -48,7 +48,7 @@ export type RecipeChange =
 
 function requireText(value: string): string {
 	const text = value.trim();
-	if (!text) throw new DomainError("Значение не может быть пустым");
+	if (!text) throw new DomainError("Value can't be empty");
 	return text;
 }
 
@@ -57,12 +57,12 @@ export class Habit {
 
 	static restore(state: HabitState): Habit {
 		const name = state.name.trim();
-		if (!name) throw new DomainError("У привычки нет названия");
-		if (FORBIDDEN_NAME_CHARS.test(name)) throw new DomainError('В названии нельзя использовать \\ / : * ? " < > | # ^ [ ]');
-		if (state.schedule.isEmpty) throw new DomainError("Не задано расписание");
+		if (!name) throw new DomainError("Give the habit a name");
+		if (FORBIDDEN_NAME_CHARS.test(name)) throw new DomainError('A name can\'t contain \\ / : * ? " < > | # ^ [ ]');
+		if (state.schedule.isEmpty) throw new DomainError("Schedule is missing");
 		for (const [part, message] of REQUIRED_TEXT) if (state.text[part].isEmpty) throw new DomainError(message);
 		for (const [part, component] of Object.entries(state.text)) {
-			if (component.versions.some((version) => !version.value.trim())) throw new DomainError(`Пустое значение в ${part}`);
+			if (component.versions.some((version) => !version.value.trim())) throw new DomainError(`${part} has an empty value`);
 		}
 		return new Habit({ ...state, name });
 	}
@@ -140,7 +140,7 @@ export class Habit {
 	}
 
 	withMark(date: LocalDate, mark: DayMark | undefined, today: LocalDate): Habit {
-		if (date.isAfter(today)) throw new DomainError("Нельзя отметить будущий день");
+		if (date.isAfter(today)) throw new DomainError("Can't mark a day in the future");
 		const marks = new Map(this.state.marks);
 		if (mark) marks.set(date.toString(), mark);
 		else marks.delete(date.toString());

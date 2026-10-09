@@ -73,9 +73,9 @@ describe("HabitService", () => {
 	});
 
 	it("refuses to change an unknown or broken habit", async () => {
-		await expect(service.cycle("Habits/Нет.md", today)).rejects.toThrow("не найдена");
-		repository.entries.set("Habits/Битая.md", { kind: "broken", path: "Habits/Битая.md", name: "Битая", problem: "нет свойств" });
-		await expect(service.cycle("Habits/Битая.md", today)).rejects.toThrow("нет свойств");
+		await expect(service.cycle("Habits/Нет.md", today)).rejects.toThrow("Habit not found");
+		repository.entries.set("Habits/Битая.md", { kind: "broken", path: "Habits/Битая.md", name: "Битая", problem: "no properties" });
+		await expect(service.cycle("Habits/Битая.md", today)).rejects.toThrow("no properties");
 	});
 
 	it("builds each change on the freshly stored habit, not on a stale read", async () => {
