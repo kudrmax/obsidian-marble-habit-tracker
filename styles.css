@@ -123,6 +123,8 @@ button.th-link {
 	cursor: pointer;
 }
 button.th-link svg { width: 13px; height: 13px; }
+button.th-back { gap: 2px; margin: 0 0 4px -4px; color: var(--th-muted); }
+button.th-back svg { width: 18px; height: 18px; }
 
 /* Answer circles: the round control behind every mark */
 .th-mark {

@@ -7,6 +7,8 @@ import { calendarStart, calendarWeeks } from "./calendar";
 import { colorClass } from "./colors";
 import { DayWatcher } from "./DayWatcher";
 import { EditSheet, EditTarget } from "./EditSheet";
+import { icon } from "./components";
+import { HABITS_VIEW } from "./TodayView";
 import { RECIPE_LABELS, dayMonth, describeChange, monthShort, recipeDays } from "./format";
 import { UiContext } from "./UiContext";
 
@@ -101,6 +103,10 @@ export class HabitScreenView extends ItemView {
 		}
 		const habit = entry.habit;
 		const page = root.createDiv({ cls: ["tiny-habits", "th-screen", "th-habit", colorClass(habit.color)] });
+		const back = page.createEl("button", { cls: ["th-link", "th-back"] });
+		icon(back, "back");
+		back.appendText("Habits");
+		back.addEventListener("click", () => void this.leaf.setViewState({ type: HABITS_VIEW, active: true }));
 		const header = page.createDiv("th-screen-header");
 		header.createSpan("th-screen-dot");
 		header.createEl("h1", { cls: "th-title", text: habit.name });
