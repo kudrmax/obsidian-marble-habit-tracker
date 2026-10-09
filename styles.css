@@ -339,7 +339,6 @@ button.th-done-row {
 .th-screen-header { display: flex; align-items: center; gap: 10px; }
 .th-screen-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--th-habit); }
 .th-recipe { display: grid; grid-template-columns: 112px minmax(0, 1fr); row-gap: 10px; align-items: baseline; }
-.th-recipe-label-full, .th-recipe-value-full { margin-top: 10px; }
 .th-recipe-value { color: var(--th-text); cursor: pointer; overflow-wrap: anywhere; }
 .th-recipe-value:hover { color: var(--th-habit); }
 .th-recipe-value.is-empty { color: var(--th-faint); }
