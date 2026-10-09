@@ -88,11 +88,6 @@ export class JarCanvas {
 		this.wake();
 	}
 
-	setLedges(ledges: readonly Box[]): void {
-		this.physics.setLedges(ledges);
-		this.wake();
-	}
-
 	setGravity(gravity: Point): void {
 		this.physics.setGravity(gravity);
 		if (!this.physics.isSettled()) this.wake();

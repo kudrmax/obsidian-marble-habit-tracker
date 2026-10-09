@@ -173,8 +173,8 @@ export class TodayView extends ItemView {
 
 	private updateObstacles(): void {
 		if (!this.jar) return;
-		this.jar.setObstacles(this.shelf ? [this.shelf] : []);
-		this.jar.setLedges(this.ui.settings().bumpText ? this.textBoxes() : []);
+		const text = this.ui.settings().bumpText ? this.textBoxes() : [];
+		this.jar.setObstacles(this.shelf ? [...text, this.shelf] : text);
 	}
 
 	private textBoxes(): Box[] {

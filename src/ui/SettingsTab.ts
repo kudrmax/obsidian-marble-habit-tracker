@@ -48,7 +48,7 @@ export class SettingsTab extends PluginSettingTab {
 			.addToggle((toggle) => toggle.setValue(host.settings.tilt).onChange((value) => save((settings) => (settings.tilt = value))));
 		new Setting(containerEl)
 			.setName("Wins bump into text")
-			.setDesc("Wins fall in through the text, but once in the jar they bounce off titles, habits and circles when you tilt the phone.")
+			.setDesc("Wins land on titles, habits and circles instead of passing behind them.")
 			.addToggle((toggle) => toggle.setValue(host.settings.bumpText).onChange((value) => save((settings) => (settings.bumpText = value))));
 		new Setting(containerEl)
 			.setName("Vibration")
