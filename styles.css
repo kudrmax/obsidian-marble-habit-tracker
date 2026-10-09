@@ -1,0 +1,63 @@
+.tiny-habits {
+	--th-accent: var(--interactive-accent);
+	--th-soft: color-mix(in srgb, var(--interactive-accent) 35%, transparent);
+	--th-cell: 36px;
+	--th-row: 52px;
+	--th-head: 44px;
+	padding: 16px;
+}
+
+.th-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.th-title { font-size: var(--font-ui-large); font-weight: 600; }
+.th-actions { display: flex; gap: 6px; }
+.th-button { min-width: 32px; }
+.th-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 48px 0; color: var(--text-muted); }
+.th-muted { color: var(--text-muted); font-size: var(--font-ui-small); }
+
+.th-grid { display: flex; }
+.th-names { flex: 0 0 auto; max-width: 45%; min-width: 120px; }
+.th-corner { height: var(--th-head); }
+.th-name { height: var(--th-row); display: flex; flex-direction: column; justify-content: center; padding-right: 12px; cursor: pointer; overflow: hidden; }
+.th-name-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.th-name-sub { font-size: var(--font-ui-smaller); color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.th-name.is-broken { opacity: 0.6; }
+.th-redesign { color: var(--th-accent); }
+
+.th-scroller { flex: 1 1 auto; overflow-x: auto; scrollbar-width: thin; }
+.th-row { display: flex; height: var(--th-row); width: max-content; min-width: 100%; align-items: center; }
+.th-row.th-dates { height: var(--th-head); }
+.th-date { width: var(--th-cell); text-align: center; font-size: var(--font-ui-smaller); color: var(--text-muted); line-height: 1.3; }
+.th-date-number { color: var(--text-normal); font-weight: 600; }
+.th-date.is-today .th-date-number { color: var(--th-accent); }
+
+.th-cell { width: var(--th-cell); height: var(--th-row); position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.th-dot { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--background-modifier-border); box-sizing: border-box; position: relative; z-index: 1; }
+.th-cell.is-off .th-dot { border-style: dashed; opacity: 0.5; }
+.th-cell.is-tiny .th-dot { background: var(--th-soft); border-color: transparent; }
+.th-cell.is-full .th-dot { background: var(--th-accent); border-color: transparent; }
+.th-cell.is-missed .th-dot { border-color: var(--text-faint); }
+.th-cell.is-missed .th-dot::after { content: ""; position: absolute; left: 4px; right: 4px; top: 50%; height: 1.5px; margin-top: -0.75px; background: var(--text-faint); }
+.th-cell.join-left::before,
+.th-cell.join-right::after { content: ""; position: absolute; top: 50%; height: 14px; margin-top: -7px; width: 50%; background: var(--th-soft); }
+.th-cell.join-left::before { left: 0; }
+.th-cell.join-right::after { right: 0; }
+
+.th-modal .th-label { font-size: var(--font-ui-smaller); text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-top: 14px; }
+.th-modal .th-field { width: 100%; margin-top: 6px; font-size: var(--font-ui-medium); }
+.th-anchor { margin-top: 4px; }
+.th-buttons { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap; }
+.th-fixes { justify-content: flex-start; border-top: 1px solid var(--background-modifier-border); padding-top: 14px; }
+.th-vertical { flex-direction: column; align-items: stretch; }
+.th-weekdays { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.th-weekday { width: 36px; height: 36px; border-radius: 50%; padding: 0; }
+.th-weekday.is-on { background: var(--interactive-accent); color: var(--text-on-accent); }
+
+.th-celebration { position: fixed; inset: 0; z-index: var(--layer-notice); display: flex; align-items: center; justify-content: center; overflow: hidden; background: color-mix(in srgb, var(--background-primary) 70%, transparent); animation: th-fade 1.5s ease forwards; }
+.th-celebration-card { text-align: center; animation: th-pop 0.35s ease-out; }
+.th-celebration-ring { width: 64px; height: 64px; margin: 0 auto 16px; border-radius: 50%; background: var(--interactive-accent); box-shadow: 0 0 0 10px color-mix(in srgb, var(--interactive-accent) 15%, transparent), 0 0 0 20px color-mix(in srgb, var(--interactive-accent) 7%, transparent); }
+.th-celebration-title { font-size: 32px; font-weight: 700; margin-bottom: 6px; }
+.th-confetti { position: absolute; top: -16px; left: var(--th-x); width: 8px; height: 14px; border-radius: 2px; background: hsl(var(--th-hue) 80% 65%); animation: th-fall 1.4s ease-in var(--th-delay) forwards; }
+
+@keyframes th-fall { to { transform: translateY(110vh) rotate(var(--th-turn)); } }
+@keyframes th-pop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes th-fade { 0%, 75% { opacity: 1; } 100% { opacity: 0; } }
