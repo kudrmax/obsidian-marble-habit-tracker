@@ -20,6 +20,19 @@ export const FIELD_LABELS: Record<TextPart, string> = {
 	celebration: "And celebrate with",
 };
 
+/** The recipe reads as one sentence: "after I … I will … on a good day … and celebrate … every …". */
+export const RECIPE_LABELS: Record<Part, string> = {
+	anchor: "after I",
+	tiny: "I will",
+	full: "on a good day",
+	celebration: "and celebrate",
+	schedule: "every",
+};
+
+export function recipeDays(schedule: Schedule): string {
+	return schedule.isEveryDay ? "day" : schedule.weekdays.map(weekdayShort).join(", ");
+}
+
 export function weekdayShort(day: Weekday): string {
 	return WEEKDAY_SHORT[day];
 }

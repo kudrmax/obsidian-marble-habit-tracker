@@ -1,13 +1,13 @@
 import { ItemView, Menu, Notice, ViewStateResult, WorkspaceLeaf } from "obsidian";
 import { HabitEntry } from "../application/ports";
-import { Habit, TextPart } from "../domain/Habit";
+import { Habit, Part, TextPart } from "../domain/Habit";
 import { LocalDate } from "../domain/LocalDate";
 import { computeStats } from "../domain/Stats";
 import { calendarStart, calendarWeeks } from "./calendar";
 import { colorClass } from "./colors";
 import { DayWatcher } from "./DayWatcher";
 import { EditSheet, EditTarget } from "./EditSheet";
-import { FIELD_LABELS, PART_LABELS, dayMonth, describeChange, monthShort, scheduleLabel } from "./format";
+import { RECIPE_LABELS, dayMonth, describeChange, monthShort, recipeDays } from "./format";
 import { UiContext } from "./UiContext";
 
 export const HABIT_VIEW = "tiny-habits-habit";
@@ -117,21 +117,19 @@ export class HabitScreenView extends ItemView {
 
 	private renderRecipe(page: HTMLElement, habit: Habit): void {
 		const section = this.section(page, "Recipe");
-		const main = section.createDiv("th-recipe");
-		const details = section.createDiv("th-recipe");
-		const row = (grid: HTMLElement, label: string, value: string | undefined, target: EditTarget, isMain = false) => {
-			grid.createSpan({ cls: "th-label", text: label });
-			const cell = grid.createSpan({ cls: "th-recipe-value", text: value ?? "add" });
-			cell.toggleClass("is-main", isMain);
+		const grid = section.createDiv("th-recipe");
+		const row = (part: Part, value: string | undefined, target: EditTarget) => {
+			grid.createSpan({ cls: ["th-label", `th-recipe-label-${part}`], text: RECIPE_LABELS[part] });
+			const cell = grid.createSpan({ cls: ["th-recipe-value", `th-recipe-value-${part}`], text: value ?? "add" });
 			cell.toggleClass("is-empty", value === undefined);
 			cell.addEventListener("click", () => this.edit(habit, target));
 		};
 		const text = (part: TextPart) => habit.text(part).current();
-		row(main, FIELD_LABELS.anchor, text("anchor"), "anchor", true);
-		row(main, FIELD_LABELS.tiny, text("tiny"), "tiny", true);
-		row(details, PART_LABELS.full, text("full"), "full");
-		row(details, PART_LABELS.celebration, text("celebration"), "celebration");
-		row(details, PART_LABELS.schedule, scheduleLabel(habit.currentSchedule), "schedule");
+		row("anchor", text("anchor"), "anchor");
+		row("tiny", text("tiny"), "tiny");
+		row("full", text("full"), "full");
+		row("celebration", text("celebration"), "celebration");
+		row("schedule", recipeDays(habit.currentSchedule), "schedule");
 	}
 
 	private renderProgress(page: HTMLElement, habit: Habit): void {

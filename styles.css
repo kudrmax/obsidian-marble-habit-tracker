@@ -337,11 +337,10 @@ button.th-done-row {
 .tiny-habits.th-screen { max-width: var(--th-column); margin: 0 auto; padding: 16px var(--th-gutter) 48px; box-sizing: border-box; }
 .th-screen-header { display: flex; align-items: center; gap: 10px; }
 .th-screen-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--th-habit); }
-.th-recipe { display: grid; grid-template-columns: 96px minmax(0, 1fr); row-gap: 10px; align-items: baseline; }
-.th-recipe + .th-recipe { margin-top: 16px; row-gap: 8px; }
+.th-recipe { display: grid; grid-template-columns: 112px minmax(0, 1fr); row-gap: 10px; align-items: baseline; }
+.th-recipe-label-full, .th-recipe-value-full { margin-top: 10px; }
 .th-recipe-value { color: var(--th-text); cursor: pointer; overflow-wrap: anywhere; }
 .th-recipe-value:hover { color: var(--th-habit); }
-.th-recipe-value.is-main { font-size: 19px; }
 .th-recipe-value.is-empty { color: var(--th-faint); }
 .th-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .th-stat-value { font-size: 32px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; color: var(--th-muted); }

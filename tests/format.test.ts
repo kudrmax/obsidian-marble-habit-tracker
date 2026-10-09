@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { Schedule } from "../src/domain/Schedule";
-import { anchorLine, dayMonth, describeChange, longDate, scheduleLabel } from "../src/ui/format";
+import { anchorLine, dayMonth, describeChange, longDate, recipeDays, scheduleLabel } from "../src/ui/format";
 import { d } from "./support/dates";
 import { habitNote } from "./support/habits";
 
 describe("format", () => {
+	it("finishes the recipe sentence after \"every\"", () => {
+		expect(recipeDays(Schedule.everyDay())).toBe("day");
+		expect(recipeDays(new Schedule(["fri", "mon", "wed"]))).toBe("Mon, Wed, Fri");
+	});
+
 	it("labels schedules", () => {
 		expect(scheduleLabel(Schedule.everyDay())).toBe("Every day");
 		expect(scheduleLabel(new Schedule(["fri", "mon", "wed"]))).toBe("Mon, Wed, Fri");
