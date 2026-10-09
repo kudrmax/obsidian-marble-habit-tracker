@@ -1,4 +1,4 @@
-import { Pill } from "./jar/JarPhysics";
+import { Box } from "./jar/JarPhysics";
 
 const NAVBAR = ".mobile-navbar";
 
@@ -15,7 +15,7 @@ export class BottomInset {
 
 	constructor(
 		private readonly element: HTMLElement,
-		private readonly onShelf: (shelf: Pill | null) => void,
+		private readonly onShelf: (shelf: Box | null) => void,
 	) {
 		this.resizer.observe(element);
 		this.mutations.observe(document.body, { attributes: true, attributeFilter: ["class"] });
@@ -25,7 +25,7 @@ export class BottomInset {
 	measure(): void {
 		this.track(document.querySelector<HTMLElement>(NAVBAR));
 		const shelf = this.shelf();
-		const inset = shelf ? Math.max(0, Math.ceil(this.element.getBoundingClientRect().height - (shelf.y - shelf.radius))) : 0;
+		const inset = shelf ? Math.max(0, Math.ceil(this.element.getBoundingClientRect().height - shelf.top)) : 0;
 		const key = JSON.stringify([shelf, inset]);
 		if (key === this.last) return;
 		this.last = key;
@@ -39,16 +39,14 @@ export class BottomInset {
 		this.track(null);
 	}
 
-	private shelf(): Pill | null {
+	private shelf(): Box | null {
 		const navbar = this.navbar;
 		if (!navbar || navbar.getClientRects().length === 0) return null;
 		const area = this.element.getBoundingClientRect();
 		const box = navbar.getBoundingClientRect();
 		if (box.top >= area.bottom || box.bottom <= area.top || box.height === 0) return null;
 		const radius = box.height / 2;
-		const left = box.left - area.left + radius;
-		const right = box.right - area.left - radius;
-		return { left, right: Math.max(left, right), y: box.top - area.top + radius, radius };
+		return { left: box.left - area.left, top: box.top - area.top, right: box.right - area.left, bottom: box.bottom - area.top, radius };
 	}
 
 	private track(navbar: HTMLElement | null): void {

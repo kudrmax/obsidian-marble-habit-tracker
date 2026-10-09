@@ -139,13 +139,50 @@ describe("JarPhysics", () => {
 		expect(physics.get("a")?.y).toBeLessThan(150);
 	});
 
-	it("rests on a pill and rolls off its ends", () => {
+	it("rests on a box and rolls off its ends", () => {
 		const physics = new JarPhysics(400, 300);
-		physics.setObstacles([{ left: 100, right: 300, y: 250, radius: 20 }]);
+		physics.setObstacles([{ left: 80, top: 230, right: 320, bottom: 270, radius: 20 }]);
 		physics.add({ id: "on", x: 200, y: 0, r: 12 });
 		physics.add({ id: "beside", x: 30, y: 0, r: 12 });
 		settle(physics);
 		expect(physics.get("on")?.y).toBeCloseTo(218, 0);
 		expect(physics.get("beside")?.y).toBeCloseTo(288, 0);
+	});
+
+	it("pushes a body out of a box it ended up inside", () => {
+		const physics = new JarPhysics(400, 300);
+		physics.add({ id: "a", x: 200, y: 105, r: 12 });
+		physics.setObstacles([{ left: 100, top: 100, right: 300, bottom: 140, radius: 4 }]);
+		physics.step();
+		expect(physics.get("a")?.y).toBeLessThanOrEqual(88.5);
+	});
+
+	it("lets a passing body through boxes until it is clear", () => {
+		const physics = new JarPhysics(400, 300);
+		physics.setObstacles([{ left: 100, top: 100, right: 300, bottom: 140, radius: 4 }]);
+		physics.add({ id: "a", x: 200, y: 120, r: 12, passing: true });
+		physics.step();
+		expect(physics.get("a")?.passing).toBe(true);
+		for (let frame = 0; frame < 60; frame++) physics.step();
+		expect(physics.get("a")?.passing).toBe(false);
+		expect(physics.get("a")?.y).toBeGreaterThan(140);
+	});
+
+	it("slides a body that does not fit under a shelf out to the side", () => {
+		const physics = new JarPhysics(400, 300);
+		physics.setObstacles([{ left: 60, top: 230, right: 340, bottom: 270, radius: 20 }]);
+		physics.add({ id: "big", x: 120, y: 280, r: 22 });
+		for (let frame = 0; frame < 300; frame++) physics.step();
+		const big = physics.get("big");
+		expect(big?.x).toBeLessThan(60);
+		expect(big?.y).toBeCloseTo(278, 0);
+	});
+
+	it("lets a small body rest under a shelf", () => {
+		const physics = new JarPhysics(400, 300);
+		physics.setObstacles([{ left: 60, top: 230, right: 340, bottom: 270, radius: 20 }]);
+		physics.add({ id: "small", x: 200, y: 288, r: 12 });
+		settle(physics);
+		expect(physics.get("small")?.x).toBeCloseTo(200, 0);
 	});
 });

@@ -1,7 +1,7 @@
 import { JarSize } from "../../domain/Jar";
 import { AssetSpec, JAR_DIAMETER, JarMaterial, assetKey, assetSvg } from "./JarAssets";
 import { Hsl, hsl } from "./color";
-import { JarPhysics, Pill, Point } from "./JarPhysics";
+import { Box, JarPhysics, Point } from "./JarPhysics";
 
 export interface JarItem {
 	readonly key: string;
@@ -83,7 +83,7 @@ export class JarCanvas {
 		this.wake();
 	}
 
-	setObstacles(obstacles: readonly Pill[]): void {
+	setObstacles(obstacles: readonly Box[]): void {
 		this.physics.setObstacles(obstacles);
 		this.wake();
 	}

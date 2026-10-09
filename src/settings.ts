@@ -7,6 +7,7 @@ export interface HabitSettings {
 	celebrationLine: boolean;
 	reduceMotion: boolean;
 	tilt: boolean;
+	bumpText: boolean;
 	haptics: boolean;
 }
 
@@ -17,6 +18,7 @@ export const DEFAULT_SETTINGS: HabitSettings = {
 	celebrationLine: true,
 	reduceMotion: false,
 	tilt: true,
+	bumpText: true,
 	haptics: true,
 };
 
@@ -32,6 +34,7 @@ export function loadSettings(data: unknown): HabitSettings {
 		celebrationLine: flag(raw.celebrationLine, DEFAULT_SETTINGS.celebrationLine),
 		reduceMotion: flag(raw.reduceMotion, DEFAULT_SETTINGS.reduceMotion),
 		tilt: flag(raw.tilt, DEFAULT_SETTINGS.tilt),
+		bumpText: flag(raw.bumpText, DEFAULT_SETTINGS.bumpText),
 		haptics: flag(raw.haptics, DEFAULT_SETTINGS.haptics),
 	};
 }

@@ -8,7 +8,7 @@ export interface BodyInput {
 	readonly x: number;
 	readonly y: number;
 	readonly r: number;
-	/** Passes through other bodies until it no longer overlaps any of them. */
+	/** Passes through other bodies and boxes until it no longer overlaps any of them. */
 	readonly passing?: boolean;
 }
 
@@ -23,11 +23,12 @@ export interface Body {
 	passing: boolean;
 }
 
-/** A pill lying horizontally: the segment (left, y)–(right, y) grown by radius. */
-export interface Pill {
+/** A solid rounded rectangle the bodies bounce off. */
+export interface Box {
 	readonly left: number;
+	readonly top: number;
 	readonly right: number;
-	readonly y: number;
+	readonly bottom: number;
 	readonly radius: number;
 }
 
@@ -39,12 +40,13 @@ const ATTRACTION = 0.22;
 const REST_SPEED = 0.05;
 const REST_FRAMES = 30;
 const GRAVITY_EPSILON = 0.01;
+const SQUEEZE = 2;
 
 export class JarPhysics {
 	private readonly items = new Map<string, Body>();
 	private readonly targets = new Map<string, Point>();
 	private gravity: Point = EARTH;
-	private obstacles: readonly Pill[] = [];
+	private obstacles: readonly Box[] = [];
 	private quietFrames = 0;
 
 	constructor(
@@ -58,7 +60,7 @@ export class JarPhysics {
 		this.quietFrames = 0;
 	}
 
-	setObstacles(obstacles: readonly Pill[]): void {
+	setObstacles(obstacles: readonly Box[]): void {
 		this.obstacles = obstacles;
 		this.quietFrames = 0;
 	}
@@ -131,7 +133,9 @@ export class JarPhysics {
 				this.contain(free[i]);
 			}
 		}
-		for (const body of free) if (body.passing) body.passing = free.some((other) => other !== body && overlaps(body, other));
+		for (const body of free) {
+			if (body.passing) body.passing = free.some((other) => other !== body && overlaps(body, other)) || this.obstacles.some((box) => touches(body, box));
+		}
 		let fastest = 0;
 		let hardest = 0;
 		free.forEach((body, index) => {
@@ -163,10 +167,11 @@ export class JarPhysics {
 	}
 
 	private contain(body: Body): void {
-		for (const pill of this.obstacles) pushOut(body, pill);
+		if (!body.passing) for (const box of this.obstacles) pushOut(body, box);
 		if (body.x < body.r) body.x = body.r;
 		if (body.x > this.width - body.r) body.x = this.width - body.r;
 		if (body.y > this.height - body.r) body.y = this.height - body.r;
+		if (!body.passing) for (const box of this.obstacles) if (touches(body, box)) squeeze(body, box, this.width);
 		if (!body.inside) {
 			body.inside = body.y >= body.r;
 			return;
@@ -179,18 +184,44 @@ function overlaps(a: Body, b: Body): boolean {
 	return Math.hypot(b.x - a.x, b.y - a.y) < a.r + b.r;
 }
 
-function pushOut(body: Body, pill: Pill): void {
-	const x = Math.max(pill.left, Math.min(pill.right, body.x));
+function inner(box: Box): Box {
+	const radius = Math.min(box.radius, (box.right - box.left) / 2, (box.bottom - box.top) / 2);
+	return { left: box.left + radius, top: box.top + radius, right: box.right - radius, bottom: box.bottom - radius, radius };
+}
+
+function touches(body: Body, box: Box): boolean {
+	const core = inner(box);
+	const dx = body.x - Math.max(core.left, Math.min(core.right, body.x));
+	const dy = body.y - Math.max(core.top, Math.min(core.bottom, body.y));
+	return Math.hypot(dx, dy) < core.radius + body.r;
+}
+
+/** A body jammed between a box and the floor slides out towards the nearer end of the box. */
+function squeeze(body: Body, box: Box, width: number): void {
+	const towardsLeft = body.x - box.left < box.right - body.x;
+	body.x = Math.max(body.r, Math.min(width - body.r, body.x + (towardsLeft ? -SQUEEZE : SQUEEZE)));
+}
+
+function pushOut(body: Body, box: Box): void {
+	const core = inner(box);
+	const min = core.radius + body.r;
+	const x = Math.max(core.left, Math.min(core.right, body.x));
+	const y = Math.max(core.top, Math.min(core.bottom, body.y));
 	const dx = body.x - x;
-	const dy = body.y - pill.y;
-	const min = pill.radius + body.r;
+	const dy = body.y - y;
 	const distanceSquared = dx * dx + dy * dy;
 	if (distanceSquared >= min * min) return;
-	const distance = Math.sqrt(distanceSquared);
-	if (distance === 0) {
-		body.y = pill.y - min;
+	if (distanceSquared > 0) {
+		const distance = Math.sqrt(distanceSquared);
+		body.x = x + (dx / distance) * min;
+		body.y = y + (dy / distance) * min;
 		return;
 	}
-	body.x = x + (dx / distance) * min;
-	body.y = pill.y + (dy / distance) * min;
+	const exits = [
+		{ depth: body.x - core.left, apply: () => (body.x = core.left - min) },
+		{ depth: core.right - body.x, apply: () => (body.x = core.right + min) },
+		{ depth: body.y - core.top, apply: () => (body.y = core.top - min) },
+		{ depth: core.bottom - body.y, apply: () => (body.y = core.bottom + min) },
+	];
+	exits.reduce((best, exit) => (exit.depth < best.depth ? exit : best)).apply();
 }
