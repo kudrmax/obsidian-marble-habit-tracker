@@ -7,6 +7,6 @@ export type HabitEntry =
 export interface HabitRepository {
 	list(): HabitEntry[];
 	get(path: string): HabitEntry | undefined;
-	save(path: string, habit: Habit): Promise<void>;
+	update(path: string, change: (habit: Habit) => Habit): Promise<Habit>;
 	create(habit: Habit): Promise<string>;
 }

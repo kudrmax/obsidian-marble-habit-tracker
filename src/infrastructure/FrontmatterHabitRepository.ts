@@ -28,10 +28,16 @@ export class FrontmatterHabitRepository implements HabitRepository {
 		return file instanceof TFile ? this.read(file) : undefined;
 	}
 
-	async save(path: string, habit: Habit): Promise<void> {
+	async update(path: string, change: (habit: Habit) => Habit): Promise<Habit> {
 		const file = this.app.vault.getAbstractFileByPath(path);
-		if (!(file instanceof TFile)) throw new DomainError("Заметка привычки не найдена");
-		await this.app.fileManager.processFrontMatter(file, (frontmatter) => encodeHabit(habit, frontmatter));
+		if (!(file instanceof TFile)) throw new DomainError("Привычка не найдена");
+		let updated: Habit | undefined;
+		await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+			updated = change(this.decodeFresh(file, frontmatter));
+			encodeHabit(updated, frontmatter);
+		});
+		if (!updated) throw new DomainError("Привычка не найдена");
+		return updated;
 	}
 
 	async create(habit: Habit): Promise<string> {
@@ -46,6 +52,15 @@ export class FrontmatterHabitRepository implements HabitRepository {
 
 	private folderPath(): string {
 		return normalizePath(this.folder());
+	}
+
+	private decodeFresh(file: TFile, frontmatter: Record<string, unknown>): Habit {
+		try {
+			return decodeHabit(file.basename, frontmatter);
+		} catch (error) {
+			if (error instanceof HabitDecodeError) throw new DomainError(`Привычка не читается: ${error.message}`);
+			throw error;
+		}
 	}
 
 	private read(file: TFile): HabitEntry {

@@ -13,9 +13,13 @@ export class InMemoryHabitRepository implements HabitRepository {
 		return this.entries.get(path);
 	}
 
-	async save(path: string, habit: Habit): Promise<void> {
-		if (!this.entries.has(path)) throw new Error(`No habit at ${path}`);
+	async update(path: string, change: (habit: Habit) => Habit): Promise<Habit> {
+		const entry = this.entries.get(path);
+		if (!entry) throw new DomainError("Привычка не найдена");
+		if (entry.kind === "broken") throw new DomainError(`Привычка не читается: ${entry.problem}`);
+		const habit = change(entry.habit);
 		this.entries.set(path, { kind: "ok", path, habit });
+		return habit;
 	}
 
 	async create(habit: Habit): Promise<string> {

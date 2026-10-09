@@ -1,6 +1,5 @@
 import { Clock } from "../domain/Clock";
 import { DayMark, nextMark } from "../domain/DayMark";
-import { DomainError } from "../domain/DomainError";
 import { Habit, NewHabit, TextPart } from "../domain/Habit";
 import { LocalDate, Weekday } from "../domain/LocalDate";
 import { Schedule } from "../domain/Schedule";
@@ -17,47 +16,39 @@ export class HabitService {
 	}
 
 	async cycle(path: string, date: LocalDate): Promise<Habit> {
-		const habit = this.load(path);
-		return this.store(path, habit.withMark(date, nextMark(habit.markOn(date)), this.today()));
+		const today = this.today();
+		return this.repository.update(path, (habit) => habit.withMark(date, nextMark(habit.markOn(date)), today));
 	}
 
 	async setMark(path: string, date: LocalDate, mark: DayMark | undefined): Promise<Habit> {
-		return this.store(path, this.load(path).withMark(date, mark, this.today()));
+		const today = this.today();
+		return this.repository.update(path, (habit) => habit.withMark(date, mark, today));
 	}
 
 	async replaceText(path: string, part: TextPart, value: string, because?: string): Promise<Habit> {
-		return this.store(path, this.load(path).replaceText(part, value, this.today(), because));
+		const today = this.today();
+		return this.repository.update(path, (habit) => habit.replaceText(part, value, today, because));
 	}
 
 	async correctText(path: string, part: TextPart, value: string): Promise<Habit> {
-		return this.store(path, this.load(path).correctText(part, value));
+		return this.repository.update(path, (habit) => habit.correctText(part, value));
 	}
 
 	async replaceSchedule(path: string, days: readonly Weekday[], because?: string): Promise<Habit> {
-		return this.store(path, this.load(path).replaceSchedule(new Schedule(days), this.today(), because));
+		const today = this.today();
+		return this.repository.update(path, (habit) => habit.replaceSchedule(new Schedule(days), today, because));
 	}
 
 	async correctSchedule(path: string, days: readonly Weekday[]): Promise<Habit> {
-		return this.store(path, this.load(path).correctSchedule(new Schedule(days)));
+		return this.repository.update(path, (habit) => habit.correctSchedule(new Schedule(days)));
 	}
 
 	async archive(path: string): Promise<Habit> {
-		return this.store(path, this.load(path).archive());
+		return this.repository.update(path, (habit) => habit.archive());
 	}
 
 	async create(input: NewHabit): Promise<string> {
 		return this.repository.create(Habit.create(input, this.today()));
 	}
 
-	private load(path: string): Habit {
-		const entry = this.repository.get(path);
-		if (!entry) throw new DomainError("Привычка не найдена");
-		if (entry.kind === "broken") throw new DomainError(`Привычка не читается: ${entry.problem}`);
-		return entry.habit;
-	}
-
-	private async store(path: string, habit: Habit): Promise<Habit> {
-		await this.repository.save(path, habit);
-		return habit;
-	}
 }

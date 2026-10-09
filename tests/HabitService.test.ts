@@ -4,6 +4,7 @@ import { FULL, TINY, missed } from "../src/domain/DayMark";
 import { DomainError } from "../src/domain/DomainError";
 import { WEEKDAYS } from "../src/domain/LocalDate";
 import { InMemoryHabitRepository } from "./support/InMemoryHabitRepository";
+import { StaleReadRepository } from "./support/StaleReadRepository";
 import { d } from "./support/dates";
 
 const today = d("2026-10-09");
@@ -70,5 +71,18 @@ describe("HabitService", () => {
 		await expect(service.cycle("Habits/Нет.md", today)).rejects.toThrow("не найдена");
 		repository.entries.set("Habits/Битая.md", { kind: "broken", path: "Habits/Битая.md", name: "Битая", problem: "нет свойств" });
 		await expect(service.cycle("Habits/Битая.md", today)).rejects.toThrow("нет свойств");
+	});
+
+	it("builds each change on the freshly stored habit, not on a stale read", async () => {
+		const stale = new StaleReadRepository();
+		const fresh = new HabitService(stale, { today: () => today });
+		const stalePath = await fresh.create({ name: "Нить", anchor: "Зубы", tiny: "1 зуб", days: WEEKDAYS });
+		stale.freeze();
+		await fresh.cycle(stalePath, d("2026-10-08"));
+		await fresh.cycle(stalePath, today);
+		await fresh.cycle(stalePath, today);
+		const habit = stale.freshHabit(stalePath);
+		expect(habit.markOn(d("2026-10-08"))).toEqual(TINY);
+		expect(habit.markOn(today)).toEqual(FULL);
 	});
 });
