@@ -183,23 +183,25 @@ export class HabitScreenView extends ItemView {
 	}
 
 	private renderHistory(page: HTMLElement, habit: Habit): void {
+		const misses = habit.marks().flatMap(([date, mark]) => (mark.kind === "missed" ? [{ date, reason: mark.reason }] : []));
+		const changes = habit.changes();
+		if (misses.length === 0 && changes.length === 0) return;
 		const section = this.section(page, "History");
-		const row = (date: LocalDate, kind: "missed" | "change" | "start", text: string, note?: string) => {
+		const row = (date: LocalDate, kind: "missed" | "change", text: string, note?: string) => {
 			const item = section.createDiv("th-history-row");
 			item.createSpan({ cls: "th-history-date", text: dayMonth(date) });
 			item.createSpan({ cls: ["th-history-icon", `is-${kind}`] });
 			const body = item.createSpan({ cls: "th-history-text", text });
 			if (note) body.createSpan({ cls: "th-history-note", text: note });
 		};
-
-		section.createEl("h3", { cls: "th-subtitle", text: "Not today" });
-		const misses = habit.marks().flatMap(([date, mark]) => (mark.kind === "missed" ? [{ date, reason: mark.reason }] : []));
-		if (misses.length === 0) section.createDiv({ cls: "th-quiet", text: "Nothing yet" });
-		for (const miss of misses) row(miss.date, "missed", miss.reason);
-
-		section.createEl("h3", { cls: "th-subtitle", text: "Recipe changes" });
-		for (const change of habit.changes()) row(change.date, "change", describeChange(change), change.because);
-		row(habit.createdOn, "start", "Started");
+		if (misses.length) {
+			section.createEl("h3", { cls: "th-subtitle", text: "Not today" });
+			for (const miss of misses) row(miss.date, "missed", miss.reason);
+		}
+		if (changes.length) {
+			section.createEl("h3", { cls: "th-subtitle", text: "Recipe changes" });
+			for (const change of changes) row(change.date, "change", describeChange(change), change.because);
+		}
 	}
 
 	private edit(habit: Habit, target: EditTarget): void {
