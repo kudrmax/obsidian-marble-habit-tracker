@@ -11,6 +11,7 @@ import { celebrationText, recipeLine, weekdayShort } from "./format";
 import { MissReasonModal } from "./MissReasonModal";
 import { visibleEntries } from "./order";
 import { DayWatcher } from "./DayWatcher";
+import { ScrollAnchor } from "./ScrollAnchor";
 import { UiContext } from "./UiContext";
 
 export const HABITS_VIEW = "tiny-habits-grid";
@@ -24,6 +25,8 @@ const DAY_CHECK_MS = 60_000;
 export class HabitsView extends ItemView {
 	private daysShown = PAGE_DAYS;
 	private scroller: HTMLElement | null = null;
+	private readonly anchor = new ScrollAnchor();
+	private readonly resizes = new ResizeObserver(() => this.applyAnchor());
 
 	constructor(
 		leaf: WorkspaceLeaf,
@@ -50,18 +53,16 @@ export class HabitsView extends ItemView {
 	}
 
 	override async onOpen(): Promise<void> {
+		this.register(() => this.resizes.disconnect());
 		this.render();
-		const scrollToToday = () => {
-			if (this.scroller) this.scroller.scrollLeft = this.scroller.scrollWidth;
-		};
-		scrollToToday();
-		window.requestAnimationFrame(scrollToToday);
 	}
 
 	refresh(): void {
-		const fromRight = this.scroller ? this.scroller.scrollWidth - this.scroller.scrollLeft : 0;
 		this.render();
-		if (this.scroller) this.scroller.scrollLeft = this.scroller.scrollWidth - fromRight;
+	}
+
+	private applyAnchor(): void {
+		if (this.scroller) this.scroller.scrollLeft = this.anchor.scrollLeft(this.scroller);
 	}
 
 	private render(): void {
@@ -91,6 +92,8 @@ export class HabitsView extends ItemView {
 		names.createDiv("th-corner");
 		const scroller = grid.createDiv("th-scroller");
 		this.scroller = scroller;
+		this.resizes.disconnect();
+		this.resizes.observe(scroller);
 
 		const dates = scroller.createDiv("th-row th-dates");
 		for (const day of days) {
@@ -104,7 +107,9 @@ export class HabitsView extends ItemView {
 			if (entry.kind === "broken") continue;
 			for (const day of days) this.renderCell(row, entry.path, entry.habit, day);
 		}
+		this.applyAnchor();
 		scroller.addEventListener("scroll", () => {
+			this.anchor.remember(scroller);
 			if (scroller.scrollLeft < LOAD_MORE_THRESHOLD_PX) this.loadMore();
 		});
 	}
