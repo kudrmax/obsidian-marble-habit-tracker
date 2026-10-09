@@ -62,6 +62,11 @@ describe("HabitService", () => {
 		expect(repository.habit(path).currentSchedule.weekdays).toEqual(["sun"]);
 	});
 
+	it("changes the color", async () => {
+		await service.setColor(path, "orange");
+		expect(repository.habit(path).color).toBe("orange");
+	});
+
 	it("archives", async () => {
 		await service.archive(path);
 		expect(repository.habit(path).archived).toBe(true);

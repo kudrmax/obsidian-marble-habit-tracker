@@ -1,6 +1,7 @@
 import { Clock } from "../domain/Clock";
 import { DayMark, nextMark } from "../domain/DayMark";
 import { Habit, NewHabit, TextPart } from "../domain/Habit";
+import { HabitColor } from "../domain/HabitColor";
 import { LocalDate, Weekday } from "../domain/LocalDate";
 import { Schedule } from "../domain/Schedule";
 import { HabitRepository } from "./ports";
@@ -41,6 +42,10 @@ export class HabitService {
 
 	async correctSchedule(path: string, days: readonly Weekday[]): Promise<Habit> {
 		return this.repository.update(path, (habit) => habit.correctSchedule(new Schedule(days)));
+	}
+
+	async setColor(path: string, color: HabitColor | undefined): Promise<Habit> {
+		return this.repository.update(path, (habit) => habit.withColor(color));
 	}
 
 	async archive(path: string): Promise<Habit> {

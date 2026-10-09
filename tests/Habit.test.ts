@@ -96,4 +96,12 @@ describe("Habit", () => {
 	it("archives", () => {
 		expect(base().archive().archived).toBe(true);
 	});
+
+	it("has an optional color from the theme palette", () => {
+		expect(base().color).toBeUndefined();
+		const blue = Habit.create({ name: "Floss", anchor: "Brush", tiny: "1 tooth", days: WEEKDAYS, color: "blue" }, created);
+		expect(blue.color).toBe("blue");
+		expect(blue.withColor("pink").color).toBe("pink");
+		expect(blue.withColor(undefined).color).toBeUndefined();
+	});
 });

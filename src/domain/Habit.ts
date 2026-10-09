@@ -1,6 +1,7 @@
 import { Component, Version } from "./Component";
 import { DayMark } from "./DayMark";
 import { DomainError } from "./DomainError";
+import { HabitColor } from "./HabitColor";
 import { LocalDate, Weekday } from "./LocalDate";
 import { Schedule } from "./Schedule";
 
@@ -19,6 +20,7 @@ export const sameSchedule = (a: Schedule, b: Schedule): boolean => a.equals(b);
 export interface HabitState {
 	readonly name: string;
 	readonly order?: number;
+	readonly color?: HabitColor;
 	readonly archived: boolean;
 	readonly schedule: Component<Schedule>;
 	readonly text: Readonly<Record<TextPart, Component<string>>>;
@@ -31,6 +33,7 @@ export interface NewHabit {
 	readonly tiny: string;
 	readonly full?: string;
 	readonly celebration?: string;
+	readonly color?: HabitColor;
 	readonly days: readonly Weekday[];
 }
 
@@ -71,6 +74,7 @@ export class Habit {
 		};
 		return Habit.restore({
 			name: input.name,
+			color: input.color,
 			archived: false,
 			schedule: Component.start(new Schedule(input.days), today, sameSchedule),
 			text: {
@@ -89,6 +93,10 @@ export class Habit {
 
 	get order(): number | undefined {
 		return this.state.order;
+	}
+
+	get color(): HabitColor | undefined {
+		return this.state.color;
 	}
 
 	get archived(): boolean {
@@ -153,6 +161,10 @@ export class Habit {
 
 	correctSchedule(schedule: Schedule): Habit {
 		return new Habit({ ...this.state, schedule: this.state.schedule.correct(schedule) });
+	}
+
+	withColor(color: HabitColor | undefined): Habit {
+		return new Habit({ ...this.state, color });
 	}
 
 	archive(): Habit {

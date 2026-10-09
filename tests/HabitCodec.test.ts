@@ -68,6 +68,15 @@ describe("decodeHabit", () => {
 		);
 	});
 
+	it("reads and writes the habit color", () => {
+		const habit = decodeHabit("Зарядка", example({ color: "green" }));
+		expect(habit.color).toBe("green");
+		const frontmatter: Frontmatter = {};
+		encodeHabit(habit, frontmatter);
+		expect(frontmatter.color).toBe("green");
+		expect(() => decodeHabit("Зарядка", example({ color: "magenta" }))).toThrow("magenta");
+	});
+
 	it("reads archived", () => {
 		expect(decodeHabit("Зарядка", example({ archived: true })).archived).toBe(true);
 	});

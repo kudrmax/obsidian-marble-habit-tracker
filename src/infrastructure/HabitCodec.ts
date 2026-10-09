@@ -2,6 +2,7 @@ import { Component, Version } from "../domain/Component";
 import { DayMark, FULL, TINY, missed } from "../domain/DayMark";
 import { DomainError } from "../domain/DomainError";
 import { Habit, TEXT_PARTS, TextPart, sameSchedule } from "../domain/Habit";
+import { HabitColor, isHabitColor } from "../domain/HabitColor";
 import { LocalDate, WEEKDAYS, Weekday } from "../domain/LocalDate";
 import { Schedule } from "../domain/Schedule";
 
@@ -23,6 +24,7 @@ export function decodeHabit(name: string, frontmatter: Frontmatter | null | unde
 		return Habit.restore({
 			name,
 			order: readOrder(frontmatter.order),
+			color: readColor(frontmatter.color),
 			archived: frontmatter.archived === true,
 			schedule: readVersions(frontmatter, "schedule", readSchedule, sameSchedule),
 			text,
@@ -36,6 +38,7 @@ export function decodeHabit(name: string, frontmatter: Frontmatter | null | unde
 
 export function encodeHabit(habit: Habit, frontmatter: Frontmatter): void {
 	put(frontmatter, "order", habit.order);
+	put(frontmatter, "color", habit.color);
 	frontmatter.schedule = encodeVersions(habit.schedule.versions, (schedule) => schedule.weekdays);
 	for (const part of TEXT_PARTS) put(frontmatter, part, nonEmpty(encodeVersions(habit.text(part).versions, (value) => value)));
 	const marks = habit.marks();
@@ -82,6 +85,12 @@ function readOrder(value: unknown): number | undefined {
 	if (value === undefined || value === null) return undefined;
 	if (typeof value === "number" && Number.isFinite(value)) return value;
 	throw new HabitDecodeError(`order: ожидается число, а не «${String(value)}»`);
+}
+
+function readColor(value: unknown): HabitColor | undefined {
+	if (value === undefined || value === null || value === "") return undefined;
+	if (isHabitColor(value)) return value;
+	throw new HabitDecodeError(`color: unknown color "${String(value)}"`);
 }
 
 function readDate(value: unknown, where: string): LocalDate {
