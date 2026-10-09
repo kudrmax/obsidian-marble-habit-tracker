@@ -10,6 +10,7 @@ import { cellLook } from "./chain";
 import { celebrationText, recipeLine, weekdayShort } from "./format";
 import { MissReasonModal } from "./MissReasonModal";
 import { visibleEntries } from "./order";
+import { DayWatcher } from "./DayWatcher";
 import { UiContext } from "./UiContext";
 
 export const HABITS_VIEW = "tiny-habits-grid";
@@ -17,6 +18,8 @@ export const HABITS_VIEW = "tiny-habits-grid";
 const PAGE_DAYS = 60;
 const LONG_PRESS_MS = 500;
 const LOAD_MORE_THRESHOLD_PX = 200;
+
+const DAY_CHECK_MS = 60_000;
 
 export class HabitsView extends ItemView {
 	private daysShown = PAGE_DAYS;
@@ -27,6 +30,11 @@ export class HabitsView extends ItemView {
 		private readonly ui: UiContext,
 	) {
 		super(leaf);
+		const watcher = new DayWatcher(ui.service, () => this.refresh());
+		const check = () => watcher.check();
+		this.registerDomEvent(window, "focus", check);
+		this.registerDomEvent(document, "visibilitychange", check);
+		this.registerInterval(window.setInterval(check, DAY_CHECK_MS));
 	}
 
 	override getViewType(): string {

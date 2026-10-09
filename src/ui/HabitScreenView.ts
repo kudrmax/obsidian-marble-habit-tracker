@@ -8,6 +8,7 @@ import { calendarStart, calendarWeeks } from "./calendar";
 import { ScheduleModal, TextComponentModal } from "./ComponentModal";
 import { BREAKDOWN_LABELS, PART_LABELS, dayMonth, describeChange, scheduleLabel } from "./format";
 import { PartPickerModal } from "./PartPickerModal";
+import { DayWatcher } from "./DayWatcher";
 import { UiContext } from "./UiContext";
 
 export const HABIT_VIEW = "tiny-habits-habit";
@@ -19,6 +20,8 @@ function section(root: HTMLElement, title: string): void {
 	root.createEl("h4", { cls: "th-section", text: title });
 }
 
+const DAY_CHECK_MS = 60_000;
+
 export class HabitScreenView extends ItemView {
 	private path = "";
 
@@ -27,6 +30,11 @@ export class HabitScreenView extends ItemView {
 		private readonly ui: UiContext,
 	) {
 		super(leaf);
+		const watcher = new DayWatcher(ui.service, () => this.refresh());
+		const check = () => watcher.check();
+		this.registerDomEvent(window, "focus", check);
+		this.registerDomEvent(document, "visibilitychange", check);
+		this.registerInterval(window.setInterval(check, DAY_CHECK_MS));
 	}
 
 	override getViewType(): string {
