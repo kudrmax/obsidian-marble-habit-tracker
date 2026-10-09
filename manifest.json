@@ -1,0 +1,10 @@
+{
+  "id": "tiny-habits",
+  "name": "Tiny Habits",
+  "version": "0.1.0",
+  "minAppVersion": "1.6.6",
+  "description": "Habit tracker built around BJ Fogg's Tiny Habits method. Habits live in Markdown notes.",
+  "author": "kudrmax",
+  "authorUrl": "https://github.com/kudrmax",
+  "isDesktopOnly": false
+}
