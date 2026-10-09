@@ -1,30 +1,297 @@
 {
-  "v": 3,
-  "createdOnFiles": {"v": 1, "at": "2026-10-09T09:00:00Z"},
-  "title": "Tiny Habits Redesign",
-  "launch": {"view": "canvas"},
-  "pages": [],
-  "boards": {
-    "Prototype.dc.html": {"x": 0, "y": 300, "w": 390, "h": 844, "title": "Today — tap the circle, hold for more", "is_interactive": true, "radius": 40},
-    "DayClosed.dc.html": {"x": 470, "y": 300, "w": 390, "h": 844, "title": "Day closed", "is_interactive": true, "radius": 40},
-    "Empty.dc.html": {"x": 940, "y": 300, "w": 390, "h": 844, "title": "First run — no habits yet", "is_interactive": true, "radius": 40},
-    "Habit.dc.html": {"x": 0, "y": 1500, "w": 390, "h": 1200, "title": "Habit — recipe · progress · history", "is_interactive": true, "radius": 40},
-    "Edit.dc.html": {"x": 470, "y": 1500, "w": 390, "h": 844, "title": "Edit — one screen for any part of the recipe", "is_interactive": true, "radius": 40},
-    "NewHabit.dc.html": {"x": 940, "y": 1500, "w": 390, "h": 844, "title": "New habit — written as a recipe", "is_interactive": true, "radius": 40},
-    "Settings.dc.html": {"x": 0, "y": 3440, "w": 390, "h": 844, "title": "Plugin settings — reference only", "is_interactive": true, "radius": 40},
-    "ProtoAura.dc.html": {"x": 470, "y": 3440, "w": 390, "h": 844, "title": "Material · Aura", "is_interactive": true, "radius": 40},
-    "ProtoHalftone.dc.html": {"x": 940, "y": 3440, "w": 390, "h": 844, "title": "Material · Halftone", "is_interactive": true, "radius": 40},
-    "Desktop.dc.html": {"x": 0, "y": 4664, "w": 1440, "h": 900, "title": "Desktop — Today in an Obsidian tab", "is_interactive": true, "radius": 12},
-    "Assets.dc.html": {"x": 0, "y": 5944, "w": 1330, "h": 1020, "title": "Jar assets"}
+ "v": 3,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-10-09T09:00:00Z"
+ },
+ "title": "Tiny Habits Redesign",
+ "launch": {
+  "view": "canvas"
+ },
+ "pages": [],
+ "boards": {
+  "Prototype.dc.html": {
+   "x": 0,
+   "y": 300,
+   "w": 390,
+   "h": 844,
+   "title": "Today — tap the circle, hold for more",
+   "is_interactive": true,
+   "radius": 40
   },
-  "order": ["Prototype.dc.html", "DayClosed.dc.html", "Empty.dc.html", "Habit.dc.html", "Edit.dc.html", "NewHabit.dc.html", "Settings.dc.html", "ProtoAura.dc.html", "ProtoHalftone.dc.html", "Desktop.dc.html", "Assets.dc.html"],
-  "notes": {
-    "titleToday": {"x": 0, "y": 0, "text": "Today · the screen you open 90% of the time", "kind": "title1", "maxW": 1330},
-    "titleHabit": {"x": 0, "y": 1220, "text": "One habit · details, edit, creation", "kind": "title1", "maxW": 1330},
-    "titleSettings": {"x": 0, "y": 3160, "text": "Settings · the jar material is your choice", "kind": "title1", "maxW": 1330},
-    "settingsNote": {"x": -360, "y": 3440, "w": 300, "text": "Reference only. Real settings live in Obsidian’s native plugin settings tab — it has its own controls and look, so this screen shows what to offer, not how it will be drawn.", "fill": "yellow"},
-    "titleDesktop": {"x": 0, "y": 4384, "text": "Desktop · Today", "kind": "title1", "maxW": 1440},
-    "titleAssets": {"x": 0, "y": 5664, "text": "Jar assets", "kind": "title1", "maxW": 1330}
+  "DayClosed.dc.html": {
+   "x": 470,
+   "y": 300,
+   "w": 390,
+   "h": 844,
+   "title": "Day closed",
+   "is_interactive": true,
+   "radius": 40
   },
-  "designSystems": []
+  "Empty.dc.html": {
+   "x": 940,
+   "y": 300,
+   "w": 390,
+   "h": 844,
+   "title": "First run — no habits yet",
+   "is_interactive": true,
+   "radius": 40
+  },
+  "Habit.dc.html": {
+   "x": 0,
+   "y": 1500,
+   "w": 390,
+   "h": 1200,
+   "title": "Habit — recipe · progress · history",
+   "is_interactive": true,
+   "radius": 40
+  },
+  "Edit.dc.html": {
+   "x": 470,
+   "y": 1500,
+   "w": 390,
+   "h": 844,
+   "title": "Edit — one screen for any part of the recipe",
+   "is_interactive": true,
+   "radius": 40
+  },
+  "NewHabit.dc.html": {
+   "x": 940,
+   "y": 1500,
+   "w": 390,
+   "h": 844,
+   "title": "New habit — written as a recipe",
+   "is_interactive": true,
+   "radius": 40
+  },
+  "Settings.dc.html": {
+   "x": 0,
+   "y": 3440,
+   "w": 390,
+   "h": 844,
+   "title": "Plugin settings — reference only",
+   "is_interactive": true,
+   "radius": 40
+  },
+  "ProtoAura.dc.html": {
+   "x": 470,
+   "y": 3440,
+   "w": 390,
+   "h": 844,
+   "title": "Material · Aura",
+   "is_interactive": true,
+   "radius": 40
+  },
+  "ProtoHalftone.dc.html": {
+   "x": 940,
+   "y": 3440,
+   "w": 390,
+   "h": 844,
+   "title": "Material · Halftone",
+   "is_interactive": true,
+   "radius": 40
+  },
+  "Desktop.dc.html": {
+   "x": 0,
+   "y": 4664,
+   "w": 1440,
+   "h": 900,
+   "title": "Desktop — Today in an Obsidian tab",
+   "is_interactive": true,
+   "radius": 12
+  },
+  "Assets.dc.html": {
+   "x": 0,
+   "y": 5944,
+   "w": 1330,
+   "h": 1020,
+   "title": "Jar assets"
+  },
+  "RowsLines.dc.html": {
+   "x": 0,
+   "y": -2280,
+   "w": 390,
+   "h": 844,
+   "title": "Now · hairlines",
+   "is_interactive": true,
+   "radius": 40
+  },
+  "RowsAir.dc.html": {
+   "x": 470,
+   "y": -2280,
+   "w": 390,
+   "h": 844,
+   "title": "A · Air — spacing only",
+   "is_interactive": true,
+   "radius": 40
+  },
+  "RowsCards.dc.html": {
+   "x": 940,
+   "y": -2280,
+   "w": 390,
+   "h": 844,
+   "title": "B · Cards — soft surfaces",
+   "is_interactive": true,
+   "radius": 40
+  },
+  "RowsRail.dc.html": {
+   "x": 1410,
+   "y": -2280,
+   "w": 390,
+   "h": 844,
+   "title": "C · Rail — habit color on the left",
+   "is_interactive": true,
+   "radius": 40
+  },
+  "RowsRings.dc.html": {
+   "x": 1880,
+   "y": -2280,
+   "w": 390,
+   "h": 844,
+   "title": "D · Rings — empty circle in habit color",
+   "is_interactive": true,
+   "radius": 40
+  },
+  "FinaleJar.dc.html": {
+   "x": 470,
+   "y": -1100,
+   "w": 390,
+   "h": 844,
+   "title": "1 · Jar — today’s balls glow",
+   "is_interactive": true,
+   "radius": 40
+  },
+  "FinaleRing.dc.html": {
+   "x": 940,
+   "y": -1100,
+   "w": 390,
+   "h": 844,
+   "title": "2 · Ring — the day as a full circle",
+   "is_interactive": true,
+   "radius": 40
+  },
+  "FinaleStreak.dc.html": {
+   "x": 1410,
+   "y": -1100,
+   "w": 390,
+   "h": 844,
+   "title": "3 · Streak — days closed in a row",
+   "is_interactive": true,
+   "radius": 40
+  },
+  "FinaleRecap.dc.html": {
+   "x": 1880,
+   "y": -1100,
+   "w": 390,
+   "h": 844,
+   "title": "4 · Recap — who you were today",
+   "is_interactive": true,
+   "radius": 40
+  },
+  "DayClosedNow.dc.html": {
+   "x": 0,
+   "y": -1100,
+   "w": 390,
+   "h": 844,
+   "title": "Now · title + line",
+   "is_interactive": true,
+   "radius": 40
+  }
+ },
+ "order": [
+  "RowsLines.dc.html",
+  "RowsAir.dc.html",
+  "RowsCards.dc.html",
+  "RowsRail.dc.html",
+  "RowsRings.dc.html",
+  "DayClosedNow.dc.html",
+  "FinaleJar.dc.html",
+  "FinaleRing.dc.html",
+  "FinaleStreak.dc.html",
+  "FinaleRecap.dc.html",
+  "Prototype.dc.html",
+  "DayClosed.dc.html",
+  "Empty.dc.html",
+  "Habit.dc.html",
+  "Edit.dc.html",
+  "NewHabit.dc.html",
+  "Settings.dc.html",
+  "ProtoAura.dc.html",
+  "ProtoHalftone.dc.html",
+  "Desktop.dc.html",
+  "Assets.dc.html"
+ ],
+ "notes": {
+  "titleToday": {
+   "x": 0,
+   "y": 0,
+   "text": "Today · the screen you open 90% of the time",
+   "kind": "title1",
+   "maxW": 1330
+  },
+  "titleHabit": {
+   "x": 0,
+   "y": 1220,
+   "text": "One habit · details, edit, creation",
+   "kind": "title1",
+   "maxW": 1330
+  },
+  "titleSettings": {
+   "x": 0,
+   "y": 3160,
+   "text": "Settings · the jar material is your choice",
+   "kind": "title1",
+   "maxW": 1330
+  },
+  "settingsNote": {
+   "x": -360,
+   "y": 3440,
+   "w": 300,
+   "text": "Reference only. Real settings live in Obsidian’s native plugin settings tab — it has its own controls and look, so this screen shows what to offer, not how it will be drawn.",
+   "fill": "yellow"
+  },
+  "titleDesktop": {
+   "x": 0,
+   "y": 4384,
+   "text": "Desktop · Today",
+   "kind": "title1",
+   "maxW": 1440
+  },
+  "titleAssets": {
+   "x": 0,
+   "y": 5664,
+   "text": "Jar assets",
+   "kind": "title1",
+   "maxW": 1330
+  },
+  "titleRows": {
+   "x": 0,
+   "y": -2560,
+   "text": "Round 2 · rows without hairlines — only the row treatment changes",
+   "kind": "title1",
+   "maxW": 2270
+  },
+  "titleFinale": {
+   "x": 0,
+   "y": -1380,
+   "text": "Round 2 · Day closed — only the top of the screen changes",
+   "kind": "title1",
+   "maxW": 2270
+  },
+  "rowsNote": {
+   "x": -360,
+   "y": -2280,
+   "w": 300,
+   "text": "Live: tap circles, hold for more. Everything except the row treatment is the approved Today screen.",
+   "fill": "yellow"
+  },
+  "finaleNote": {
+   "x": -360,
+   "y": -1100,
+   "w": 300,
+   "text": "Same day in every board: 4 done, 1 skipped with a reason. Tap “Show” and undo one to see the finale go away and come back.",
+   "fill": "yellow"
+  }
+ },
+ "designSystems": []
 }
