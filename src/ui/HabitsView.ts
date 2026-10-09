@@ -43,9 +43,11 @@ export class HabitsView extends ItemView {
 
 	override async onOpen(): Promise<void> {
 		this.render();
-		window.requestAnimationFrame(() => {
+		const scrollToToday = () => {
 			if (this.scroller) this.scroller.scrollLeft = this.scroller.scrollWidth;
-		});
+		};
+		scrollToToday();
+		window.requestAnimationFrame(scrollToToday);
 	}
 
 	refresh(): void {

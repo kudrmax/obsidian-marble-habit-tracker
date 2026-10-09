@@ -4,6 +4,7 @@ import { systemClock } from "./domain/Clock";
 import { FrontmatterHabitRepository } from "./infrastructure/FrontmatterHabitRepository";
 import { HabitSettings, loadSettings } from "./settings";
 import { HabitFormModal } from "./ui/HabitFormModal";
+import { HABIT_VIEW, HabitScreenView } from "./ui/HabitScreenView";
 import { HABITS_VIEW, HabitsView } from "./ui/HabitsView";
 import { SettingsHost, SettingsTab } from "./ui/SettingsTab";
 import { UiContext } from "./ui/UiContext";
@@ -19,11 +20,12 @@ export default class TinyHabitsPlugin extends Plugin implements SettingsHost {
 			service,
 			repository,
 			settings: () => this.settings,
-			openHabit: (path) => void this.app.workspace.openLinkText(path, "", "tab"),
+			openHabit: (path) => void this.openHabit(path),
 			newHabit: () => new HabitFormModal(this.app, service).open(),
 		};
 
 		this.registerView(HABITS_VIEW, (leaf) => new HabitsView(leaf, ui));
+		this.registerView(HABIT_VIEW, (leaf) => new HabitScreenView(leaf, ui));
 		this.addRibbonIcon("sprout", "Привычки", () => void this.openGrid());
 		this.addCommand({ id: "open", name: "Открыть привычки", callback: () => void this.openGrid() });
 		this.addCommand({ id: "new", name: "Новая привычка", callback: () => ui.newHabit() });
@@ -34,7 +36,12 @@ export default class TinyHabitsPlugin extends Plugin implements SettingsHost {
 		};
 		this.registerEvent(this.app.metadataCache.on("changed", (file) => refreshIfHabit(file.path)));
 		this.registerEvent(this.app.vault.on("delete", (file) => refreshIfHabit(file.path)));
-		this.registerEvent(this.app.vault.on("rename", (file, oldPath) => refreshIfHabit(file.path, oldPath)));
+		this.registerEvent(
+			this.app.vault.on("rename", (file, oldPath) => {
+				for (const view of this.habitScreens()) view.renamed(oldPath, file.path);
+				refreshIfHabit(file.path, oldPath);
+			}),
+		);
 	}
 
 	async saveSettings(): Promise<void> {
@@ -42,10 +49,17 @@ export default class TinyHabitsPlugin extends Plugin implements SettingsHost {
 		this.refreshViews();
 	}
 
+	private habitScreens(): HabitScreenView[] {
+		return this.app.workspace
+			.getLeavesOfType(HABIT_VIEW)
+			.flatMap((leaf) => (leaf.view instanceof HabitScreenView ? [leaf.view] : []));
+	}
+
 	private refreshViews(): void {
 		for (const leaf of this.app.workspace.getLeavesOfType(HABITS_VIEW)) {
 			if (leaf.view instanceof HabitsView) leaf.view.refresh();
 		}
+		for (const view of this.habitScreens()) view.refresh();
 	}
 
 	private async openGrid(): Promise<void> {
@@ -53,5 +67,10 @@ export default class TinyHabitsPlugin extends Plugin implements SettingsHost {
 		const leaf = existing ?? this.app.workspace.getLeaf("tab");
 		if (!existing) await leaf.setViewState({ type: HABITS_VIEW, active: true });
 		await this.app.workspace.revealLeaf(leaf);
+	}
+
+	private async openHabit(path: string): Promise<void> {
+		const leaf = this.app.workspace.getLeaf("tab");
+		await leaf.setViewState({ type: HABIT_VIEW, active: true, state: { path } });
 	}
 }
