@@ -67,6 +67,48 @@ describe("JarPhysics", () => {
 		expect(physics.get("a")?.y).toBeCloseTo(188, 0);
 	});
 
+	it("rolls bodies towards a sideways gravity", () => {
+		const physics = new JarPhysics(300, 200);
+		physics.add({ id: "a", x: 50, y: 188, r: 12 });
+		physics.setGravity({ x: 0.45, y: 0 });
+		settle(physics);
+		expect(physics.get("a")?.x).toBeCloseTo(288, 0);
+	});
+
+	it("keeps bodies under the lid once they are inside", () => {
+		const physics = new JarPhysics(200, 300);
+		physics.add({ id: "a", x: 100, y: 200, r: 12 });
+		physics.setGravity({ x: 0, y: -0.45 });
+		settle(physics);
+		expect(physics.get("a")?.y).toBeCloseTo(12, 0);
+	});
+
+	it("lets bodies fall in from above the lid", () => {
+		const physics = new JarPhysics(200, 300);
+		physics.add({ id: "a", x: 100, y: -100, r: 12 });
+		physics.step();
+		expect(physics.get("a")?.y).toBeLessThan(0);
+	});
+
+	it("wakes up when gravity changes", () => {
+		const physics = new JarPhysics(200, 300);
+		physics.add({ id: "a", x: 100, y: 288, r: 12 });
+		settle(physics);
+		expect(physics.isSettled()).toBe(true);
+		physics.setGravity({ x: 0.3, y: 0.3 });
+		expect(physics.isSettled()).toBe(false);
+	});
+
+	it("reports how hard a body hit something", () => {
+		const physics = new JarPhysics(200, 300);
+		physics.add({ id: "a", x: 100, y: 0, r: 12 });
+		let hardest = 0;
+		for (let frame = 0; frame < 120; frame++) hardest = Math.max(hardest, physics.step());
+		expect(hardest).toBeGreaterThan(5);
+		settle(physics);
+		expect(physics.step()).toBeLessThan(0.5);
+	});
+
 	it("removes bodies", () => {
 		const physics = new JarPhysics(200, 300);
 		physics.add({ id: "a", x: 100, y: 0, r: 12 });

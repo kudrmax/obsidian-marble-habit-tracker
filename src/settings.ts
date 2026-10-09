@@ -6,6 +6,8 @@ export interface HabitSettings {
 	material: JarMaterial;
 	celebrationLine: boolean;
 	reduceMotion: boolean;
+	tilt: boolean;
+	haptics: boolean;
 }
 
 export const DEFAULT_SETTINGS: HabitSettings = {
@@ -14,6 +16,8 @@ export const DEFAULT_SETTINGS: HabitSettings = {
 	material: "grain",
 	celebrationLine: true,
 	reduceMotion: false,
+	tilt: true,
+	haptics: true,
 };
 
 export function loadSettings(data: unknown): HabitSettings {
@@ -27,5 +31,7 @@ export function loadSettings(data: unknown): HabitSettings {
 		material: isJarMaterial(raw.material) ? raw.material : DEFAULT_SETTINGS.material,
 		celebrationLine: flag(raw.celebrationLine, DEFAULT_SETTINGS.celebrationLine),
 		reduceMotion: flag(raw.reduceMotion, DEFAULT_SETTINGS.reduceMotion),
+		tilt: flag(raw.tilt, DEFAULT_SETTINGS.tilt),
+		haptics: flag(raw.haptics, DEFAULT_SETTINGS.haptics),
 	};
 }

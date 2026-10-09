@@ -17,6 +17,7 @@ export interface JarOptions {
 	readonly background: Hsl;
 	readonly reduceMotion: boolean;
 	onMerge?(item: JarItem): void;
+	onImpact?(strength: number): void;
 }
 
 const RANK: Record<JarSize, number> = { small: 0, medium: 1, big: 2 };
@@ -78,6 +79,11 @@ export class JarCanvas {
 		if (options.material !== this.options.material || hsl(options.background) !== hsl(this.options.background)) this.sprites.clear();
 		this.options = options;
 		this.wake();
+	}
+
+	setGravity(gravity: Point): void {
+		this.physics.setGravity(gravity);
+		if (!this.physics.isSettled()) this.wake();
 	}
 
 	replay(): void {
@@ -225,7 +231,8 @@ export class JarCanvas {
 	private tick(): void {
 		this.frame = 0;
 		if (this.width === 0 || this.height === 0) return;
-		this.physics.step();
+		const impact = this.physics.step();
+		if (impact > 0) this.options.onImpact?.(impact);
 		this.draw();
 		const now = performance.now();
 		for (const [key, start] of this.born) if (now - start > BORN_MS) this.born.delete(key);

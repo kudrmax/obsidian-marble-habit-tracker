@@ -8,10 +8,12 @@ import { colorClass } from "./colors";
 import { chip, icon, iconButton } from "./components";
 import { DayWatcher } from "./DayWatcher";
 import { EditSheet } from "./EditSheet";
+import { Haptics } from "./Haptics";
 import { anchorLine } from "./format";
 import { Hsl, parseColor } from "./jar/color";
 import { JarCanvas, JarItem } from "./jar/JarCanvas";
-import { Point } from "./jar/JarPhysics";
+import { EARTH, Point } from "./jar/JarPhysics";
+import { TiltSensor } from "./jar/TiltSensor";
 import { visibleEntries } from "./order";
 import { REASONS, celebrationLine, closeDayTitle, offersShrink, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
@@ -43,6 +45,8 @@ export class TodayView extends ItemView {
 	private readonly celebrating = new Map<string, number>();
 	private readonly origins = new Map<string, Point>();
 	private readonly colors = new Map<string, Hsl>();
+	private readonly haptics = new Haptics(() => this.ui.settings().haptics);
+	private readonly tilt = new TiltSensor((gravity) => this.jar?.setGravity(gravity));
 
 	constructor(
 		leaf: WorkspaceLeaf,
@@ -83,10 +87,15 @@ export class TodayView extends ItemView {
 			}),
 		);
 		this.registerDomEvent(root, "click", (event) => this.closeMenuOutside(event));
+		this.registerDomEvent(root, "pointerdown", () => {
+			if (this.tiltEnabled()) void this.tilt.askOnTap();
+		});
+		this.applyTilt();
 		this.render();
 	}
 
 	override async onClose(): Promise<void> {
+		this.tilt.stop();
 		this.jar?.destroy();
 		this.jar = null;
 		window.clearTimeout(this.holdTimer);
@@ -96,6 +105,7 @@ export class TodayView extends ItemView {
 
 	refresh(): void {
 		this.jar?.setOptions(this.jarOptions());
+		this.applyTilt();
 		this.render();
 	}
 
@@ -328,7 +338,10 @@ export class TodayView extends ItemView {
 			this.other = null;
 			this.otherText = "";
 			this.shrink = mark && offersShrink(habit, mark, this.ui.settings().redesignThreshold) ? path : null;
-			if (isDone(mark)) this.celebrate(path);
+			if (isDone(mark)) {
+				this.haptics.tap();
+				this.celebrate(path);
+			}
 			else this.stopCelebrating(path);
 		} catch (error) {
 			new Notice(error instanceof Error ? error.message : String(error));
@@ -362,7 +375,13 @@ export class TodayView extends ItemView {
 			const color = this.resolve(entry.habit.color);
 			return buildJar(entry.habit, today).map((piece) => ({ ...piece, key: `${entry.path}|${piece.id}`, group: entry.path, color }));
 		});
-		this.jar.setOptions({ ...this.jarOptions(), onMerge: (item) => this.caption(names.get(item.group), item) });
+		this.jar.setOptions({
+			...this.jarOptions(),
+			onMerge: (item) => {
+				this.haptics.merge();
+				this.caption(names.get(item.group), item);
+			},
+		});
 		this.jar.sync(items, this.origins);
 		this.origins.clear();
 	}
@@ -381,7 +400,27 @@ export class TodayView extends ItemView {
 
 	private jarOptions() {
 		const settings = this.ui.settings();
-		return { material: settings.material, reduceMotion: settings.reduceMotion, background: this.resolveVar("--background-primary") };
+		return {
+			material: settings.material,
+			reduceMotion: settings.reduceMotion,
+			background: this.resolveVar("--background-primary"),
+			onImpact: (strength: number) => this.haptics.impact(strength),
+		};
+	}
+
+	private tiltEnabled(): boolean {
+		const settings = this.ui.settings();
+		return settings.tilt && !settings.reduceMotion;
+	}
+
+	private applyTilt(): void {
+		if (this.tiltEnabled()) {
+			this.tilt.start();
+			void this.tilt.askSilently();
+			return;
+		}
+		this.tilt.stop();
+		this.jar?.setGravity(EARTH);
 	}
 
 	private resolve(color: HabitColor | undefined): Hsl {

@@ -42,6 +42,15 @@ export class SettingsTab extends PluginSettingTab {
 			.setDesc("Wins appear in place instead of falling and merging.")
 			.addToggle((toggle) => toggle.setValue(host.settings.reduceMotion).onChange((value) => save((settings) => (settings.reduceMotion = value))));
 
+		new Setting(containerEl)
+			.setName("Tilt to roll")
+			.setDesc("Tilt your phone and the wins roll around the jar.")
+			.addToggle((toggle) => toggle.setValue(host.settings.tilt).onChange((value) => save((settings) => (settings.tilt = value))));
+		new Setting(containerEl)
+			.setName("Vibration")
+			.setDesc("A light tap when you answer, when wins bump and when they merge.")
+			.addToggle((toggle) => toggle.setValue(host.settings.haptics).onChange((value) => save((settings) => (settings.haptics = value))));
+
 		new Setting(containerEl).setName("Habits").setHeading();
 		new Setting(containerEl)
 			.setName("Folder")

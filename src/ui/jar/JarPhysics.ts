@@ -17,18 +17,22 @@ export interface Body {
 	r: number;
 	px: number;
 	py: number;
+	inside: boolean;
 }
 
-const GRAVITY = 0.45;
+export const EARTH: Point = { x: 0, y: 0.45 };
+
 const DAMPING = 0.985;
 const PASSES = 6;
 const ATTRACTION = 0.22;
 const REST_SPEED = 0.05;
 const REST_FRAMES = 30;
+const GRAVITY_EPSILON = 0.01;
 
 export class JarPhysics {
 	private readonly items = new Map<string, Body>();
 	private readonly targets = new Map<string, Point>();
+	private gravity: Point = EARTH;
 	private quietFrames = 0;
 
 	constructor(
@@ -42,8 +46,14 @@ export class JarPhysics {
 		this.quietFrames = 0;
 	}
 
+	setGravity(gravity: Point): void {
+		const changed = Math.abs(gravity.x - this.gravity.x) + Math.abs(gravity.y - this.gravity.y) > GRAVITY_EPSILON;
+		this.gravity = gravity;
+		if (changed) this.quietFrames = 0;
+	}
+
 	add(input: BodyInput): void {
-		this.items.set(input.id, { ...input, px: input.x, py: input.y });
+		this.items.set(input.id, { ...input, px: input.x, py: input.y, inside: input.y >= input.r });
 		this.quietFrames = 0;
 	}
 
@@ -69,12 +79,12 @@ export class JarPhysics {
 		return this.targets.size === 0 && this.quietFrames >= REST_FRAMES;
 	}
 
-	step(): void {
-		let fastest = 0;
+	/** Advances one frame and returns the hardest hit: the most speed any body lost to a wall or a neighbour. */
+	step(): number {
 		for (const body of this.items.values()) {
 			const target = this.targets.get(body.id);
-			const vx = (body.x - body.px) * DAMPING;
-			const vy = (body.y - body.py) * DAMPING + GRAVITY;
+			const vx = (body.x - body.px) * DAMPING + this.gravity.x;
+			const vy = (body.y - body.py) * DAMPING + this.gravity.y;
 			body.px = body.x;
 			body.py = body.y;
 			if (target) {
@@ -86,14 +96,22 @@ export class JarPhysics {
 			body.y += vy;
 		}
 		const free = [...this.items.values()].filter((body) => !this.targets.has(body.id));
+		const before = free.map((body) => Math.hypot(body.x - body.px, body.y - body.py));
 		for (let pass = 0; pass < PASSES; pass++) {
 			for (let i = 0; i < free.length; i++) {
 				for (let j = i + 1; j < free.length; j++) this.separate(free[i], free[j]);
 				this.contain(free[i]);
 			}
 		}
-		for (const body of free) fastest = Math.max(fastest, Math.abs(body.x - body.px), Math.abs(body.y - body.py));
+		let fastest = 0;
+		let hardest = 0;
+		free.forEach((body, index) => {
+			const speed = Math.hypot(body.x - body.px, body.y - body.py);
+			fastest = Math.max(fastest, speed);
+			hardest = Math.max(hardest, before[index] - speed);
+		});
 		this.quietFrames = fastest < REST_SPEED ? this.quietFrames + 1 : 0;
+		return hardest;
 	}
 
 	private separate(a: Body, b: Body): void {
@@ -118,5 +136,10 @@ export class JarPhysics {
 		if (body.x < body.r) body.x = body.r;
 		if (body.x > this.width - body.r) body.x = this.width - body.r;
 		if (body.y > this.height - body.r) body.y = this.height - body.r;
+		if (!body.inside) {
+			body.inside = body.y >= body.r;
+			return;
+		}
+		if (body.y < body.r) body.y = body.r;
 	}
 }
