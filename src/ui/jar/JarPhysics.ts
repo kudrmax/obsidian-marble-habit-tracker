@@ -8,6 +8,8 @@ export interface BodyInput {
 	readonly x: number;
 	readonly y: number;
 	readonly r: number;
+	/** Passes through other bodies until it no longer overlaps any of them. */
+	readonly passing?: boolean;
 }
 
 export interface Body {
@@ -18,6 +20,7 @@ export interface Body {
 	px: number;
 	py: number;
 	inside: boolean;
+	passing: boolean;
 }
 
 export const EARTH: Point = { x: 0, y: 0.45 };
@@ -53,7 +56,7 @@ export class JarPhysics {
 	}
 
 	add(input: BodyInput): void {
-		this.items.set(input.id, { ...input, px: input.x, py: input.y, inside: input.y >= input.r });
+		this.items.set(input.id, { ...input, px: input.x, py: input.y, inside: input.y >= input.r, passing: input.passing ?? false });
 		this.quietFrames = 0;
 	}
 
@@ -72,6 +75,17 @@ export class JarPhysics {
 
 	attract(ids: readonly string[], target: Point): void {
 		for (const id of ids) if (this.items.has(id)) this.targets.set(id, target);
+		this.quietFrames = 0;
+	}
+
+	/** Lets attracted bodies go, pushed against gravity by `kick` frames' worth of it. */
+	release(ids: readonly string[], kick = 0): void {
+		for (const id of ids) {
+			const body = this.items.get(id);
+			if (!body || !this.targets.delete(id)) continue;
+			body.px = body.x + this.gravity.x * kick;
+			body.py = body.y + this.gravity.y * kick;
+		}
 		this.quietFrames = 0;
 	}
 
@@ -103,6 +117,7 @@ export class JarPhysics {
 				this.contain(free[i]);
 			}
 		}
+		for (const body of free) if (body.passing) body.passing = free.some((other) => other !== body && overlaps(body, other));
 		let fastest = 0;
 		let hardest = 0;
 		free.forEach((body, index) => {
@@ -115,6 +130,7 @@ export class JarPhysics {
 	}
 
 	private separate(a: Body, b: Body): void {
+		if (a.passing || b.passing) return;
 		const dx = b.x - a.x;
 		const dy = b.y - a.y;
 		const min = a.r + b.r;
@@ -142,4 +158,8 @@ export class JarPhysics {
 		}
 		if (body.y < body.r) body.y = body.r;
 	}
+}
+
+function overlaps(a: Body, b: Body): boolean {
+	return Math.hypot(b.x - a.x, b.y - a.y) < a.r + b.r;
 }

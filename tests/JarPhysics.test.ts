@@ -115,4 +115,27 @@ describe("JarPhysics", () => {
 		physics.remove("a");
 		expect(physics.bodies()).toHaveLength(0);
 	});
+
+	it("lets a passing body through others until it is clear", () => {
+		const physics = new JarPhysics(200, 300);
+		physics.add({ id: "pile", x: 100, y: 288, r: 12 });
+		physics.add({ id: "new", x: 100, y: 280, r: 12, passing: true });
+		physics.step();
+		expect(physics.get("pile")?.x).toBeCloseTo(100, 3);
+		expect(physics.get("new")?.passing).toBe(true);
+		physics.remove("pile");
+		physics.step();
+		expect(physics.get("new")?.passing).toBe(false);
+	});
+
+	it("releases a held body with a kick against gravity", () => {
+		const physics = new JarPhysics(200, 300);
+		physics.add({ id: "a", x: 100, y: 150, r: 12 });
+		physics.attract(["a"], { x: 100, y: 150 });
+		for (let frame = 0; frame < 10; frame++) physics.step();
+		expect(physics.get("a")?.y).toBeCloseTo(150, 3);
+		physics.release(["a"], 6);
+		physics.step();
+		expect(physics.get("a")?.y).toBeLessThan(150);
+	});
 });

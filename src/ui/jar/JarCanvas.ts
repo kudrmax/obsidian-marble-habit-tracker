@@ -24,6 +24,8 @@ const RANK: Record<JarSize, number> = { small: 0, medium: 1, big: 2 };
 const BORN_MS = 520;
 const DROP_MS = 650;
 const MERGE_MS = 420;
+const HOLD_MS = 260;
+const KICK = 8;
 const RAIN_GAP = 18;
 const QUIET_STEPS = 1500;
 
@@ -112,7 +114,7 @@ export class JarCanvas {
 				sources.forEach((source) => leftovers.delete(source));
 				this.merge(item, sources, origin);
 			} else if (item.today && origin) {
-				this.spawn(item, this.local(origin));
+				this.launch(item, this.local(origin));
 			} else {
 				this.spawn(item, { x: this.randomX(item), y: -this.radius(item) });
 			}
@@ -159,10 +161,20 @@ export class JarCanvas {
 		};
 		if (!origin || this.options.reduceMotion) return gather();
 		const ghost: JarItem = { ...item, key: `ghost:${this.ghost++}`, size: "small", full: item.full };
-		this.drawn.set(ghost.key, ghost);
-		this.spawn(ghost, this.local(origin));
+		this.launch(ghost, this.local(origin));
 		ids.push(ghost.key);
 		this.later(DROP_MS, gather);
+	}
+
+	/** Pops out of the tapped button, hangs there for a beat, then hops off and falls through the pile. */
+	private launch(item: JarItem, at: Point): void {
+		if (this.options.reduceMotion) return this.spawn(item, at);
+		this.drawn.set(item.key, item);
+		this.physics.add({ id: item.key, x: at.x, y: at.y, r: this.radius(item), passing: true });
+		this.physics.attract([item.key], at);
+		this.born.set(item.key, performance.now());
+		this.later(HOLD_MS, () => this.physics.release([item.key], KICK));
+		this.wake();
 	}
 
 	private spawn(item: JarItem, at: Point): void {

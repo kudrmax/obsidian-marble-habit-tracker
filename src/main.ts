@@ -1,4 +1,4 @@
-import { Plugin } from "obsidian";
+import { Plugin, WorkspaceLeaf } from "obsidian";
 import { HabitService } from "./application/HabitService";
 import { systemClock } from "./domain/Clock";
 import { FrontmatterHabitRepository } from "./infrastructure/FrontmatterHabitRepository";
@@ -20,7 +20,7 @@ export default class TinyHabitsPlugin extends Plugin implements SettingsHost {
 			service,
 			repository,
 			settings: () => this.settings,
-			openHabit: (path) => void this.openHabit(path),
+			openHabit: (path, leaf) => void this.openHabit(path, leaf),
 			newHabit: () => new HabitFormModal(this.app, service).open(),
 		};
 
@@ -74,8 +74,8 @@ export default class TinyHabitsPlugin extends Plugin implements SettingsHost {
 		await this.app.workspace.revealLeaf(leaf);
 	}
 
-	private async openHabit(path: string): Promise<void> {
-		const leaf = this.app.workspace.getLeaf("tab");
+	private async openHabit(path: string, from?: WorkspaceLeaf): Promise<void> {
+		const leaf = from ?? this.app.workspace.getLeaf("tab");
 		await leaf.setViewState({ type: HABIT_VIEW, active: true, state: { path } });
 	}
 }

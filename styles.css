@@ -250,7 +250,7 @@ button.th-swatch.is-on { box-shadow: 0 0 0 3px var(--th-bg), 0 0 0 5px var(--th-
 /* Today */
 .tiny-habits.th-today { position: relative; height: 100%; padding: 0; overflow: hidden; }
 .th-today-scroll { position: absolute; inset: 0; z-index: 1; overflow-y: auto; }
-.th-column { max-width: var(--th-column); margin: 0 auto; padding: 8px var(--th-gutter) var(--th-jar-reserve); box-sizing: border-box; }
+.th-column { max-width: var(--th-column); margin: 0 auto; padding: 8px var(--th-gutter) calc(var(--th-jar-reserve) + var(--th-bottom-inset, 0px)); box-sizing: border-box; }
 .th-today-header { padding: 8px 0 20px; }
 .th-progress { height: var(--th-progress); margin-top: 16px; border-radius: var(--th-progress); background: var(--th-line); overflow: hidden; }
 .th-progress-fill { height: 100%; border-radius: var(--th-progress); background: var(--th-text); transition: width 450ms ease; }
@@ -291,11 +291,11 @@ button.th-done-row {
 .th-done-text { flex: 1 1 auto; font-size: 14px; color: var(--th-muted); }
 .th-done-toggle { font-size: var(--th-small-size); color: var(--th-faint); }
 
-.th-jar { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; pointer-events: none; }
+.th-jar { position: absolute; top: 0; left: 0; z-index: 2; width: 100%; height: calc(100% - var(--th-bottom-inset, 0px)); pointer-events: none; }
 .th-caption {
 	position: absolute;
 	left: 50%;
-	bottom: 210px;
+	bottom: calc(210px + var(--th-bottom-inset, 0px));
 	z-index: 3;
 	transform: translateX(-50%);
 	height: 32px;

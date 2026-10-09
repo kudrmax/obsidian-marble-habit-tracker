@@ -4,6 +4,7 @@ import { DayMark, FULL, TINY, isDone, missed } from "../domain/DayMark";
 import { Habit } from "../domain/Habit";
 import { HabitColor } from "../domain/HabitColor";
 import { buildJar } from "../domain/Jar";
+import { BottomInset } from "./BottomInset";
 import { colorClass } from "./colors";
 import { chip, icon, iconButton } from "./components";
 import { DayWatcher } from "./DayWatcher";
@@ -33,6 +34,7 @@ export class TodayView extends ItemView {
 	private columnEl!: HTMLElement;
 	private captionEl: HTMLElement | null = null;
 	private jar: JarCanvas | null = null;
+	private inset: BottomInset | null = null;
 	private menu: string | null = null;
 	private asking: string | null = null;
 	private other: string | null = null;
@@ -79,6 +81,9 @@ export class TodayView extends ItemView {
 		this.scrollEl = root.createDiv("th-today-scroll");
 		this.columnEl = this.scrollEl.createDiv("th-column");
 		this.jar = new JarCanvas(root, this.jarOptions());
+		this.inset = new BottomInset(root);
+		this.registerEvent(this.app.workspace.on("layout-change", () => this.inset?.measure()));
+		this.registerDomEvent(window, "resize", () => this.inset?.measure());
 		this.addAction("plus", "New habit", () => this.ui.newHabit());
 		this.registerEvent(
 			this.app.workspace.on("css-change", () => {
@@ -96,6 +101,8 @@ export class TodayView extends ItemView {
 
 	override async onClose(): Promise<void> {
 		this.tilt.stop();
+		this.inset?.destroy();
+		this.inset = null;
 		this.jar?.destroy();
 		this.jar = null;
 		window.clearTimeout(this.holdTimer);
@@ -173,11 +180,11 @@ export class TodayView extends ItemView {
 		text.createDiv({ cls: "th-row-title", text: habit.text("tiny").current() ?? habit.name });
 		const sub = text.createDiv({ cls: "th-row-sub", text: this.subtitle(path, habit, mark) });
 		sub.toggleClass("is-celebrating", done && this.celebrating.has(path) && this.ui.settings().celebrationLine);
-		text.addEventListener("click", () => this.ui.openHabit(path));
+		text.addEventListener("click", () => this.ui.openHabit(path, this.leaf));
 
 		if (this.menu === path) this.renderAnswers(main, path, mark);
 		else {
-			main.createSpan({ cls: "th-hint", text: done ? "right-click to change" : "click · right-click for more" });
+			main.createSpan({ cls: "th-hint", text: mark ? "click to undo · right-click to change" : "click · right-click for more" });
 			this.renderMark(main, path, mark);
 		}
 		if (this.asking === path) this.renderReasons(row, path);
@@ -193,7 +200,7 @@ export class TodayView extends ItemView {
 	}
 
 	private renderMark(parent: HTMLElement, path: string, mark: DayMark | undefined): void {
-		const button = parent.createEl("button", { cls: "th-mark-button", attr: { "aria-label": mark ? "Change answer" : "Done — hold for more" } });
+		const button = parent.createEl("button", { cls: "th-mark-button", attr: { "aria-label": mark ? "Undo — hold to change" : "Done — hold for more" } });
 		const circle = button.createSpan("th-mark");
 		if (isDone(mark)) {
 			circle.addClass("is-done");
@@ -223,8 +230,7 @@ export class TodayView extends ItemView {
 				this.held = false;
 				return;
 			}
-			if (mark) this.showMenu(path);
-			else void this.answer(path, TINY, event);
+			void this.answer(path, mark ? undefined : TINY, event);
 		});
 	}
 

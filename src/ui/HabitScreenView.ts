@@ -16,6 +16,7 @@ const DAY_CHECK_MS = 60_000;
 const MIN_WEEKS = 26;
 
 export class HabitScreenView extends ItemView {
+	override navigation = true;
 	private path = "";
 
 	constructor(
