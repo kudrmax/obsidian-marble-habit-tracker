@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Habits · Read</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#1e1e1e}
+a{color:#a88bfa}a:hover{color:#c4b1ff}
+button{font-family:inherit;-webkit-tap-highlight-color:transparent}
+@keyframes th-fan{from{opacity:0;transform:translateX(24px) scale(.5)}to{opacity:1;transform:none}}
+@keyframes th-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+<div style="width: 390px; height: 1200px; position: relative; display: flex; flex-direction: column; background: #1e1e1e; color: #dadada; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; overflow: hidden">
+  <div style="height: 48px; flex: 0 0 auto; margin-top: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 6px">
+    <a href="Prototype.dc.html" aria-label="Back to today" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #b3b3b3"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></a>
+    <span style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #8a8a8a"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg></span>
+  </div>
+
+  <main style="flex: 1 1 auto; padding: 4px 20px 0">
+    <header style="display: flex; align-items: center; gap: 10px">
+      <span style="width: 12px; height: 12px; border-radius: 50%; background: #a882ff"></span>
+      <h1 style="margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.02em">Read</h1>
+    </header>
+
+    <section aria-labelledby="recipe" style="margin-top: 28px">
+      <h2 id="recipe" style="margin: 0 0 12px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6e6e6e">Recipe</h2>
+      <div style="display: grid; grid-template-columns: 88px minmax(0, 1fr); row-gap: 10px; align-items: baseline">
+        <span style="font-size: 14px; color: #6e6e6e">After I</span><a href="Edit.dc.html" style="font-size: 19px; color: #e6e6e6; text-decoration: none">pour my morning coffee</a>
+        <span style="font-size: 14px; color: #6e6e6e">I will</span><a href="Edit.dc.html" style="font-size: 19px; color: #e6e6e6; text-decoration: none">open the book to one page</a>
+      </div>
+      <div style="display: grid; grid-template-columns: 88px minmax(0, 1fr); row-gap: 8px; margin-top: 16px; font-size: 14px">
+        <span style="color: #6e6e6e">More</span><a href="Edit.dc.html" style="color: #cfcfcf; text-decoration: none">read a whole chapter</a>
+        <span style="color: #6e6e6e">Celebrate</span><a href="Edit.dc.html" style="color: #cfcfcf; text-decoration: none">“I’m becoming a reader!”</a>
+        <span style="color: #6e6e6e">Days</span><span style="color: #cfcfcf">every day</span>
+      </div>
+    </section>
+
+    <section aria-labelledby="progress" style="margin-top: 36px; padding-top: 24px; border-top: 1px solid #2e2e2e">
+      <h2 id="progress" style="margin: 0 0 16px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6e6e6e">Progress</h2>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr))">
+        <div><div style="font-size: 32px; font-weight: 700; letter-spacing: -0.03em; line-height: 1">11</div><div style="margin-top: 6px; font-size: 13px; color: #8a8a8a">in a row</div></div>
+        <div><div style="font-size: 32px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; color: #7a7a7a">23</div><div style="margin-top: 6px; font-size: 13px; color: #6e6e6e">best</div></div>
+        <div><div style="font-size: 32px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; color: #7a7a7a">148</div><div style="margin-top: 6px; font-size: 13px; color: #6e6e6e">wins</div></div>
+      </div>
+
+      <div style="display: flex; gap: 6px; margin-top: 22px">
+        <div style="flex: 0 0 auto; display: flex; flex-direction: column; gap: 3px; padding-top: 19px; font-size: 10px; color: #5c5c5c">
+          <span style="height: 16px; line-height: 16px">M</span><span style="height: 16px"></span><span style="height: 16px; line-height: 16px">W</span><span style="height: 16px"></span><span style="height: 16px; line-height: 16px">F</span><span style="height: 16px"></span><span style="height: 16px"></span>
+        </div>
+        <div style="flex: 1 1 auto; min-width: 0; overflow-x: auto; direction: rtl; scrollbar-width: none">
+          <div style="direction: ltr; display: inline-flex; gap: 3px">
+            <sc-for list="{{weeks}}" as="w" hint-placeholder-count="52">
+              <div style="display: flex; flex-direction: column; gap: 3px; width: 16px">
+                <span style="height: 16px; font-size: 10px; line-height: 16px; color: #5c5c5c; white-space: nowrap; overflow: visible">{{w.month}}</span>
+                <sc-for list="{{w.days}}" as="d" hint-placeholder-count="7">
+                  <span title="{{d.aria}}" style="{{d.style}}"></span>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <section aria-labelledby="history" style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #2e2e2e">
+      <h2 id="history" style="margin: 0 0 8px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #6e6e6e">History</h2>
+      <h3 style="margin: 14px 0 2px; font-size: 15px; font-weight: 600; color: #b3b3b3">Not today</h3>
+      <sc-for list="{{misses}}" as="e" hint-placeholder-count="3">
+        <div style="display: grid; grid-template-columns: 58px 18px minmax(0, 1fr); align-items: start; padding: 11px 0; border-bottom: 1px solid #262626; font-size: 15px">
+          <span style="color: #6e6e6e; font-size: 13px; padding-top: 1px">{{e.date}}</span>
+          <span style="{{e.icon}}"></span>
+          <span>
+            <span style="{{e.textStyle}}">{{e.text}}</span>
+            <span style="display: block; margin-top: 2px; font-size: 13px; color: #6e6e6e">{{e.note}}</span>
+          </span>
+        </div>
+      </sc-for>
+      <h3 style="margin: 22px 0 2px; font-size: 15px; font-weight: 600; color: #b3b3b3">Recipe changes</h3>
+      <sc-for list="{{changes}}" as="e" hint-placeholder-count="3">
+        <div style="display: grid; grid-template-columns: 58px 18px minmax(0, 1fr); align-items: start; padding: 11px 0; border-bottom: 1px solid #262626; font-size: 15px">
+          <span style="color: #6e6e6e; font-size: 13px; padding-top: 1px">{{e.date}}</span>
+          <span style="{{e.icon}}"></span>
+          <span>
+            <span style="{{e.textStyle}}">{{e.text}}</span>
+            <span style="display: block; margin-top: 2px; font-size: 13px; color: #6e6e6e">{{e.note}}</span>
+          </span>
+        </div>
+      </sc-for>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1200}}'>
+const COLOR = '#a882ff';
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const WEEKS = 52;
+const TODAY = new Date(2026, 9, 9);
+const START = new Date(2026, 4, 1);
+const THIS_MONDAY = new Date(2026, 9, 5);
+const MISSES = { '2026-9-28': 1, '2026-9-2': 1, '2026-8-18': 1 };
+const HISTORY = [
+  { date: 'Sep 28', kind: 'miss', text: 'Overslept, no coffee at home', note: '' },
+  { date: 'Sep 2', kind: 'miss', text: 'Travel day, book in checked bag', note: '' },
+  { date: 'Aug 18', kind: 'miss', text: 'No energy', note: '' },
+  { date: 'Aug 2', kind: 'change', text: 'Tiny → open the book to one page', note: 'A whole page felt like a chore on tired days' },
+  { date: 'Jun 1', kind: 'change', text: 'Anchor → pour my morning coffee', note: 'Started working from home' },
+  { date: 'May 1', kind: 'start', text: 'Started', note: '' }
+];
+const isDone = (c) => c === 't' || c === 'f';
+
+function noise(i) {
+  const x = Math.sin(i * 12.9898 + 3.3) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+function keyOf(d) {
+  return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+}
+
+function baseMark(d, i) {
+  if (d > TODAY) return 'z';
+  if (d < START) return 'b';
+  if (MISSES[keyOf(d)]) return 'm';
+  const daysAgo = Math.round((TODAY - d) / 86400000);
+  if (daysAgo <= 10) return daysAgo % 4 === 1 ? 'f' : 't';
+  const r = noise(i);
+  if (r < 0.8) return noise(i + 500) < 0.25 ? 'f' : 't';
+  return r < 0.86 ? 'm' : 'e';
+}
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {};
+  }
+
+  dateAt(col, row) {
+    const d = new Date(THIS_MONDAY);
+    d.setDate(THIS_MONDAY.getDate() - (WEEKS - 1 - col) * 7 + row);
+    return d;
+  }
+
+  markAt(col, row) {
+    const d = this.dateAt(col, row);
+    return baseMark(d, col * 7 + row);
+  }
+
+  renderVals() {
+    const weeks = Array.from({ length: WEEKS }, (_, col) => {
+      const monday = this.dateAt(col, 0);
+      const month = monday.getDate() <= 7 ? MONTHS[monday.getMonth()] : '';
+      const days = Array.from({ length: 7 }, (_, row) => {
+        const d = this.dateAt(col, row);
+        const c = this.markAt(col, row);
+        const key = keyOf(d);
+        const base = 'display: block; width: 16px; height: 16px; box-sizing: border-box; border-radius: 50%;';
+        let look;
+        if (c === 'z' || c === 'b') look = ' border: none; background: transparent;';
+        else if (c === 'f') look = ' border: none; background: radial-gradient(circle, #ffffff 0 2px, ' + COLOR + ' 2.5px);';
+        else if (c === 't') look = ' border: none; background: ' + COLOR + ';';
+        else if (c === 'm') look = ' border: 1.5px solid #555555; background: transparent;';
+        else look = ' border: none; background: #2a2a2a;';
+        if (key === keyOf(TODAY)) look += ' outline: 1.5px solid #dadada; outline-offset: 2px;';
+        return {
+          aria: WEEKDAYS[row] + ', ' + MONTHS[d.getMonth()] + ' ' + d.getDate(),
+          style: base + look
+        };
+      });
+      return { month, days };
+    });
+
+    const row = (e) => ({
+      date: e.date,
+      text: e.text,
+      note: e.note,
+      textStyle: 'display: block; color: ' + (e.kind === 'miss' ? '#b3b3b3' : '#dadada') + ';',
+      icon: 'width: 10px; height: 10px; margin-top: 5px; box-sizing: border-box; border-radius: 50%; ' + (e.kind === 'miss' ? 'border: 1.5px solid #555555;' : e.kind === 'change' ? 'background: ' + COLOR + ';' : 'background: #4a4a4a;')
+    });
+
+    return {
+      weeks,
+      misses: HISTORY.filter((e) => e.kind === 'miss').map(row),
+      changes: HISTORY.filter((e) => e.kind !== 'miss').map(row)
+    };
+  }
+}
+</script>
+</body>
+</html>

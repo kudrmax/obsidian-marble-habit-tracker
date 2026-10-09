@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Jar assets</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#1e1e1e}
+</style>
+</helmet>
+<div style="width: 1330px; height: 1020px; box-sizing: border-box; padding: 56px 64px; background: #1e1e1e; color: #dadada; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif">
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+    <defs>
+      <filter id="as-grain" x="0" y="0" width="100%" height="100%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="3" result="n"></feTurbulence>
+        <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.6 -0.55"></feColorMatrix>
+      </filter>
+      <pattern id="as-dots" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(30)"><circle cx="3" cy="3" r="1.9" fill="#ffffff"></circle></pattern>
+      <radialGradient id="as-ht-grad" cx="36%" cy="30%" r="72%"><stop offset="0" stop-color="#ffffff"></stop><stop offset="0.7" stop-color="#000000"></stop></radialGradient>
+      <mask id="as-ht"><circle r="48" fill="url(#as-ht-grad)"></circle></mask>
+      <clipPath id="as-ball"><circle r="48"></circle></clipPath>
+    </defs>
+  </svg>
+
+  <header style="display: flex; align-items: flex-end; justify-content: space-between; padding-bottom: 28px; border-bottom: 1px solid #2e2e2e">
+    <div>
+      <h1 style="margin: 0; font-size: 32px; font-weight: 700; letter-spacing: -0.02em">Jar assets</h1>
+      <p style="margin: 8px 0 0; font-size: 15px; color: #8a8a8a">Material is chosen in plugin settings. Shape is always a circle. Three sizes by streak, a spark for “did more”.</p>
+    </div>
+    <div style="display: grid; grid-template-columns: auto auto; column-gap: 16px; row-gap: 4px; font-size: 13px; color: #8a8a8a">
+      <span style="color: #dadada">Day</span><span>24 px (ladder shown at 2×)</span>
+      <span style="color: #dadada">7 in a row</span><span>44 px</span>
+      <span style="color: #dadada">28 in a row</span><span>68 px</span>
+    </div>
+  </header>
+
+  <sc-for list="{{materials}}" as="m" hint-placeholder-count="3">
+    <section style="display: grid; grid-template-columns: 220px minmax(0, 1fr) 360px; column-gap: 40px; align-items: center; padding: 30px 0; border-bottom: 1px solid #2a2a2a">
+      <div>
+        <div style="font-size: 12px; color: #6e6e6e">{{m.index}}</div>
+        <h2 style="margin: 2px 0 6px; font-size: 22px; font-weight: 700; letter-spacing: -0.01em">{{m.name}}</h2>
+        <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #8a8a8a">{{m.note}}</p>
+      </div>
+      <div style="display: flex; align-items: flex-end; gap: 36px">
+        <sc-for list="{{m.ladder}}" as="a" hint-placeholder-count="4">
+          <figure style="margin: 0; display: flex; flex-direction: column; align-items: center; gap: 10px">
+            <div style="{{a.box}}">
+              <svg width="100%" height="100%" viewBox="-48 -48 96 96" style="overflow: visible; display: block">
+                <defs>
+                  <radialGradient id="{{a.gid}}" cx="50%" cy="50%" r="{{a.gr}}" fx="{{a.gfx}}" fy="{{a.gfy}}">
+                    <stop offset="0" stop-color="{{a.g0}}"></stop>
+                    <stop offset="{{a.gm}}" stop-color="{{a.g1}}"></stop>
+                    <stop offset="1" stop-color="{{a.g2}}"></stop>
+                  </radialGradient>
+                </defs>
+                <circle r="48" fill="{{a.bodyFill}}"></circle>
+                <g clip-path="url(#as-ball)">
+                  <path d="{{a.shadeD}}" fill="{{a.shadeFill}}"></path>
+                  <rect x="-50" y="-50" width="100" height="100" filter="url(#as-grain)" opacity="{{a.grainOp}}"></rect>
+                  <rect x="-60" y="-60" width="120" height="120" fill="url(#as-dots)" mask="url(#as-ht)" opacity="{{a.dotsOp}}"></rect>
+                </g>
+                <path d="M0 -10 C1.2 -2.6 2.6 -1.2 10 0 C2.6 1.2 1.2 2.6 0 10 C-1.2 2.6 -2.6 1.2 -10 0 C-2.6 -1.2 -1.2 -2.6 0 -10 Z" transform="{{a.starT}}" fill="{{a.starFill}}" opacity="{{a.starOp}}"></path>
+                <path d="M0 -10 C1.2 -2.6 2.6 -1.2 10 0 C2.6 1.2 1.2 2.6 0 10 C-1.2 2.6 -2.6 1.2 -10 0 C-2.6 -1.2 -1.2 -2.6 0 -10 Z" transform="{{a.sparkT}}" fill="{{a.sparkFill}}" opacity="{{a.sparkOp}}"></path>
+              </svg>
+            </div>
+            <figcaption style="text-align: center">
+              <div style="font-size: 13px; color: #dadada">{{a.label}}</div>
+              <div style="font-size: 12px; color: #6e6e6e">{{a.hint}}</div>
+            </figcaption>
+          </figure>
+        </sc-for>
+      </div>
+      <div>
+        <div style="font-size: 12px; color: #6e6e6e; margin-bottom: 12px">Habit colours · 44 px</div>
+        <div style="display: flex; align-items: flex-end; gap: 14px">
+          <sc-for list="{{m.swatches}}" as="a" hint-placeholder-count="5">
+            <div style="{{a.box}}">
+              <svg width="100%" height="100%" viewBox="-48 -48 96 96" style="overflow: visible; display: block">
+                <defs>
+                  <radialGradient id="{{a.gid}}" cx="50%" cy="50%" r="{{a.gr}}" fx="{{a.gfx}}" fy="{{a.gfy}}">
+                    <stop offset="0" stop-color="{{a.g0}}"></stop>
+                    <stop offset="{{a.gm}}" stop-color="{{a.g1}}"></stop>
+                    <stop offset="1" stop-color="{{a.g2}}"></stop>
+                  </radialGradient>
+                </defs>
+                <circle r="48" fill="{{a.bodyFill}}"></circle>
+                <g clip-path="url(#as-ball)">
+                  <path d="{{a.shadeD}}" fill="{{a.shadeFill}}"></path>
+                  <rect x="-50" y="-50" width="100" height="100" filter="url(#as-grain)" opacity="{{a.grainOp}}"></rect>
+                  <rect x="-60" y="-60" width="120" height="120" fill="url(#as-dots)" mask="url(#as-ht)" opacity="{{a.dotsOp}}"></rect>
+                </g>
+              </svg>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: flex; gap: 14px; margin-top: 8px; font-size: 11px; color: #6e6e6e">
+          <span style="width: 44px; text-align: center">Read</span><span style="width: 44px; text-align: center">Floss</span><span style="width: 44px; text-align: center">Push-ups</span><span style="width: 44px; text-align: center">Journal</span><span style="width: 44px; text-align: center">Water</span>
+        </div>
+      </div>
+    </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1330,"height":1020}}'>
+const COLORS = ['#a882ff', '#44cf6e', '#e9973f', '#53dfdd', '#5aa2ff'];
+const MATERIALS = [
+  { id: 'grain', index: '02', name: 'Grain', note: 'Flat colour, print grain, a hard shadow side. Quiet and graphic.' },
+  { id: 'aura', index: '03', name: 'Aura', note: 'Soft two-tone gradient, no highlight. A quiet glow only on the biggest.' },
+  { id: 'halftone', index: '06', name: 'Halftone', note: 'Print dots shade the sphere. Editorial, a little retro.' }
+];
+const LADDER = [
+  { tier: 1, full: false, scale: 3, label: 'Day', hint: 'tiny · 24 px' },
+  { tier: 1, full: true, scale: 3, label: 'Day', hint: 'did more · 24 px' },
+  { tier: 2, full: false, scale: 3, label: '7 in a row', hint: '44 px' },
+  { tier: 3, full: false, scale: 3, label: '28 in a row', hint: '68 px' }
+];
+const SIZE = { 1: 24, 2: 44, 3: 68 };
+
+function hexToHsl(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h /= 6;
+  }
+  return [h * 360, s * 100, l * 100];
+}
+
+function hsl(h, s, l, a) {
+  const clamp = (v) => Math.max(0, Math.min(100, v)).toFixed(0);
+  return 'hsl(' + ((h + 360) % 360).toFixed(0) + ' ' + clamp(s) + '% ' + clamp(l) + '%' + (a !== undefined ? ' / ' + a : '') + ')';
+}
+
+let uid = 0;
+function look(material, color, tier, full, px) {
+  const [h, s, l] = hexToHsl(color);
+  const v = {
+    gid: 'as-g' + uid++, gr: '50%', gfx: '50%', gfy: '50%', gm: 0.5, g0: '#000', g1: '#000', g2: '#000',
+    bodyFill: 'none', shadeD: '', shadeFill: 'none', grainOp: 0, dotsOp: 0,
+    starT: 'scale(0)', starFill: '#fff', starOp: 0, sparkT: 'scale(0)', sparkFill: '#fff', sparkOp: 0
+  };
+  let filter = '';
+  const star = (scale, fill) => { v.starT = 'scale(' + scale + ')'; v.starFill = fill; v.starOp = 1; };
+  const spark = (x, y, scale, fill) => { v.sparkT = 'translate(' + x + ' ' + y + ') scale(' + scale + ')'; v.sparkFill = fill; v.sparkOp = 1; };
+  if (material === 'grain') {
+    Object.assign(v, { bodyFill: color, shadeD: 'M-60 26 C-14 48 34 22 60 -36 L60 60 L-60 60 Z', shadeFill: hsl(h, s, l - 15), grainOp: 0.22 });
+    if (tier === 3) star(2.4, '#1e1e1e');
+    if (full) spark(20, -20, 0.9, '#ffffff');
+  } else if (material === 'aura') {
+    Object.assign(v, { gr: '80%', gfx: '32%', gfy: '26%', gm: 0.6, g0: hsl(h - 16, s, l + 16), g1: hsl(h, s + 6, l), g2: hsl(h + 16, s + 8, l - 14), bodyFill: 'url(#' + v.gid + ')' });
+    if (tier === 3) { star(1.8, '#ffffff'); filter = ' filter: drop-shadow(0 0 ' + (px * 0.12).toFixed(1) + 'px ' + hsl(h, s, l, 0.45) + ');'; }
+    if (full) spark(20, -20, 0.9, '#ffffff');
+  } else {
+    Object.assign(v, { bodyFill: hsl(h, s, l - 10), dotsOp: 0.75 });
+    if (tier === 3) star(2, '#ffffff');
+    if (full) spark(20, -20, 0.9, '#ffffff');
+  }
+  v.box = 'width: ' + px + 'px; height: ' + px + 'px;' + filter;
+  return v;
+}
+
+class Component extends DCLogic {
+  renderVals() {
+    const materials = MATERIALS.map((m) => ({
+      index: m.index,
+      name: m.name,
+      note: m.note,
+      ladder: LADDER.map((a, i) => Object.assign(look(m.id, COLORS[i === 2 ? 1 : i === 3 ? 4 : 0], a.tier, a.full, SIZE[a.tier] * 2), { label: a.label, hint: a.hint })),
+      swatches: COLORS.map((c) => Object.assign(look(m.id, c, 1, false, 44)))
+    }));
+    return { materials };
+  }
+}
+</script>
+</body>
+</html>

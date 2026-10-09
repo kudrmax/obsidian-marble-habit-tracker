@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Habits · Prototype</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#1e1e1e}
+a{color:#a88bfa}a:hover{color:#c4b1ff}
+button{font-family:inherit;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input::placeholder{color:#5c5c5c}
+@keyframes th-pop{0%{transform:scale(.4)}55%{transform:scale(1.2)}100%{transform:scale(1)}}
+@keyframes th-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@keyframes th-born{0%{transform:scale(.2)}60%{transform:scale(1.18)}100%{transform:scale(1)}}
+@keyframes th-fan{from{opacity:0;transform:translateX(24px) scale(.5)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; display: flex; flex-direction: column; background: #1e1e1e; color: #dadada; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; overflow: hidden">
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+    <defs>
+      <filter id="th-grain" x="0" y="0" width="100%" height="100%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="3" result="n"></feTurbulence>
+        <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.6 -0.55"></feColorMatrix>
+      </filter>
+      <pattern id="th-dots" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(30)"><circle cx="3" cy="3" r="1.9" fill="#ffffff"></circle></pattern>
+      <radialGradient id="th-ht-grad" cx="36%" cy="30%" r="72%"><stop offset="0" stop-color="#ffffff"></stop><stop offset="0.7" stop-color="#000000"></stop></radialGradient>
+      <mask id="th-ht"><circle r="48" fill="url(#th-ht-grad)"></circle></mask>
+      <clipPath id="th-ball"><circle r="48"></circle></clipPath>
+    </defs>
+  </svg>
+
+  <div style="height: 48px; flex: 0 0 auto; margin-top: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 6px">
+    <span style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #8a8a8a"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"></path></svg></span>
+    <span style="font-size: 15px; font-weight: 600; color: #b3b3b3">Habits</span>
+    <span style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #8a8a8a"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle></svg></span>
+  </div>
+
+  <main style="flex: 1 1 auto; position: relative; overflow: hidden">
+    <div style="position: absolute; inset: 0; z-index: 2; overflow-y: auto; padding: 0 20px 230px">
+      <div style="display: flex; justify-content: flex-end; align-items: center; gap: 4px; height: 44px; font-size: 12px; color: #5c5c5c">
+        <a href="NewHabit.dc.html" aria-label="New habit" style="width: 44px; height: 44px; margin-left: -12px; margin-right: auto; display: flex; align-items: center; justify-content: center; color: #b3b3b3; text-decoration: none"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></a>
+        <span style="font-variant-numeric: tabular-nums; margin-right: 4px">{{total}} wins</span>
+        <button aria-label="Drop one random win" onClick="{{addOne}}" style="height: 26px; padding: 0 8px; border: 1px solid #333333; border-radius: 13px; background: transparent; box-shadow: none; color: #7a7a7a; font-size: 12px; cursor: pointer">+1</button>
+        <button aria-label="Drop ten random wins" onClick="{{addTen}}" style="height: 26px; padding: 0 8px; border: 1px solid #333333; border-radius: 13px; background: transparent; box-shadow: none; color: #7a7a7a; font-size: 12px; cursor: pointer">+10</button>
+        <button aria-label="Replay the jar" onClick="{{replay}}" style="width: 30px; height: 30px; margin-right: -8px; padding: 0; border: none; border-radius: 15px; background: transparent; box-shadow: none; color: #7a7a7a; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 3v5h5"></path></svg></button>
+      </div>
+
+      <header style="padding: 4px 0 20px">
+        <h1 style="margin: 0; font-size: 30px; font-weight: 700; line-height: 1.12; letter-spacing: -0.02em; color: #dadada">{{title}}</h1>
+        <div style="height: 3px; margin-top: 16px; border-radius: 2px; background: #2e2e2e; overflow: hidden"><div style="{{lineStyle}}"></div></div>
+      </header>
+
+      <sc-for list="{{habits}}" as="h" hint-placeholder-count="3">
+        <div style="border-top: 1px solid #2a2a2a; animation: th-in 220ms ease">
+          <div style="display: flex; align-items: center; gap: 10px; min-height: 62px">
+            <a href="Habit.dc.html" aria-label="{{h.moreAria}}" style="flex: 1 1 auto; min-width: 0; display: block; padding: 10px 0; text-decoration: none">
+              <span style="{{h.titleStyle}}">{{h.tiny}}</span>
+              <span style="{{h.subStyle}}">{{h.sub}}</span>
+            </a>
+
+            <sc-if value="{{h.menuOpen}}" hint-placeholder-val="{{false}}">
+              <div style="display: flex; gap: 8px; flex: 0 0 auto; margin-right: -2px">
+                <sc-for list="{{h.choices}}" as="c" hint-placeholder-count="3">
+                  <button aria-label="{{c.aria}}" onClick="{{c.pick}}" style="{{c.style}}">
+                    <sc-if value="{{c.isMiss}}" hint-placeholder-val="{{true}}">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+                    </sc-if>
+                    <sc-if value="{{c.isFull}}" hint-placeholder-val="{{false}}">
+                      <svg width="16" height="16" viewBox="-10 -10 20 20"><path fill="currentColor" d="M0 -10 C1.2 -2.6 2.6 -1.2 10 0 C2.6 1.2 1.2 2.6 0 10 C-1.2 2.6 -2.6 1.2 -10 0 C-2.6 -1.2 -1.2 -2.6 0 -10 Z"></path></svg>
+                    </sc-if>
+                    <sc-if value="{{c.isTiny}}" hint-placeholder-val="{{false}}">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+                    </sc-if>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{h.menuClosed}}" hint-placeholder-val="{{true}}">
+              <button aria-label="{{h.markAria}}" onClick="{{h.click}}" onPointerDown="{{h.down}}" onPointerUp="{{h.up}}" onPointerLeave="{{h.up}}" onContextMenu="{{h.noMenu}}" style="width: 48px; height: 48px; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; margin-right: -6px; padding: 0; border: none; border-radius: 24px; background: transparent; box-shadow: none; cursor: pointer">
+                <span style="{{h.mark}}">
+                  <sc-if value="{{h.isDone}}" hint-placeholder-val="{{false}}">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+                  </sc-if>
+                  <sc-if value="{{h.isFull}}" hint-placeholder-val="{{false}}">
+                    <svg width="14" height="14" viewBox="-10 -10 20 20"><path fill="#ffffff" d="M0 -10 C1.2 -2.6 2.6 -1.2 10 0 C2.6 1.2 1.2 2.6 0 10 C-1.2 2.6 -2.6 1.2 -10 0 C-2.6 -1.2 -1.2 -2.6 0 -10 Z"></path></svg>
+                  </sc-if>
+                </span>
+              </button>
+            </sc-if>
+          </div>
+
+          <sc-if value="{{h.askReason}}" hint-placeholder-val="{{false}}">
+            <div style="padding: 0 0 14px; animation: th-in 200ms ease">
+              <div style="font-size: 13px; color: #8a8a8a; margin-bottom: 8px">What got in the way?</div>
+              <div style="display: flex; flex-wrap: wrap; gap: 6px">
+                <sc-for list="{{h.reasons}}" as="r" hint-placeholder-count="5">
+                  <button onClick="{{r.pick}}" style="{{r.style}}">{{r.text}}</button>
+                </sc-for>
+              </div>
+              <sc-if value="{{h.otherOpen}}" hint-placeholder-val="{{false}}">
+                <div style="display: flex; gap: 6px; margin-top: 8px; animation: th-in 180ms ease">
+                  <input aria-label="Your reason" placeholder="What happened?" value="{{otherText}}" onChange="{{onOther}}" onKeyDown="{{h.otherKey}}" style="flex: 1 1 auto; min-width: 0; height: 36px; padding: 0 12px; box-sizing: border-box; border: 1px solid #3a3a3a; border-radius: 18px; background: #262626; color: #dadada; font-size: 14px; font-family: inherit; outline: none">
+                  <button onClick="{{h.saveOther}}" style="{{saveStyle}}">Save</button>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{h.offerShrink}}" hint-placeholder-val="{{false}}">
+            <div style="padding: 0 0 12px">
+              <a href="Edit.dc.html" style="display: inline-flex; align-items: center; gap: 6px; height: 32px; color: #a68cff; font-size: 13px; text-decoration: none">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"></path></svg>
+                Make it even tinier
+              </a>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+
+      <sc-if value="{{hasHidden}}" hint-placeholder-val="{{true}}">
+        <button onClick="{{toggleDone}}" style="width: 100%; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0; border: none; border-top: 1px solid #2a2a2a; border-radius: 0; background: transparent; box-shadow: none; text-align: left; cursor: pointer">
+          <span style="flex: 0 0 auto; display: flex">
+            <sc-for list="{{hiddenDots}}" as="d" hint-placeholder-count="2">
+              <span style="{{d.style}}"></span>
+            </sc-for>
+          </span>
+          <span style="flex: 1 1 auto; font-size: 14px; color: #7a7a7a">{{hiddenText}}</span>
+          <span style="font-size: 13px; color: #5c5c5c">{{doneToggleText}}</span>
+        </button>
+      </sc-if>
+    </div>
+
+    <sc-if value="{{caption}}" hint-placeholder-val="{{false}}">
+      <div style="{{caption.style}}">{{caption.text}}</div>
+    </sc-if>
+
+    <div ref="{{setPile}}" style="position: absolute; inset: 0; z-index: 3; pointer-events: none">
+      <sc-for list="{{bodies}}" as="b" hint-placeholder-count="30">
+        <div style="{{b.pos}}">
+          <svg width="100%" height="100%" viewBox="-48 -48 96 96" style="overflow: visible; display: block">
+            <defs>
+              <radialGradient id="{{b.gid}}" cx="50%" cy="50%" r="{{b.gr}}" fx="{{b.gfx}}" fy="{{b.gfy}}">
+                <stop offset="0" stop-color="{{b.g0}}"></stop>
+                <stop offset="{{b.gm}}" stop-color="{{b.g1}}"></stop>
+                <stop offset="1" stop-color="{{b.g2}}"></stop>
+              </radialGradient>
+            </defs>
+            <circle r="48" fill="{{b.bodyFill}}"></circle>
+            <g clip-path="url(#th-ball)">
+              <path d="{{b.shadeD}}" fill="{{b.shadeFill}}"></path>
+              <rect x="-50" y="-50" width="100" height="100" filter="url(#th-grain)" opacity="{{b.grainOp}}"></rect>
+              <rect x="-60" y="-60" width="120" height="120" fill="url(#th-dots)" mask="url(#th-ht)" opacity="{{b.dotsOp}}"></rect>
+            </g>
+            <path d="M0 -10 C1.2 -2.6 2.6 -1.2 10 0 C2.6 1.2 1.2 2.6 0 10 C-1.2 2.6 -2.6 1.2 -10 0 C-2.6 -1.2 -1.2 -2.6 0 -10 Z" transform="{{b.starT}}" fill="{{b.starFill}}" opacity="{{b.starOp}}"></path>
+            <path d="M0 -10 C1.2 -2.6 2.6 -1.2 10 0 C2.6 1.2 1.2 2.6 0 10 C-1.2 2.6 -2.6 1.2 -10 0 C-2.6 -1.2 -1.2 -2.6 0 -10 Z" transform="{{b.sparkT}}" fill="{{b.sparkFill}}" opacity="{{b.sparkOp}}"></path>
+          </svg>
+        </div>
+      </sc-for>
+    </div>
+  </main>
+
+  <div style="height: 64px; flex: 0 0 auto; position: relative; z-index: 4; border-top: 1px solid #2e2e2e; background: #262626; display: flex; align-items: flex-start; justify-content: space-around; padding-top: 10px; color: #8a8a8a">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="5" width="14" height="14" rx="3"></rect></svg>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"material":{"editor":"enum","options":["grain","aura","halftone"],"default":"grain"},"scene":{"editor":"enum","options":["today","closed"],"default":"today"},"$preview":{"width":390,"height":844}}'>
+const W = 390;
+const H = 688;
+const HOLD_MS = 450;
+const RADIUS = { marble: 12, stone: 22, gem: 34 };
+const VALUE = { marble: 1, stone: 7, gem: 28 };
+const HABITS = [
+  { id: 'read', name: 'Read', anchor: 'pour my morning coffee', tiny: 'Open the book to one page', full: 'a chapter', win: 'I’m becoming a reader!', color: '#a882ff', gems: 1, stones: 2, marbles: 4 },
+  { id: 'floss', name: 'Floss', anchor: 'brush my teeth at night', tiny: 'Floss one tooth', full: 'every tooth', win: 'Clean slate!', color: '#44cf6e', gems: 0, stones: 3, marbles: 2 },
+  { id: 'push', name: 'Push-ups', anchor: 'flush in the morning', tiny: 'Do two push-ups', full: 'twenty', win: 'Stronger already!', color: '#e9973f', gems: 0, stones: 0, marbles: 4 },
+  { id: 'journal', name: 'Journal', anchor: 'close my laptop', tiny: 'Write one line', full: 'a full page', win: 'Day captured.', color: '#53dfdd', gems: 1, stones: 1, marbles: 2 },
+  { id: 'water', name: 'Water', anchor: 'sit down at my desk', tiny: 'Take one sip of water', full: 'a full glass', win: 'Hydrated!', color: '#5aa2ff', gems: 0, stones: 1, marbles: 6 }
+];
+const REASONS = ['Forgot', 'Anchor didn’t happen', 'No energy', 'Felt too big'];
+const WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five'];
+const TIER = { marble: 1, stone: 2, gem: 3 };
+const isDone = (m) => m && (m.kind === 't' || m.kind === 'f');
+
+function noise(i) {
+  const x = Math.sin(i * 12.9898 + 7.7) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+function hexToHsl(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h /= 6;
+  }
+  return [h * 360, s * 100, l * 100];
+}
+
+function hsl(h, s, l, a) {
+  const clamp = (v) => Math.max(0, Math.min(100, v)).toFixed(0);
+  return 'hsl(' + ((h + 360) % 360).toFixed(0) + ' ' + clamp(s) + '% ' + clamp(l) + '%' + (a !== undefined ? ' / ' + a : '') + ')';
+}
+
+const BLANK = {
+  gr: '50%', gfx: '50%', gfy: '50%', gm: 0.5, g0: '#000', g1: '#000', g2: '#000',
+  bodyFill: 'none', shadeD: '', shadeFill: 'none', grainOp: 0, dotsOp: 0,
+  starT: 'scale(0)', starFill: '#fff', starOp: 0, sparkT: 'scale(0)', sparkFill: '#fff', sparkOp: 0
+};
+
+function look(material, b, color) {
+  const [h, s, l] = hexToHsl(color);
+  const tier = TIER[b.tier];
+  const size = b.r * 2;
+  const v = Object.assign({}, BLANK, { gid: 'th-g' + b.id });
+  let filter = '';
+  const star = (scale, fill) => { v.starT = 'scale(' + scale + ')'; v.starFill = fill; v.starOp = 1; };
+  const spark = (x, y, scale, fill) => { v.sparkT = 'translate(' + x + ' ' + y + ') scale(' + scale + ')'; v.sparkFill = fill; v.sparkOp = 1; };
+  if (material === 'aura') {
+    Object.assign(v, { gr: '80%', gfx: '32%', gfy: '26%', gm: 0.6, g0: hsl(h - 16, s, l + 16), g1: hsl(h, s + 6, l), g2: hsl(h + 16, s + 8, l - 14), bodyFill: 'url(#' + v.gid + ')' });
+    if (tier === 3) { star(1.8, '#ffffff'); filter = 'filter: drop-shadow(0 0 ' + (size * 0.12).toFixed(1) + 'px ' + hsl(h, s, l, 0.45) + ');'; }
+  } else if (material === 'halftone') {
+    Object.assign(v, { bodyFill: hsl(h, s, l - 10), dotsOp: 0.75 });
+    if (tier === 3) star(2, '#ffffff');
+  } else {
+    Object.assign(v, { bodyFill: color, shadeD: 'M-60 26 C-14 48 34 22 60 -36 L60 60 L-60 60 Z', shadeFill: hsl(h, s, l - 15), grainOp: 0.22 });
+    if (tier === 3) star(2.4, '#1e1e1e');
+  }
+  if (b.full) spark(20, -20, 0.9, '#ffffff');
+  v.pos = 'position: absolute; left: ' + (b.x - b.r).toFixed(1) + 'px; top: ' + (b.y - b.r).toFixed(1) + 'px; width: ' + size + 'px; height: ' + size + 'px; ' + filter + (b.born ? ' animation: th-born 520ms cubic-bezier(.2,.9,.3,1.2);' : '');
+  return v;
+}
+
+let nextId = 1;
+function makeBody(habit, tier, x, y, extra) {
+  return Object.assign({ id: nextId++, habit: habit.id, tier, r: RADIUS[tier], x, y, px: x, py: y, full: false, born: false }, extra || {});
+}
+
+function initialBodies() {
+  const list = [];
+  let k = 0;
+  HABITS.forEach((h) => {
+    ['gem', 'stone', 'marble'].forEach((tier) => {
+      for (let i = 0; i < h[tier + 's']; i++) list.push({ h, tier, seed: k++ });
+    });
+  });
+  list.sort((a, b) => noise(a.seed + 50) - noise(b.seed + 50));
+  return list.map((item, i) => {
+    const r = RADIUS[item.tier];
+    return makeBody(item.h, item.tier, r + noise(item.seed + 11) * (W - 2 * r), -40 - i * 26, { full: item.tier === 'marble' && noise(item.seed + 3) < 0.22 });
+  });
+}
+
+function todayBodies(marks, from) {
+  return HABITS.filter((h) => isDone(marks[h.id])).map((h, i) => makeBody(h, 'marble', 280 + i * 30, from - i * 40, { today: h.id, full: marks[h.id].kind === 'f' }));
+}
+
+function step(bodies, merge) {
+  const merging = (b) => merge && merge.ids.includes(b.id);
+  for (const b of bodies) {
+    if (merging(b)) {
+      b.px = b.x; b.py = b.y;
+      b.x += (merge.x - b.x) * 0.22;
+      b.y += (merge.y - b.y) * 0.22;
+      continue;
+    }
+    const vx = (b.x - b.px) * 0.985;
+    const vy = (b.y - b.py) * 0.985 + 0.45;
+    b.px = b.x; b.py = b.y;
+    b.x += vx; b.y += vy;
+  }
+  for (let pass = 0; pass < 3; pass++) {
+    for (let i = 0; i < bodies.length; i++) {
+      const a = bodies[i];
+      if (merging(a)) continue;
+      for (let j = i + 1; j < bodies.length; j++) {
+        const b = bodies[j];
+        if (merging(b)) continue;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const min = a.r + b.r;
+        const d2 = dx * dx + dy * dy;
+        if (d2 >= min * min || d2 === 0) continue;
+        const d = Math.sqrt(d2);
+        const push = (min - d) / d;
+        const ma = a.r * a.r;
+        const mb = b.r * b.r;
+        a.x -= dx * push * mb / (ma + mb); a.y -= dy * push * mb / (ma + mb);
+        b.x += dx * push * ma / (ma + mb); b.y += dy * push * ma / (ma + mb);
+      }
+      if (a.x < a.r) a.x = a.r;
+      if (a.x > W - a.r) a.x = W - a.r;
+      if (a.y > H - a.r) a.y = H - a.r;
+    }
+  }
+}
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const marks = props.scene === 'closed'
+      ? { read: { kind: 't' }, floss: { kind: 't' }, push: { kind: 'm', reason: 'No energy' }, journal: { kind: 'f' }, water: { kind: 't' } }
+      : { read: { kind: 't' }, journal: { kind: 'f' } };
+    this.bodies = initialBodies().concat(todayBodies(marks, -1200));
+    this.state = { marks, menu: null, ask: null, other: null, otherText: '', flash: null, caption: null, showDone: false, frame: 0 };
+  }
+
+  componentDidMount() {
+    this.run(420);
+  }
+
+  componentWillUnmount() {
+    cancelAnimationFrame(this.raf);
+    [this.timer, this.mergeTimer, this.captionTimer, this.holdTimer].forEach(clearTimeout);
+  }
+
+  run(frames) {
+    cancelAnimationFrame(this.raf);
+    let left = frames;
+    const tick = () => {
+      step(this.bodies, this.merge);
+      this.setState({ frame: this.state.frame + 1 });
+      left--;
+      if (left > 0) this.raf = requestAnimationFrame(tick);
+    };
+    this.raf = requestAnimationFrame(tick);
+  }
+
+  origin(event) {
+    const target = event && event.currentTarget;
+    if (!target || !this.pile) return { x: 350, y: 220 };
+    const box = this.pile.getBoundingClientRect();
+    const at = target.getBoundingClientRect();
+    const scale = box.width / W || 1;
+    return { x: (at.left + at.width / 2 - box.left) / scale, y: (at.top + at.height / 2 - box.top) / scale };
+  }
+
+  replay() {
+    clearTimeout(this.mergeTimer);
+    this.merge = null;
+    this.bodies = initialBodies().concat(todayBodies(this.state.marks, -1200));
+    this.run(420);
+  }
+
+  addRandom(count) {
+    for (let i = 0; i < count; i++) {
+      const h = HABITS[Math.floor(Math.random() * HABITS.length)];
+      const x = RADIUS.marble + Math.random() * (W - 2 * RADIUS.marble);
+      this.bodies.push(makeBody(h, 'marble', x, -30 - i * 34, { full: Math.random() < 0.2 }));
+    }
+    this.run(360);
+    this.scheduleMerges(1400 + count * 60);
+  }
+
+  scheduleMerges(delay) {
+    if (this.merge) return;
+    clearTimeout(this.mergeTimer);
+    this.mergeTimer = setTimeout(() => this.nextMerge(), delay);
+  }
+
+  nextMerge() {
+    for (const h of HABITS) {
+      const marbles = this.bodies.filter((b) => b.habit === h.id && b.tier === 'marble');
+      if (marbles.length >= 7) return this.melt(h, marbles.slice(0, 7), 'stone', '7 in a row merged');
+    }
+    for (const h of HABITS) {
+      const stones = this.bodies.filter((b) => b.habit === h.id && b.tier === 'stone');
+      if (stones.length >= 4) return this.melt(h, stones.slice(0, 4), 'gem', '4 weeks merged');
+    }
+    return null;
+  }
+
+  melt(h, parts, tier, text) {
+    const x = parts.reduce((sum, b) => sum + b.x, 0) / parts.length;
+    const y = Math.min(H - RADIUS[tier], parts.reduce((sum, b) => sum + b.y, 0) / parts.length);
+    this.merge = { ids: parts.map((b) => b.id), x, y };
+    this.run(24);
+    this.mergeTimer = setTimeout(() => {
+      this.bodies = this.bodies.filter((b) => !this.merge.ids.includes(b.id));
+      this.bodies.push(makeBody(h, tier, x, y, { born: true }));
+      this.merge = null;
+      this.say(h.name + ' · ' + text, h.color);
+      this.run(200);
+      this.scheduleMerges(700);
+    }, 420);
+  }
+
+  say(text, color) {
+    clearTimeout(this.captionTimer);
+    this.captionTimer = setTimeout(() => this.setState({ caption: null }), 2600);
+    this.setState({ caption: { text, color } });
+  }
+
+  set(id, mark, event) {
+    const h = HABITS.find((x) => x.id === id);
+    const before = this.state.marks[id];
+    const marks = Object.assign({}, this.state.marks);
+    if (mark) marks[id] = mark; else delete marks[id];
+    if (isDone(before) && !isDone(mark)) this.bodies = this.bodies.filter((b) => b.today !== id);
+    if (isDone(before) && isDone(mark)) this.bodies.forEach((b) => { if (b.today === id) b.full = mark.kind === 'f'; });
+    if (!isDone(before) && isDone(mark)) {
+      const at = this.origin(event);
+      this.bodies.push(makeBody(h, 'marble', at.x, at.y, { today: id, full: mark.kind === 'f', born: true }));
+      this.scheduleMerges(1300);
+    }
+    const missed = mark && mark.kind === 'm';
+    this.setState({ marks, menu: null, ask: missed || !mark ? null : this.state.ask === id ? null : this.state.ask, other: null, otherText: '', flash: isDone(mark) ? id : null, shrink: missed && mark.reason === 'Felt too big' ? id : null });
+    clearTimeout(this.timer);
+    if (isDone(mark)) this.timer = setTimeout(() => this.setState({ flash: null }), 2200);
+    this.run(160);
+  }
+
+  choose(id, kind, event) {
+    const current = this.state.marks[id];
+    if (current && current.kind === kind) return this.set(id, null);
+    if (kind === 'm') return this.setState({ menu: null, ask: id, other: null, otherText: '' });
+    return this.set(id, { kind }, event);
+  }
+
+  primary(id, event) {
+    if (this.state.marks[id]) return this.setState({ menu: this.state.menu === id ? null : id });
+    return this.set(id, { kind: 't' }, event);
+  }
+
+  renderVals() {
+    const { marks, menu, ask, other, otherText, flash, showDone, shrink } = this.state;
+    const material = this.props.material || 'grain';
+    const visible = HABITS.filter((h) => !isDone(marks[h.id]) || flash === h.id || menu === h.id || showDone);
+    const hidden = HABITS.filter((h) => isDone(marks[h.id]));
+
+    const habits = visible.map((h) => {
+      const mark = marks[h.id];
+      const missed = mark && mark.kind === 'm';
+      const done = isDone(mark);
+      const asking = ask === h.id;
+      const markBase = 'box-sizing: border-box; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center;';
+      const markStyle = done
+        ? markBase + ' background: ' + h.color + ';' + (flash === h.id ? ' animation: th-pop 420ms cubic-bezier(.2,.9,.3,1.2);' : '')
+        : missed
+          ? markBase + ' border: 1.5px solid #555555; background: linear-gradient(135deg, transparent 46%, #555555 46%, #555555 54%, transparent 54%);'
+          : asking ? markBase + ' border: 1.5px dashed #6a6a6a;' : markBase + ' border: 1.5px solid #4a4a4a;';
+      let sub = 'after I ' + h.anchor;
+      if (done && flash === h.id) sub = h.win;
+      else if (done) sub = mark.kind === 'f' ? 'did more · ' + h.full : 'done';
+      else if (missed) sub = 'not today · ' + mark.reason.toLowerCase();
+      else if (asking) sub = 'not today — why?';
+      const circle = (kind, i) => {
+        const selected = mark && mark.kind === kind;
+        const base = 'width: 40px; height: 40px; box-sizing: border-box; padding: 0; border-radius: 50%; box-shadow: none; display: flex; align-items: center; justify-content: center; cursor: pointer; animation: th-fan ' + (200 + i * 70) + 'ms cubic-bezier(.2,.9,.3,1.2);';
+        const look = kind === 'm'
+          ? (selected ? ' border: none; background: #555555; color: #1e1e1e;' : ' border: 1.5px solid #4a4a4a; background: transparent; color: #8a8a8a;')
+          : kind === 'f'
+            ? (selected ? ' border: none; background: ' + h.color + '; color: #ffffff;' : ' border: 1.5px solid ' + h.color + '80; background: transparent; color: ' + h.color + ';')
+            : (selected ? ' border: none; background: ' + h.color + '; color: #ffffff;' : ' border: none; background: ' + h.color + '; color: #ffffff;');
+        return {
+          style: base + look,
+          aria: kind === 'm' ? 'Not today' : kind === 'f' ? 'Did more: ' + h.full : 'Done: ' + h.tiny,
+          isMiss: kind === 'm',
+          isFull: kind === 'f',
+          isTiny: kind === 't',
+          pick: (event) => this.choose(h.id, kind, event)
+        };
+      };
+      const reasons = REASONS.map((text) => ({
+        text,
+        style: 'height: 34px; padding: 0 12px; border: 1px solid #363636; border-radius: 17px; background: #262626; box-shadow: none; color: #cfcfcf; font-size: 13px; cursor: pointer;',
+        pick: () => this.set(h.id, { kind: 'm', reason: text })
+      }));
+      reasons.push({
+        text: 'Other…',
+        style: 'height: 34px; padding: 0 12px; border: 1px ' + (other === h.id ? 'solid #6a6a6a' : 'dashed #4a4a4a') + '; border-radius: 17px; background: transparent; box-shadow: none; color: #9a9a9a; font-size: 13px; cursor: pointer;',
+        pick: () => this.setState({ other: h.id })
+      });
+      const save = () => {
+        const text = this.state.otherText.trim();
+        if (text) this.set(h.id, { kind: 'm', reason: text });
+      };
+      return {
+        tiny: h.tiny,
+        sub,
+        titleStyle: 'display: block; font-size: 17px; font-weight: 500; color: ' + (done || missed ? '#7a7a7a' : '#e6e6e6') + ';',
+        subStyle: 'display: block; margin-top: 2px; font-size: 13px; color: ' + (done && flash === h.id ? h.color : '#666666') + ';' + (done && flash === h.id ? ' font-weight: 600;' : ''),
+        mark: markStyle,
+        isDone: done && mark.kind === 't',
+        isFull: done && mark.kind === 'f',
+        menuOpen: menu === h.id,
+        menuClosed: menu !== h.id,
+        choices: ['m', 'f', 't'].map(circle),
+        askReason: asking,
+        reasons,
+        otherOpen: other === h.id,
+        saveOther: save,
+        otherKey: (event) => { if (event.key === 'Enter') save(); },
+        offerShrink: shrink === h.id,
+        moreAria: 'Open ' + h.name,
+        markAria: done ? h.name + ' — change' : 'Mark ' + h.name + ' done, hold for more',
+        openMenu: () => this.setState({ menu: menu === h.id ? null : h.id }),
+        down: () => {
+          this.held = false;
+          clearTimeout(this.holdTimer);
+          this.holdTimer = setTimeout(() => { this.held = true; this.setState({ menu: h.id }); }, HOLD_MS);
+        },
+        up: () => clearTimeout(this.holdTimer),
+        noMenu: (event) => event.preventDefault(),
+        click: (event) => {
+          if (this.held) { this.held = false; return; }
+          this.primary(h.id, event);
+        }
+      };
+    });
+
+    const answered = HABITS.filter((h) => marks[h.id]).length;
+    const count = HABITS.length;
+    const left = count - answered;
+    const closed = left === 0;
+    const share = answered / count;
+
+    const byId = {};
+    HABITS.forEach((h) => { byId[h.id] = h; });
+    const bodies = this.bodies.map((b) => look(material, b, byId[b.habit].color));
+    const total = this.bodies.reduce((sum, b) => sum + VALUE[b.tier], 0);
+    const caption = this.state.caption
+      ? { text: this.state.caption.text, style: 'position: absolute; left: 50%; bottom: 210px; z-index: 4; transform: translateX(-50%); white-space: nowrap; height: 32px; padding: 0 14px; display: flex; align-items: center; border-radius: 16px; background: #262626; border: 1px solid ' + this.state.caption.color + '66; color: ' + this.state.caption.color + '; font-size: 13px; font-weight: 600; animation: th-in 200ms ease;' }
+      : null;
+
+    return {
+      title: closed ? 'Day closed' : left === 1 ? 'One left to close the day' : WORDS[left] + ' left to close the day',
+      lineStyle: 'height: 3px; width: ' + Math.round(share * 100) + '%; border-radius: 2px; background: #dadada; transition: width .45s ease;',
+      habits,
+      hasHidden: hidden.length > 0,
+      hiddenDots: hidden.map((h, i) => ({ style: 'width: 14px; height: 14px; border-radius: 50%; background: ' + h.color + '; box-shadow: 0 0 0 2px #1e1e1e; margin-left: ' + (i === 0 ? 0 : -4) + 'px;' })),
+      hiddenText: hidden.length + ' done',
+      doneToggleText: showDone ? 'Hide' : 'Show',
+      toggleDone: () => this.setState({ showDone: !showDone }),
+      otherText,
+      onOther: (event) => this.setState({ otherText: event.target.value }),
+      saveStyle: 'height: 36px; padding: 0 14px; border: none; border-radius: 18px; background: ' + (otherText.trim() ? '#dadada' : '#2e2e2e') + '; box-shadow: none; color: ' + (otherText.trim() ? '#1e1e1e' : '#5c5c5c') + '; font-size: 13px; font-weight: 600; cursor: pointer;',
+      bodies,
+      total,
+      caption,
+      replay: () => this.replay(),
+      addOne: () => this.addRandom(1),
+      addTen: () => this.addRandom(10),
+      setPile: (el) => { this.pile = el; }
+    };
+  }
+}
+</script>
+</body>
+</html>

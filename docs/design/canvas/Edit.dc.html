@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Habits · Edit</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#1e1e1e}
+a{color:#a68cff}a:hover{color:#c4b1ff}
+textarea::placeholder{color:#4e4e4e}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; display: flex; flex-direction: column; background: #1e1e1e; color: #dadada; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; overflow: hidden">
+  <div style="height: 56px; flex: 0 0 auto; margin-top: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px">
+    <a href="Prototype.dc.html" aria-label="Cancel" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #b3b3b3"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></a>
+    <span style="font-size: 16px; font-weight: 600">{{habit}}</span>
+    <sc-if value="{{ready}}" hint-placeholder-val="{{true}}">
+      <a href="Prototype.dc.html" aria-label="Save" style="width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #dadada; color: #1e1e1e"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></a>
+    </sc-if>
+    <sc-if value="{{notReady}}" hint-placeholder-val="{{false}}">
+      <span aria-label="Save — write something first" style="width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #2e2e2e; color: #5c5c5c"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+    </sc-if>
+  </div>
+
+  <main style="flex: 1 1 auto; padding: 32px 20px 0">
+    <label for="edit-value" style="display: block; font-size: 13px; color: #7a7a7a">{{label}}</label>
+    <textarea id="edit-value" rows="3" value="{{value}}" onChange="{{onValue}}" placeholder="{{placeholder}}" style="width: 100%; margin-top: 8px; box-sizing: border-box; padding: 0; border: none; background: transparent; color: #ededed; font-size: 24px; font-weight: 500; line-height: 1.35; letter-spacing: -0.01em; font-family: inherit; resize: none; outline: none"></textarea>
+    <div style="height: 1px; background: #3a3a3a"></div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"field":{"editor":"enum","options":["tiny","anchor","full","win","name"],"default":"tiny"},"$preview":{"width":390,"height":844}}'>
+const FIELDS = {
+  anchor: { label: 'After I', value: 'flush in the morning', placeholder: 'something I already do every day' },
+  tiny: { label: 'I will', value: 'do two push-ups', placeholder: 'the tiniest version' },
+  full: { label: 'If I feel like more', value: 'twenty push-ups', placeholder: 'the full version' },
+  win: { label: 'And celebrate with', value: 'Stronger already!', placeholder: 'a word or gesture' },
+  name: { label: 'Name', value: 'Push-ups', placeholder: 'Push-ups' }
+};
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const field = FIELDS[props.field] || FIELDS.tiny;
+    this.state = { value: field.value };
+  }
+
+  renderVals() {
+    const field = FIELDS[this.props.field] || FIELDS.tiny;
+    const ready = this.state.value.trim().length > 0;
+    return {
+      habit: 'Push-ups',
+      label: field.label,
+      placeholder: field.placeholder,
+      value: this.state.value,
+      onValue: (event) => this.setState({ value: event.target.value }),
+      ready,
+      notReady: !ready
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tiny Habits · Settings</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#1e1e1e}
+a{color:#a68cff}a:hover{color:#c4b1ff}
+button{font-family:inherit;-webkit-tap-highlight-color:transparent}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; display: flex; flex-direction: column; background: #1e1e1e; color: #dadada; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; overflow: hidden">
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+    <defs>
+      <filter id="st-grain" x="0" y="0" width="100%" height="100%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="3" result="n"></feTurbulence>
+        <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.6 -0.55"></feColorMatrix>
+      </filter>
+      <pattern id="st-dots" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(30)"><circle cx="4.5" cy="4.5" r="2.8" fill="#ffffff"></circle></pattern>
+      <radialGradient id="st-ht-grad" cx="36%" cy="30%" r="72%"><stop offset="0" stop-color="#ffffff"></stop><stop offset="0.7" stop-color="#000000"></stop></radialGradient>
+      <mask id="st-ht"><circle r="48" fill="url(#st-ht-grad)"></circle></mask>
+      <clipPath id="st-ball"><circle r="48"></circle></clipPath>
+    </defs>
+  </svg>
+
+  <div style="height: 52px; flex: 0 0 auto; margin-top: 44px; display: flex; align-items: center; padding: 0 6px; border-bottom: 1px solid #2a2a2a">
+    <span style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #b3b3b3"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></span>
+    <span style="font-size: 16px; font-weight: 600">Tiny Habits</span>
+  </div>
+
+  <main style="flex: 1 1 auto; overflow-y: auto; padding: 8px 20px 32px">
+    <h2 style="margin: 18px 0 4px; font-size: 13px; font-weight: 600; color: #8a8a8a">Jar</h2>
+    <div style="padding: 10px 0 16px; border-bottom: 1px solid #2a2a2a">
+      <div style="font-size: 16px">Material</div>
+      <div style="margin-top: 2px; font-size: 13px; color: #7a7a7a">How your wins look when they pile up.</div>
+      <div role="radiogroup" aria-label="Jar material" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px">
+        <sc-for list="{{materials}}" as="m" hint-placeholder-count="3">
+          <button role="radio" aria-checked="{{m.on}}" onClick="{{m.pick}}" style="{{m.style}}">
+            <span style="position: relative; display: block; width: 96px; height: 64px; margin: 0 auto">
+              <sc-for list="{{m.balls}}" as="b" hint-placeholder-count="9">
+                <span style="{{b.pos}}">
+                  <svg width="100%" height="100%" viewBox="-48 -48 96 96" style="display: block; overflow: visible">
+                    <defs>
+                      <radialGradient id="{{b.gid}}" cx="50%" cy="50%" r="80%" fx="32%" fy="26%">
+                        <stop offset="0" stop-color="{{b.g0}}"></stop>
+                        <stop offset="0.6" stop-color="{{b.g1}}"></stop>
+                        <stop offset="1" stop-color="{{b.g2}}"></stop>
+                      </radialGradient>
+                    </defs>
+                    <circle r="48" fill="{{b.fill}}"></circle>
+                    <g clip-path="url(#st-ball)">
+                      <path d="{{b.shadeD}}" fill="{{b.shade}}"></path>
+                      <rect x="-50" y="-50" width="100" height="100" filter="url(#st-grain)" opacity="{{b.grainOp}}"></rect>
+                      <rect x="-60" y="-60" width="120" height="120" fill="url(#st-dots)" mask="url(#st-ht)" opacity="{{b.dotsOp}}"></rect>
+                    </g>
+                  </svg>
+                </span>
+              </sc-for>
+            </span>
+            <span style="{{m.labelStyle}}">{{m.name}}</span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid #2a2a2a">
+      <div style="flex: 1 1 auto">
+        <div style="font-size: 16px">Celebration line</div>
+        <div style="margin-top: 2px; font-size: 13px; color: #7a7a7a">Your celebration phrase shows under the habit for two seconds.</div>
+      </div>
+      <button role="switch" aria-checked="{{celebrate}}" aria-label="Celebration line" onClick="{{toggleCelebrate}}" style="{{celebrateStyle}}"><span style="{{celebrateKnob}}"></span></button>
+    </div>
+    <div style="display: flex; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid #2a2a2a">
+      <div style="flex: 1 1 auto">
+        <div style="font-size: 16px">Reduce motion</div>
+        <div style="margin-top: 2px; font-size: 13px; color: #7a7a7a">Wins fade in instead of falling and merging.</div>
+      </div>
+      <button role="switch" aria-checked="{{calm}}" aria-label="Reduce motion" onClick="{{toggleCalm}}" style="{{calmStyle}}"><span style="{{calmKnob}}"></span></button>
+    </div>
+
+    <h2 style="margin: 26px 0 4px; font-size: 13px; font-weight: 600; color: #8a8a8a">Habits</h2>
+    <div style="display: flex; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid #2a2a2a">
+      <div style="flex: 1 1 auto">
+        <div style="font-size: 16px">Folder</div>
+        <div style="margin-top: 2px; font-size: 13px; color: #7a7a7a">One note per habit lives here.</div>
+      </div>
+      <span style="height: 36px; padding: 0 12px; display: flex; align-items: center; border: 1px solid #333333; border-radius: 8px; font-size: 14px; color: #cfcfcf">Habits</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid #2a2a2a">
+      <div style="flex: 1 1 auto">
+        <div style="font-size: 16px">Suggest a redesign</div>
+        <div style="margin-top: 2px; font-size: 13px; color: #7a7a7a">After this many “not today” in a row.</div>
+      </div>
+      <div style="display: flex; align-items: center; border: 1px solid #333333; border-radius: 8px">
+        <button aria-label="Fewer" onClick="{{less}}" style="width: 36px; height: 36px; border: none; background: transparent; box-shadow: none; color: #b3b3b3; font-size: 18px; cursor: pointer">−</button>
+        <span style="width: 24px; text-align: center; font-size: 15px; font-variant-numeric: tabular-nums">{{threshold}}</span>
+        <button aria-label="More" onClick="{{more}}" style="width: 36px; height: 36px; border: none; background: transparent; box-shadow: none; color: #b3b3b3; font-size: 18px; cursor: pointer">+</button>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid #2a2a2a">
+      <div style="flex: 1 1 auto; font-size: 16px">Archived habits</div>
+      <span style="font-size: 15px; color: #7a7a7a">2</span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6e6e6e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+const PALETTE = ['#a882ff', '#44cf6e', '#e9973f', '#53dfdd', '#5aa2ff'];
+const MATERIALS = [['grain', 'Grain'], ['aura', 'Aura'], ['halftone', 'Halftone']];
+const BALLS = [
+  { x: 22, y: 48, r: 16, c: 0 }, { x: 54, y: 52, r: 12, c: 4 }, { x: 80, y: 56, r: 8, c: 1 },
+  { x: 74, y: 40, r: 8, c: 3 }, { x: 42, y: 30, r: 9, c: 1 },
+  { x: 62, y: 28, r: 8, c: 0 }, { x: 90, y: 42, r: 7, c: 2 }, { x: 6, y: 26, r: 7, c: 4 }
+];
+
+function hslOf(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h /= 6;
+  }
+  return [h * 360, s * 100, l * 100];
+}
+
+const hsl = (h, s, l) => 'hsl(' + Math.round((h + 360) % 360) + ' ' + Math.round(Math.max(0, Math.min(100, s))) + '% ' + Math.round(Math.max(0, Math.min(100, l))) + '%)';
+
+function ball(material, b, key) {
+  const hex = PALETTE[b.c];
+  const [h, s, l] = hslOf(hex);
+  const v = { gid: 'st-' + key, g0: '#000', g1: '#000', g2: '#000', fill: hex, shadeD: '', shade: 'none', grainOp: 0, dotsOp: 0 };
+  if (material === 'grain') Object.assign(v, { shadeD: 'M-60 26 C-14 48 34 22 60 -36 L60 60 L-60 60 Z', shade: hsl(h, s, l - 15), grainOp: 0.22 });
+  else if (material === 'aura') Object.assign(v, { g0: hsl(h - 16, s, l + 16), g1: hsl(h, s + 6, l), g2: hsl(h + 16, s + 8, l - 14), fill: 'url(#' + v.gid + ')' });
+  else Object.assign(v, { fill: hsl(h, s, l - 10), dotsOp: 0.75 });
+  v.pos = 'position: absolute; left: ' + (b.x - b.r) + 'px; top: ' + (b.y - b.r) + 'px; width: ' + b.r * 2 + 'px; height: ' + b.r * 2 + 'px;';
+  return v;
+}
+
+const knob = (on) => 'position: absolute; top: 3px; left: ' + (on ? 23 : 3) + 'px; width: 20px; height: 20px; border-radius: 50%; background: #ffffff; transition: left .15s;';
+const track = (on) => 'position: relative; flex: 0 0 auto; width: 46px; height: 26px; padding: 0; border: none; border-radius: 13px; box-shadow: none; cursor: pointer; background: ' + (on ? '#8b6cef' : '#3a3a3a') + '; transition: background .15s;';
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { material: 'grain', celebrate: true, calm: false, threshold: 3 };
+  }
+
+  renderVals() {
+    const { material, celebrate, calm, threshold } = this.state;
+    return {
+      materials: MATERIALS.map(([id, name]) => ({
+        name,
+        on: material === id,
+        pick: () => this.setState({ material: id }),
+        balls: BALLS.map((b, i) => ball(id, b, id + i)),
+        style: 'display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 12px 4px 10px; border-radius: 12px; cursor: pointer; box-shadow: none; background: ' + (material === id ? '#262626' : 'transparent') + '; border: 1.5px solid ' + (material === id ? '#dadada' : '#2e2e2e') + ';',
+        labelStyle: 'font-size: 13px; color: ' + (material === id ? '#dadada' : '#8a8a8a') + '; font-weight: ' + (material === id ? 600 : 400) + ';'
+      })),
+      celebrate,
+      calm,
+      celebrateStyle: track(celebrate),
+      celebrateKnob: knob(celebrate),
+      calmStyle: track(calm),
+      calmKnob: knob(calm),
+      toggleCelebrate: () => this.setState({ celebrate: !celebrate }),
+      toggleCalm: () => this.setState({ calm: !calm }),
+      threshold,
+      less: () => this.setState({ threshold: Math.max(1, threshold - 1) }),
+      more: () => this.setState({ threshold: Math.min(9, threshold + 1) })
+    };
+  }
+}
+</script>
+</body>
+</html>
