@@ -1,13 +1,23 @@
 import { describe, expect, it } from "vitest";
 import { HabitEntry } from "../src/application/ports";
 import { FULL, TINY, missed } from "../src/domain/DayMark";
-import { celebrationLine, closeDayTitle, closedDayLine, offersShrink, todayEntries } from "../src/ui/today";
+import { celebrationLine, closeDayTitle, closedDayLine, totalWins, winsLabel, offersShrink, todayEntries } from "../src/ui/today";
 import { d } from "./support/dates";
 import { habitNote } from "./support/habits";
 
 const today = d("2026-10-09");
 const ok = (name: string, extra = {}): HabitEntry => ({ kind: "ok", path: `Habits/${name}.md`, habit: habitNote(name, extra) });
 const names = (entries: HabitEntry[]) => entries.map((entry) => (entry.kind === "ok" ? entry.habit.name : entry.name));
+
+describe("totalWins", () => {
+	it("counts done days of every habit and says it in words", () => {
+		const read = ok("Read", { done_tiny: ["2026-10-08", "2026-10-07"], done_full: ["2026-10-09"], missed: [{ date: "2026-10-06", reason: "Forgot" }] });
+		const floss = ok("Floss", { done_tiny: ["2026-10-09"] });
+		expect(totalWins([read, floss, { kind: "broken", path: "Habits/X.md", name: "X", problem: "bad" }])).toBe(4);
+		expect(winsLabel(1)).toBe("1 win");
+		expect(winsLabel(214)).toBe("214 wins");
+	});
+});
 
 describe("closedDayLine", () => {
 	it("praises a full day and owns up to skips", () => {

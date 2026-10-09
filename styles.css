@@ -269,6 +269,7 @@ button.th-swatch.is-on { box-shadow: 0 0 0 3px var(--th-bg), 0 0 0 5px var(--th-
 .th-ring-header .th-title { font-size: 26px; }
 .th-ring-sub { margin-top: 6px; font-size: 14px; color: var(--th-muted); }
 .th-progress { height: var(--th-progress); margin-top: 16px; border-radius: var(--th-progress); background: var(--th-line); overflow: hidden; }
+.th-wins { margin-top: 8px; text-align: right; font-size: 12px; color: var(--th-faint); font-variant-numeric: tabular-nums; }
 .th-progress-fill { height: 100%; border-radius: var(--th-progress); background: var(--th-text); transition: width 450ms ease; }
 
 .th-row { position: relative; margin-bottom: 8px; padding-left: 16px; animation: th-in 220ms ease; }

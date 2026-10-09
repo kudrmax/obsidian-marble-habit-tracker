@@ -16,7 +16,7 @@ import { EARTH, Point } from "./jar/JarPhysics";
 import { TiltSensor } from "./jar/TiltSensor";
 import { visibleEntries } from "./order";
 import { ScreenChrome } from "./ScreenChrome";
-import { REASONS, celebrationLine, closeDayTitle, closedDayLine, offersShrink, todayEntries } from "./today";
+import { REASONS, celebrationLine, closeDayTitle, closedDayLine, totalWins, winsLabel, offersShrink, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
 
 export const HABITS_VIEW = "tiny-habits-grid";
@@ -149,6 +149,7 @@ export class TodayView extends ItemView {
 			header.createEl("h1", { cls: "th-title", text: closeDayTitle(habits.length - answered) });
 			const progress = header.createDiv("th-progress");
 			progress.createDiv("th-progress-fill").style.width = `${habits.length ? (answered / habits.length) * 100 : 100}%`;
+			header.createDiv({ cls: "th-wins", text: winsLabel(totalWins(all)) });
 		}
 		this.wasClosed = closed;
 

@@ -1,5 +1,5 @@
 import { HabitEntry } from "../application/ports";
-import { DayMark } from "../domain/DayMark";
+import { DayMark, isDone } from "../domain/DayMark";
 import { Habit } from "../domain/Habit";
 import { LocalDate } from "../domain/LocalDate";
 import { needsRedesign } from "../domain/RedesignRule";
@@ -13,6 +13,14 @@ const WORDS = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "E
 export function closeDayTitle(left: number): string {
 	if (left === 0) return "Day closed";
 	return `${WORDS[left] ?? left} left to close the day`;
+}
+
+export function totalWins(entries: readonly HabitEntry[]): number {
+	return entries.reduce((sum, entry) => sum + (entry.kind === "ok" ? entry.habit.marks().filter(([, mark]) => isDone(mark)).length : 0), 0);
+}
+
+export function winsLabel(count: number): string {
+	return count === 1 ? "1 win" : `${count} wins`;
 }
 
 export function closedDayLine(skipped: number): string {
