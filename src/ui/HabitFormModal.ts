@@ -1,77 +1,69 @@
-import { App, Modal, Notice } from "obsidian";
+import { App } from "obsidian";
 import { HabitService } from "../application/HabitService";
-import { NewHabit } from "../domain/Habit";
-import { WEEKDAYS } from "../domain/LocalDate";
-import { ColorPicker } from "./ColorPicker";
-import { colorClass } from "./colors";
-import { WeekdayPicker } from "./WeekdayPicker";
+import { HabitColor } from "../domain/HabitColor";
+import { WEEKDAYS, Weekday } from "../domain/LocalDate";
+import { colorCircles, textField, weekdayCircles } from "./components";
+import { FIELD_LABELS } from "./format";
+import { Sheet } from "./Sheet";
 
-export class HabitFormModal extends Modal {
+export class HabitFormModal extends Sheet {
+	private anchor = "";
+	private tiny = "";
+	private full = "";
+	private celebration = "";
+	private name = "";
+	private days: Weekday[] = [...WEEKDAYS];
+	private color: HabitColor | undefined;
+
 	constructor(
 		app: App,
 		private readonly service: HabitService,
 	) {
-		super(app);
+		super(app, "New habit", undefined);
 	}
 
-	override onOpen(): void {
-		const { contentEl } = this;
-		this.modalEl.addClass("th-modal-shell");
-		contentEl.addClass("th-modal", "th-form", "th-habit", colorClass(undefined));
-		contentEl.createDiv({ cls: "th-modal-title", text: "New habit" });
-		contentEl.createDiv({ cls: "th-modal-hint", text: "Write it as a recipe: an anchor you already do, then something tiny." });
-
-		const line = (lead: string, placeholder: string, optional = false) => {
-			const row = contentEl.createDiv("th-recipe-input");
-			row.createSpan({ cls: "th-recipe-lead", text: lead });
-			const input = row.createEl("input", { cls: "th-input", type: "text" });
-			input.placeholder = placeholder;
-			if (optional) row.createSpan({ cls: "th-optional", text: "optional" });
-			return input;
-		};
-		const anchor = line("After I", "pour my morning coffee");
-		const tiny = line("I'll", "do 2 squats");
-		const full = line("Aiming for", "a 15 minute workout", true);
-		const celebration = line("Then I celebrate", "say “Yes!”", true);
-
-		contentEl.createDiv({ cls: "th-field-label", text: "Name" });
-		const name = contentEl.createEl("input", { cls: "th-input th-input-block", type: "text" });
-		name.placeholder = "Morning workout";
-		contentEl.createDiv({ cls: "th-field-label", text: "Days" });
-		const days = new WeekdayPicker(contentEl, WEEKDAYS);
-		contentEl.createDiv({ cls: "th-field-label", text: "Color" });
-		let tint = colorClass(undefined);
-		const color = new ColorPicker(contentEl, undefined, (picked) => {
-			contentEl.removeClass(tint);
-			tint = colorClass(picked);
-			contentEl.addClass(tint);
-		});
-
-		const actions = contentEl.createDiv("th-actions-row");
-		actions.createEl("button", { cls: "th-pill th-pill-habit", text: "Create habit" }).addEventListener("click", () => {
-			void this.submit({
-				name: name.value,
-				anchor: anchor.value,
-				tiny: tiny.value,
-				full: full.value,
-				celebration: celebration.value,
-				days: days.days,
-				color: color.color,
+	protected override fill(body: HTMLElement): void {
+		const field = (label: string, placeholder: string, large: boolean, set: (value: string) => void) =>
+			textField(body, {
+				label,
+				placeholder,
+				large,
+				onInput: (value) => {
+					set(value);
+					this.refreshReady();
+				},
 			});
+		const first = field(FIELD_LABELS.anchor, "something I already do every day", true, (value) => (this.anchor = value));
+		field(FIELD_LABELS.tiny, "the tiniest version", true, (value) => (this.tiny = value));
+		field(`${FIELD_LABELS.full} · optional`, "the full version", false, (value) => (this.full = value));
+		field(`${FIELD_LABELS.celebration} · optional`, "a word or gesture, like “Yes!”", false, (value) => (this.celebration = value));
+		field("Call it", "Read", false, (value) => (this.name = value));
+
+		const days = body.createDiv("th-sheet-group");
+		days.createDiv({ cls: "th-label", text: "Days" });
+		weekdayCircles(days, this.days, (picked) => {
+			this.days = picked;
+			this.refreshReady();
 		});
-		window.setTimeout(() => anchor.focus(), 0);
+		const colors = body.createDiv("th-sheet-group");
+		colors.createDiv({ cls: "th-label", text: "Color" });
+		colorCircles(colors, this.color, (picked) => (this.color = picked));
+		window.setTimeout(() => first.focus(), 0);
 	}
 
-	override onClose(): void {
-		this.contentEl.empty();
+	protected override isReady(): boolean {
+		return [this.anchor, this.tiny, this.name].every((value) => value.trim()) && this.days.length > 0;
 	}
 
-	private async submit(input: NewHabit): Promise<void> {
-		try {
-			await this.service.create(input);
-			this.close();
-		} catch (error) {
-			new Notice(error instanceof Error ? error.message : String(error));
-		}
+	protected override submit(): Promise<unknown> {
+		return this.service.create({
+			name: this.name,
+			anchor: this.anchor,
+			tiny: this.tiny,
+			full: this.full,
+			celebration: this.celebration,
+			days: this.days,
+			color: this.color,
+		});
 	}
 }

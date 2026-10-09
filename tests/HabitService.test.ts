@@ -29,16 +29,10 @@ describe("HabitService", () => {
 		await expect(service.create({ name: "Зарядка", anchor: "a", tiny: "b", days: WEEKDAYS })).rejects.toThrow(DomainError);
 	});
 
-	it("cycles a day and stores the result", async () => {
-		expect((await service.cycle(path, today)).markOn(today)).toEqual(TINY);
-		expect((await service.cycle(path, today)).markOn(today)).toEqual(FULL);
-		expect((await service.cycle(path, today)).markOn(today)).toBeUndefined();
-		expect(repository.habit(path).markOn(today)).toBeUndefined();
-	});
-
-	it("does not cycle a missed day", async () => {
-		await service.setMark(path, today, missed("проспал"));
-		await expect(service.cycle(path, today)).rejects.toThrow(DomainError);
+	it("answers a day and stores the result", async () => {
+		expect((await service.setMark(path, today, TINY)).markOn(today)).toEqual(TINY);
+		expect((await service.setMark(path, today, FULL)).markOn(today)).toEqual(FULL);
+		expect(repository.habit(path).markOn(today)).toEqual(FULL);
 	});
 
 	it("sets and clears an explicit mark", async () => {
@@ -73,9 +67,9 @@ describe("HabitService", () => {
 	});
 
 	it("refuses to change an unknown or broken habit", async () => {
-		await expect(service.cycle("Habits/Нет.md", today)).rejects.toThrow("Habit not found");
+		await expect(service.setMark("Habits/Нет.md", today, TINY)).rejects.toThrow("Habit not found");
 		repository.entries.set("Habits/Битая.md", { kind: "broken", path: "Habits/Битая.md", name: "Битая", problem: "no properties" });
-		await expect(service.cycle("Habits/Битая.md", today)).rejects.toThrow("no properties");
+		await expect(service.setMark("Habits/Битая.md", today, TINY)).rejects.toThrow("no properties");
 	});
 
 	it("builds each change on the freshly stored habit, not on a stale read", async () => {
@@ -83,9 +77,9 @@ describe("HabitService", () => {
 		const fresh = new HabitService(stale, { today: () => today });
 		const stalePath = await fresh.create({ name: "Нить", anchor: "Зубы", tiny: "1 зуб", days: WEEKDAYS });
 		stale.freeze();
-		await fresh.cycle(stalePath, d("2026-10-08"));
-		await fresh.cycle(stalePath, today);
-		await fresh.cycle(stalePath, today);
+		await fresh.setMark(stalePath, d("2026-10-08"), TINY);
+		await fresh.setMark(stalePath, today, TINY);
+		await fresh.setMark(stalePath, today, FULL);
 		const habit = stale.freshHabit(stalePath);
 		expect(habit.markOn(d("2026-10-08"))).toEqual(TINY);
 		expect(habit.markOn(today)).toEqual(FULL);

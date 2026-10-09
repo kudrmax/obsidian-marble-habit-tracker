@@ -1,26 +1,23 @@
-import { Habit, Part, RecipeChange } from "../domain/Habit";
+import { Habit, Part, RecipeChange, TextPart } from "../domain/Habit";
 import { LocalDate, Weekday } from "../domain/LocalDate";
 import { Schedule } from "../domain/Schedule";
-import { Breakdown } from "../domain/Stats";
 
 const WEEKDAY_SHORT: Record<Weekday, string> = { mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun" };
 const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export const PART_LABELS: Record<Part, string> = {
 	anchor: "Anchor",
-	tiny: "Tiny habit",
-	full: "Full habit",
-	celebration: "Celebration",
-	schedule: "Schedule",
+	tiny: "Tiny",
+	full: "More",
+	celebration: "Celebrate",
+	schedule: "Days",
 };
 
-export const LEVEL_LABELS = { tiny: "Tiny", full: "Full" } as const;
-
-export const BREAKDOWN_LABELS: Record<keyof Breakdown, string> = {
-	tiny: "Tiny",
-	full: "Full",
-	missed: "Didn't happen",
-	empty: "Not marked",
+export const FIELD_LABELS: Record<TextPart, string> = {
+	anchor: "After I",
+	tiny: "I will",
+	full: "If I feel like more",
+	celebration: "And celebrate with",
 };
 
 export function weekdayShort(day: Weekday): string {
@@ -44,19 +41,10 @@ export function longDate(date: LocalDate): string {
 }
 
 export function anchorLine(habit: Habit): string {
-	return `After I ${habit.text("anchor").current() ?? ""}`;
-}
-
-export function celebrationText(habit: Habit, kind: "tiny" | "full"): { title: string; subtitle: string } {
-	const celebration = habit.text("celebration").current();
-	return celebration
-		? { title: celebration, subtitle: `${habit.name} · ${LEVEL_LABELS[kind]}` }
-		: { title: habit.name, subtitle: LEVEL_LABELS[kind] };
+	return `after I ${habit.text("anchor").current() ?? ""}`;
 }
 
 export function describeChange(change: RecipeChange): string {
-	const show = (value: string | Schedule | undefined) => (value instanceof Schedule ? scheduleLabel(value) : value);
-	const from = show(change.from);
-	const to = show(change.to);
-	return `${PART_LABELS[change.part]}: ${from === undefined ? to : `${from} → ${to}`}`;
+	const to = change.to instanceof Schedule ? scheduleLabel(change.to) : change.to;
+	return `${PART_LABELS[change.part]} → ${to}`;
 }

@@ -5,7 +5,7 @@ import { FrontmatterHabitRepository } from "./infrastructure/FrontmatterHabitRep
 import { HabitSettings, loadSettings } from "./settings";
 import { HabitFormModal } from "./ui/HabitFormModal";
 import { HABIT_VIEW, HabitScreenView } from "./ui/HabitScreenView";
-import { HABITS_VIEW, HabitsView } from "./ui/HabitsView";
+import { HABITS_VIEW, TodayView } from "./ui/TodayView";
 import { SettingsHost, SettingsTab } from "./ui/SettingsTab";
 import { UiContext } from "./ui/UiContext";
 
@@ -24,11 +24,12 @@ export default class TinyHabitsPlugin extends Plugin implements SettingsHost {
 			newHabit: () => new HabitFormModal(this.app, service).open(),
 		};
 
-		this.registerView(HABITS_VIEW, (leaf) => new HabitsView(leaf, ui));
+		this.registerView(HABITS_VIEW, (leaf) => new TodayView(leaf, ui));
 		this.registerView(HABIT_VIEW, (leaf) => new HabitScreenView(leaf, ui));
 		this.addRibbonIcon("sprout", "Habits", () => void this.openGrid());
 		this.addCommand({ id: "open", name: "Open habits", callback: () => void this.openGrid() });
 		this.addCommand({ id: "new", name: "New habit", callback: () => ui.newHabit() });
+		this.addCommand({ id: "replay-jar", name: "Replay the jar", callback: () => this.todayViews().forEach((view) => view.replayJar()) });
 		this.addSettingTab(new SettingsTab(this.app, this));
 
 		const refreshIfHabit = (...paths: string[]) => {
@@ -55,10 +56,14 @@ export default class TinyHabitsPlugin extends Plugin implements SettingsHost {
 			.flatMap((leaf) => (leaf.view instanceof HabitScreenView ? [leaf.view] : []));
 	}
 
+	private todayViews(): TodayView[] {
+		return this.app.workspace
+			.getLeavesOfType(HABITS_VIEW)
+			.flatMap((leaf) => (leaf.view instanceof TodayView ? [leaf.view] : []));
+	}
+
 	private refreshViews(): void {
-		for (const leaf of this.app.workspace.getLeavesOfType(HABITS_VIEW)) {
-			if (leaf.view instanceof HabitsView) leaf.view.refresh();
-		}
+		for (const view of this.todayViews()) view.refresh();
 		for (const view of this.habitScreens()) view.refresh();
 	}
 

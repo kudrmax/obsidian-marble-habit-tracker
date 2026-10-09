@@ -1,5 +1,5 @@
 import { Clock } from "../domain/Clock";
-import { DayMark, nextMark } from "../domain/DayMark";
+import { DayMark } from "../domain/DayMark";
 import { Habit, NewHabit, TextPart } from "../domain/Habit";
 import { HabitColor } from "../domain/HabitColor";
 import { LocalDate, Weekday } from "../domain/LocalDate";
@@ -14,11 +14,6 @@ export class HabitService {
 
 	today(): LocalDate {
 		return this.clock.today();
-	}
-
-	async cycle(path: string, date: LocalDate): Promise<Habit> {
-		const today = this.today();
-		return this.repository.update(path, (habit) => habit.withMark(date, nextMark(habit.markOn(date)), today));
 	}
 
 	async setMark(path: string, date: LocalDate, mark: DayMark | undefined): Promise<Habit> {

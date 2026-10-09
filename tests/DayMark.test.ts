@@ -1,18 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { FULL, TINY, isDone, missed, nextMark } from "../src/domain/DayMark";
-import { DomainError } from "../src/domain/DomainError";
+import { FULL, TINY, isDone, missed } from "../src/domain/DayMark";
 
 describe("DayMark", () => {
-	it("cycles empty → tiny → full → empty", () => {
-		expect(nextMark(undefined)).toEqual(TINY);
-		expect(nextMark(TINY)).toEqual(FULL);
-		expect(nextMark(FULL)).toBeUndefined();
-	});
-
-	it("does not cycle a missed day", () => {
-		expect(() => nextMark(missed("проспал"))).toThrow(DomainError);
-	});
-
 	it("requires a reason for a missed day", () => {
 		expect(missed("  проспал ")).toEqual({ kind: "missed", reason: "проспал" });
 		expect(() => missed("   ")).toThrow("reason");
