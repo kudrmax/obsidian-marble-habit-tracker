@@ -131,7 +131,9 @@ function readMarks(frontmatter: Frontmatter): Map<string, DayMark> {
 	const marks = new Map<string, DayMark>();
 	const add = (date: LocalDate, mark: DayMark, key: string) => {
 		const id = date.toString();
-		if (marks.has(id)) throw new HabitDecodeError(`${key}: у дня ${id} уже есть другая отметка`);
+		const existing = marks.get(id);
+		if (existing && JSON.stringify(existing) === JSON.stringify(mark)) return;
+		if (existing) throw new HabitDecodeError(`${key}: у дня ${id} уже есть другая отметка`);
 		marks.set(id, mark);
 	};
 	for (const value of list(frontmatter, DONE_TINY)) add(readDate(value, DONE_TINY), TINY, DONE_TINY);

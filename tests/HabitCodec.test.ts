@@ -52,6 +52,22 @@ describe("decodeHabit", () => {
 		expect(frontmatter).toEqual(EXAMPLE);
 	});
 
+	it("treats the same mark repeated in one list as one mark", () => {
+		const habit = decodeHabit(
+			"Зарядка",
+			example({ done_tiny: ["2026-10-08", "2026-10-08", "2026-10-06"], missed: [{ date: "2026-10-07", reason: "Пил кофе не дома" }, { date: "2026-10-07", reason: "Пил кофе не дома" }] }),
+		);
+		const frontmatter: Frontmatter = {};
+		encodeHabit(habit, frontmatter);
+		expect(frontmatter).toEqual(EXAMPLE);
+	});
+
+	it("reports two different reasons for one missed day", () => {
+		expect(() => decodeHabit("Зарядка", example({ missed: [{ date: "2026-10-07", reason: "a" }, { date: "2026-10-07", reason: "b" }] }))).toThrow(
+			"2026-10-07",
+		);
+	});
+
 	it("reads archived", () => {
 		expect(decodeHabit("Зарядка", example({ archived: true })).archived).toBe(true);
 	});
