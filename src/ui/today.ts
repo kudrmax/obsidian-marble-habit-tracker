@@ -15,6 +15,10 @@ export function closeDayTitle(left: number): string {
 	return `${WORDS[left] ?? left} left to close the day`;
 }
 
+export function closedDayLine(skipped: number): string {
+	return skipped === 0 ? "Every habit, done" : `${skipped} skipped honestly · see you tomorrow`;
+}
+
 export function todayEntries(entries: readonly HabitEntry[], today: LocalDate): HabitEntry[] {
 	return visibleEntries(entries).filter(
 		(entry) => entry.kind === "broken" || entry.habit.isScheduled(today) || entry.habit.markOn(today) !== undefined,

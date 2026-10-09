@@ -9,12 +9,14 @@ This document wins over `docs/superpowers/specs/2026-10-09-best-habit-experience
 1. **Close the day.** The main goal of a day is to answer every habit: done, did more, or not today with a reason.
 2. **Tiny is success.** A tiny mark is a full, equal-size mark. "Did more" is the same mark plus a spark — never bigger, never "more correct".
 3. **Reward right after the tap.** The mark pops, a ball drops into the jar, the celebration phrase replaces the subtitle for ~2 s.
-4. **Minimal and native.** Only Obsidian theme variables, the system font, hairline separators, no cards, no colour noise. Habit colour appears only where it means "this habit" — the mark, its balls, its grid.
+4. **Minimal and native.** Only Obsidian theme variables, the system font, no cards, no colour noise. Habit colour appears only where it means "this habit" — the rail, the mark, its balls, its grid.
 5. **Mobile first.** Every screen is drawn at 390 pt first; desktop is the same screen in a wider tab.
 
 ## Today (main screen)
 
-- No date. Title: "Three left to close the day" → "Day closed". Under it a 3 px neutral progress line (`answered / habits`).
+- No date. Title: "Three left to close the day". Under it a 3 px neutral progress line (`answered / habits`).
+- Rows have no separators: 8 px apart, each with a 3 px rail in its habit colour on the left (30 % once answered).
+- When every habit is answered the header becomes a ring: one arc per habit in its colour (skipped ones grey), "4/5" inside, "Day closed" and "Every habit, done" / "1 skipped honestly · see you tomorrow" under it. The arcs draw in and the count pops when the day closes in front of you.
 - Rows: the tiny action (17 px), the anchor under it ("after I …", 13 px, faint). The row text opens the habit.
 - Circle on the right (28 px inside a 48 px target):
   - **tap** → tiny done, immediately;

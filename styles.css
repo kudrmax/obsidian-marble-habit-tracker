@@ -45,6 +45,7 @@ body {
 
 @keyframes th-pop { 0% { transform: scale(0.4); } 55% { transform: scale(1.2); } 100% { transform: scale(1); } }
 @keyframes th-fan { from { opacity: 0; transform: translateX(24px) scale(0.5); } to { opacity: 1; transform: none; } }
+@keyframes th-arc { from { stroke-dasharray: 0 var(--th-arc) var(--th-rest) 0; } to { stroke-dasharray: var(--th-arc) 0 var(--th-rest) 0; } }
 @keyframes th-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 
 /* Typography */
@@ -252,10 +253,24 @@ button.th-swatch.is-on { box-shadow: 0 0 0 3px var(--th-bg), 0 0 0 5px var(--th-
 .th-today-scroll { position: absolute; inset: 0; z-index: 1; overflow-y: auto; }
 .th-column { max-width: var(--th-column); margin: 0 auto; padding: 8px var(--th-gutter) calc(var(--th-jar-reserve) + var(--th-bottom-inset, 0px)); box-sizing: border-box; }
 .th-today-header { padding: 8px 0 20px; }
+.th-ring-header { display: flex; flex-direction: column; align-items: center; padding: 18px 0 26px; text-align: center; animation: th-in 300ms ease; }
+.th-ring { position: relative; width: 168px; height: 168px; margin-bottom: 18px; }
+.th-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
+.th-ring circle { fill: none; stroke-width: 7; stroke-linecap: round; stroke-dasharray: var(--th-arc) var(--th-rest); }
+.th-ring-track { stroke: var(--th-line); stroke-linecap: butt; }
+.th-ring-arc { stroke: var(--th-habit); }
+.th-ring-arc.is-missed { stroke: var(--th-faint); opacity: 0.5; }
+.th-ring-header.is-fresh .th-ring-arc { animation: th-arc 600ms cubic-bezier(.2, .9, .3, 1) both; }
+.th-ring-header.is-fresh .th-ring-count { animation: th-pop 520ms cubic-bezier(.2, .9, .3, 1.2) 300ms both; }
+.th-ring-count { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 34px; font-weight: 700; letter-spacing: -0.02em; color: var(--th-text); font-variant-numeric: tabular-nums; }
+.th-ring-header .th-title { font-size: 26px; }
+.th-ring-sub { margin-top: 6px; font-size: 14px; color: var(--th-muted); }
 .th-progress { height: var(--th-progress); margin-top: 16px; border-radius: var(--th-progress); background: var(--th-line); overflow: hidden; }
 .th-progress-fill { height: 100%; border-radius: var(--th-progress); background: var(--th-text); transition: width 450ms ease; }
 
-.th-row { border-top: var(--th-line-width) solid var(--th-line); animation: th-in 220ms ease; }
+.th-row { position: relative; margin-bottom: 8px; padding-left: 16px; animation: th-in 220ms ease; }
+.th-row::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 2px; background: var(--th-habit, var(--th-line)); transition: opacity var(--th-fast); }
+.th-row.is-answered::before { opacity: 0.3; }
 .th-row-main { display: flex; align-items: center; gap: 10px; min-height: var(--th-row-min); }
 .th-row-text { flex: 1 1 auto; min-width: 0; padding: 10px 0; cursor: pointer; }
 .th-row-title { font-size: var(--th-text-size); font-weight: 500; color: var(--th-text); overflow-wrap: anywhere; }
@@ -276,9 +291,9 @@ button.th-done-row {
 	display: flex;
 	align-items: center;
 	gap: 10px;
-	padding: 0;
+	margin-top: 4px;
+	padding: 0 0 0 16px;
 	border: none;
-	border-top: var(--th-line-width) solid var(--th-line);
 	border-radius: 0;
 	box-shadow: none;
 	background: transparent;

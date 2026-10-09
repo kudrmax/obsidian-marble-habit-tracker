@@ -16,7 +16,7 @@ import { JarCanvas, JarItem } from "./jar/JarCanvas";
 import { EARTH, Point } from "./jar/JarPhysics";
 import { TiltSensor } from "./jar/TiltSensor";
 import { visibleEntries } from "./order";
-import { REASONS, celebrationLine, closeDayTitle, offersShrink, todayEntries } from "./today";
+import { REASONS, celebrationLine, closeDayTitle, closedDayLine, offersShrink, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
 
 export const HABITS_VIEW = "tiny-habits-grid";
@@ -25,6 +25,9 @@ const HOLD_MS = 450;
 const CELEBRATE_MS = 2200;
 const CAPTION_MS = 2600;
 const DAY_CHECK_MS = 60_000;
+const SVG_NS = "http://www.w3.org/2000/svg";
+const RING_RADIUS = 50;
+const RING_GAP = 9;
 const FALLBACK_COLOR: Hsl = { h: 258, s: 88, l: 66 };
 
 type Answer = "miss" | "more" | "done";
@@ -41,6 +44,7 @@ export class TodayView extends ItemView {
 	private otherText = "";
 	private shrink: string | null = null;
 	private showDone = false;
+	private wasClosed: boolean | null = null;
 	private held = false;
 	private holdTimer = 0;
 	private captionTimer = 0;
@@ -135,10 +139,15 @@ export class TodayView extends ItemView {
 		const habits = entries.flatMap((entry) => (entry.kind === "ok" ? [entry] : []));
 		const answered = habits.filter((entry) => entry.habit.markOn(today) !== undefined).length;
 
-		const header = column.createDiv("th-today-header");
-		header.createEl("h1", { cls: "th-title", text: closeDayTitle(habits.length - answered) });
-		const progress = header.createDiv("th-progress");
-		progress.createDiv("th-progress-fill").style.width = `${habits.length ? (answered / habits.length) * 100 : 100}%`;
+		const closed = habits.length > 0 && answered === habits.length;
+		if (closed) this.renderRing(column, habits.map((entry) => entry.habit), this.wasClosed === false);
+		else {
+			const header = column.createDiv("th-today-header");
+			header.createEl("h1", { cls: "th-title", text: closeDayTitle(habits.length - answered) });
+			const progress = header.createDiv("th-progress");
+			progress.createDiv("th-progress-fill").style.width = `${habits.length ? (answered / habits.length) * 100 : 100}%`;
+		}
+		this.wasClosed = closed;
 
 		const hidden: HabitEntry[] = [];
 		for (const entry of entries) {
@@ -152,6 +161,38 @@ export class TodayView extends ItemView {
 			if (visible) this.renderRow(column, entry.path, entry.habit);
 		}
 		if (hidden.length) this.renderDoneRow(column, hidden);
+	}
+
+	private renderRing(column: HTMLElement, habits: readonly Habit[], justClosed: boolean): void {
+		const today = this.ui.service.today();
+		const done = habits.filter((habit) => isDone(habit.markOn(today))).length;
+		const header = column.createDiv("th-ring-header");
+		header.toggleClass("is-fresh", justClosed);
+		const ring = header.createDiv("th-ring");
+		const svg = ring.appendChild(document.createElementNS(SVG_NS, "svg"));
+		svg.setAttribute("viewBox", "-60 -60 120 120");
+		svg.setAttribute("aria-hidden", "true");
+		const circumference = 2 * Math.PI * RING_RADIUS;
+		const share = circumference / habits.length;
+		const gap = habits.length > 1 ? RING_GAP : 0;
+		const arc = (classes: string[], length: number, offset: number, index: number) => {
+			const circle = svg.appendChild(document.createElementNS(SVG_NS, "circle"));
+			circle.setAttribute("r", String(RING_RADIUS));
+			circle.setAttribute("class", classes.join(" "));
+			circle.style.setProperty("--th-arc", `${length}`);
+			circle.style.setProperty("--th-rest", `${circumference - length}`);
+			circle.style.strokeDashoffset = `${-offset}`;
+			circle.style.animationDelay = `${index * 90}ms`;
+		};
+		arc(["th-ring-track"], circumference, 0, 0);
+		habits.forEach((habit, index) => {
+			const classes = isDone(habit.markOn(today)) ? ["th-ring-arc", "th-habit", colorClass(habit.color)] : ["th-ring-arc", "is-missed"];
+			arc(classes, share - gap, index * share + gap / 2, index);
+		});
+		ring.createDiv({ cls: "th-ring-count", text: `${done}/${habits.length}` });
+		header.createEl("h1", { cls: "th-title", text: closeDayTitle(0) });
+		header.createDiv({ cls: "th-ring-sub", text: closedDayLine(habits.length - done) });
+		if (justClosed) this.haptics.merge();
 	}
 
 	private renderEmpty(column: HTMLElement): void {
