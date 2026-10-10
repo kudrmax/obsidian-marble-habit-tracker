@@ -40,11 +40,12 @@ class SpriteCache {
 
 	constructor(private readonly onReady: () => void) {}
 
-	get(spec: AssetSpec): HTMLCanvasElement | null {
-		const key = assetKey(spec);
+	/** `spec` is only built the first time a key is seen. */
+	get(key: string, spec: () => AssetSpec): HTMLCanvasElement | null {
 		if (this.sprites.has(key)) return this.sprites.get(key) ?? null;
 		this.sprites.set(key, null);
-		const pixels = Math.ceil(JAR_DIAMETER[spec.size] * Math.max(2, window.devicePixelRatio || 1));
+		const asset = spec();
+		const pixels = Math.ceil(JAR_DIAMETER[asset.size] * Math.max(2, window.devicePixelRatio || 1));
 		const generation = this.generation;
 		const image = new Image();
 		image.onload = () => {
@@ -56,7 +57,7 @@ class SpriteCache {
 			this.sprites.set(key, bitmap);
 			this.onReady();
 		};
-		image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(assetSvg(spec, pixels))}`;
+		image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(assetSvg(asset, pixels))}`;
 		return null;
 	}
 
@@ -71,6 +72,8 @@ export class JarCanvas {
 	private readonly context: CanvasRenderingContext2D | null;
 	private readonly physics = new JarPhysics(0, 0);
 	private readonly sprites = new SpriteCache(() => this.wake());
+	/** Each marble's sprite key, worked out once per marble instead of every frame. */
+	private spriteKeys = new WeakMap<JarItem, string>();
 	private readonly drawn = new Map<string, JarItem>();
 	private readonly born = new Map<string, number>();
 	/** Marbles flying into a merge (the merging ones and the one launched from the button): a later sync must not delete them mid-flight. */
@@ -96,7 +99,10 @@ export class JarCanvas {
 	}
 
 	setOptions(options: JarOptions): void {
-		if (options.material !== this.options.material || hsl(options.background) !== hsl(this.options.background)) this.sprites.clear();
+		if (options.material !== this.options.material || hsl(options.background) !== hsl(this.options.background)) {
+			this.sprites.clear();
+			this.spriteKeys = new WeakMap();
+		}
 		this.options = options;
 		this.wake();
 	}
@@ -281,6 +287,19 @@ export class JarCanvas {
 		else this.clock.reset();
 	}
 
+	private assetOf(item: JarItem): AssetSpec {
+		return { material: this.options.material, color: item.color, background: this.options.background, size: item.size, full: item.full };
+	}
+
+	private spriteKey(item: JarItem): string {
+		let key = this.spriteKeys.get(item);
+		if (key === undefined) {
+			key = assetKey(this.assetOf(item));
+			this.spriteKeys.set(item, key);
+		}
+		return key;
+	}
+
 	private draw(): void {
 		const context = this.context;
 		if (!context) return;
@@ -294,7 +313,7 @@ export class JarCanvas {
 			const start = this.born.get(body.id);
 			const scale = start === undefined ? 1 : popScale((now - start) / BORN_MS);
 			const r = body.r * scale;
-			const sprite = this.sprites.get({ material: this.options.material, color: item.color, background: this.options.background, size: item.size, full: item.full });
+			const sprite = this.sprites.get(this.spriteKey(item), () => this.assetOf(item));
 			if (sprite) {
 				context.drawImage(sprite, body.x - r, body.y - r, r * 2, r * 2);
 				continue;
