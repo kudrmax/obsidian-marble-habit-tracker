@@ -253,7 +253,6 @@ export class TodayView extends ItemView {
 
 		if (this.menu === path) this.renderAnswers(main, path, mark);
 		else {
-			main.createSpan({ cls: "th-hint", text: mark ? "click to undo · right-click to change" : "click · right-click for more" });
 			this.renderMark(main, path, mark);
 		}
 		if (this.asking === path) this.renderReasons(row, path);
@@ -268,7 +267,8 @@ export class TodayView extends ItemView {
 	}
 
 	private renderMark(parent: HTMLElement, path: string, mark: DayMark | undefined): void {
-		const button = parent.createEl("button", { cls: "th-mark-button" });
+		const hint = mark ? "Click to undo · hold or right-click to change" : "Click when done · hold or right-click for more";
+		const button = parent.createEl("button", { cls: "th-mark-button", attr: { title: hint } });
 		button.createSpan({ cls: "th-sr-only", text: mark ? "Undo — hold to change" : "Done — hold for more" });
 		const circle = button.createSpan("th-mark");
 		if (isDone(mark)) {
@@ -306,10 +306,10 @@ export class TodayView extends ItemView {
 	private renderAnswers(parent: HTMLElement, path: string, mark: DayMark | undefined): void {
 		const answers = parent.createDiv("th-answers");
 		const option = (answer: Answer, label: string, iconName: "x" | "spark" | "check", selected: boolean) => {
-			const button = answers.createEl("button", { cls: ["th-answer", `th-answer-${answer}`] });
-		button.createSpan({ cls: "th-sr-only", text: label });
+			const button = answers.createEl("button", { cls: ["th-answer", `th-answer-${answer}`], attr: { title: label } });
+			button.createSpan({ cls: "th-sr-only", text: label });
 			button.toggleClass("is-selected", selected);
-			icon(button, iconName);
+			icon(button.createSpan("th-answer-circle"), iconName);
 			button.addEventListener("click", (event) => void this.choose(path, answer, mark, event));
 		};
 		option("miss", "Not today", "x", mark?.kind === "missed");

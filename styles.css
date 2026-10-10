@@ -20,7 +20,7 @@ body {
 	--th-row-min: 62px;
 	--th-target: 48px;
 	--th-mark: 28px;
-	--th-answer: 40px;
+	--th-answer: 44px;
 	--th-chip: 34px;
 	--th-button: 44px;
 	--th-dot: 16px;
@@ -168,28 +168,35 @@ button.th-mark-button:hover { background: transparent; }
 .tiny-habits button, .th-sheet button { -webkit-tap-highlight-color: transparent; }
 .is-mobile .tiny-habits button:focus-visible, .is-mobile .th-sheet button:focus-visible, button.th-mark-button:focus-visible { box-shadow: none; outline: none; }
 
-.th-answers { display: flex; gap: 8px; flex: 0 0 auto; margin-right: -4px; }
+.th-answers { display: flex; gap: 0; flex: 0 0 auto; margin-right: -6px; }
 button.th-answer {
 	box-sizing: border-box;
 	width: var(--th-answer);
 	height: var(--th-answer);
+	min-height: 0;
 	padding: 0;
-	border-radius: 50%;
+	border: none;
 	box-shadow: none;
+	background: transparent;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	cursor: pointer;
 	animation: th-fan 240ms var(--th-ease-pop) backwards;
 }
-button.th-answer svg { width: 16px; height: 16px; }
+button.th-answer:hover { background: transparent; }
+.th-answer-circle { box-sizing: border-box; width: var(--th-mark); height: var(--th-mark); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.th-answer-circle svg { width: 14px; height: 14px; }
 button.th-answer:nth-child(2) { animation-delay: 60ms; }
 button.th-answer:nth-child(3) { animation-delay: 120ms; }
-button.th-answer-miss { border: 1.5px solid var(--th-line); background: transparent; color: var(--th-muted); }
-button.th-answer-miss.is-selected { border-color: var(--th-faint); background: var(--th-faint); color: var(--th-bg); }
-button.th-answer-more { border: 1.5px solid color-mix(in srgb, var(--th-habit) 50%, transparent); background: transparent; color: var(--th-habit); }
-button.th-answer-more.is-selected { border-color: var(--th-habit); background: var(--th-habit); color: #ffffff; }
-button.th-answer-done { border: none; background: var(--th-habit); color: #ffffff; }
+.th-answer-miss .th-answer-circle { border: 1.5px solid var(--th-line); color: var(--th-muted); }
+.th-answer-miss.is-selected .th-answer-circle { border-color: var(--th-faint); background: var(--th-faint); color: var(--th-bg); }
+.th-answer-more .th-answer-circle { border: 1.5px solid color-mix(in srgb, var(--th-habit) 50%, transparent); color: var(--th-habit); }
+.th-answer-more.is-selected .th-answer-circle { border-color: var(--th-habit); background: var(--th-habit); color: #ffffff; }
+.th-answer-done .th-answer-circle { background: var(--th-habit); color: #ffffff; }
+
+/* Obsidian 1.14 draws buttons as squircles; every circle here stays a circle. */
+.tiny-habits button, .tiny-habits .th-mark, .th-answer-circle, .th-sheet button.th-day, .th-sheet button.th-swatch { corner-shape: round; }
 
 /* Fields */
 .th-field { display: block; padding: 6px 0 10px; }
@@ -211,6 +218,7 @@ input.th-inline-input {
 button.th-day {
 	width: var(--th-answer);
 	height: var(--th-answer);
+	min-height: 0;
 	padding: 0;
 	border: 1.5px solid var(--th-line);
 	border-radius: 50%;
@@ -281,9 +289,6 @@ button.th-meta-done[aria-expanded="true"] .th-meta-chevron { transform: rotate(9
 .th-row-extra .th-label { margin-bottom: 8px; }
 .th-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .th-inline-form { display: flex; gap: 6px; margin-top: 8px; }
-.th-hint { flex: 0 0 auto; font-size: 12px; color: var(--th-faint); opacity: 0; transition: opacity var(--th-fast); }
-@media (hover: hover) { .th-row:hover .th-hint { opacity: 1; } }
-.is-mobile .th-hint { display: none; }
 
 .th-done-dots { display: flex; }
 .th-done-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--th-habit); box-shadow: 0 0 0 2px var(--th-bg); }
