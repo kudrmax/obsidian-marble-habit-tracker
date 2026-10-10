@@ -168,10 +168,10 @@ button.th-mark-button:hover { background: transparent; }
 .tiny-habits button, .th-sheet button { -webkit-tap-highlight-color: transparent; }
 .is-mobile .tiny-habits button:focus-visible, .is-mobile .th-sheet button:focus-visible, button.th-mark-button:focus-visible { box-shadow: none; outline: none; }
 
-.th-answers { display: flex; gap: 0; flex: 0 0 auto; margin-right: -6px; }
+.th-answers { display: flex; gap: 0; flex: 0 0 auto; margin-right: -4px; }
 button.th-answer {
 	box-sizing: border-box;
-	width: var(--th-answer);
+	width: calc(var(--th-mark) + 8px);
 	height: var(--th-answer);
 	min-height: 0;
 	padding: 0;
