@@ -1,4 +1,4 @@
-import { ItemView, Notice, WorkspaceLeaf } from "obsidian";
+import { ItemView, Notice, WorkspaceLeaf, setIcon } from "obsidian";
 import { HabitEntry } from "../application/ports";
 import { DayMark, FULL, TINY, isDone, missed } from "../domain/DayMark";
 import { Habit } from "../domain/Habit";
@@ -147,34 +147,54 @@ export class TodayView extends ItemView {
 		const habits = entries.flatMap((entry) => (entry.kind === "ok" ? [entry] : []));
 		const answered = habits.filter((entry) => entry.habit.markOn(today) !== undefined).length;
 
+		const doneHabits = habits.filter((entry) => isDone(entry.habit.markOn(today)));
 		const closed = habits.length > 0 && answered === habits.length;
-		if (closed) this.renderRing(column, habits.map((entry) => entry.habit), this.wasClosed === false);
-		else {
-			const header = column.createDiv("th-today-header");
-			header.createEl("h1", { cls: "th-title", text: closeDayTitle(habits.length - answered) });
-			const progress = header.createDiv("th-progress");
-			progress.createDiv("th-progress-fill").style.width = `${habits.length ? (answered / habits.length) * 100 : 100}%`;
-			if (this.ui.settings().showWins) header.createDiv({ cls: "th-wins", text: winsLabel(totalWins(all)) });
-		}
+		const header = closed
+			? this.renderRing(column, habits.map((entry) => entry.habit), this.wasClosed === false)
+			: this.renderProgress(column, habits.length - answered, habits.length ? answered / habits.length : 1);
+		this.renderMeta(header, doneHabits, all);
 		this.wasClosed = closed;
 
-		const hidden: HabitEntry[] = [];
+		const hideDone = this.ui.settings().hideDone;
 		for (const entry of entries) {
 			if (entry.kind === "broken") {
 				this.renderBroken(column, entry);
 				continue;
 			}
 			const done = isDone(entry.habit.markOn(today));
-			const hideDone = this.ui.settings().hideDone;
-			const visible = !done || !hideDone || this.showDone || this.menu === entry.path;
-			if (done) hidden.push(entry);
-			if (visible) this.renderRow(column, entry.path, entry.habit);
+			if (!done || !hideDone || this.showDone || this.menu === entry.path) this.renderRow(column, entry.path, entry.habit);
 		}
-		if (hidden.length && this.ui.settings().hideDone) this.renderDoneRow(column, hidden);
 		this.shownRows = this.renderingRows;
 	}
 
-	private renderRing(column: HTMLElement, habits: readonly Habit[], justClosed: boolean): void {
+	private renderProgress(column: HTMLElement, left: number, share: number): HTMLElement {
+		const header = column.createDiv("th-today-header");
+		header.createEl("h1", { cls: "th-title", text: closeDayTitle(left) });
+		header.createDiv("th-progress").createDiv("th-progress-fill").style.width = `${share * 100}%`;
+		return header;
+	}
+
+	/** "3 done" (tap to show or hide them) and the total wins, under today's progress. */
+	private renderMeta(header: HTMLElement, done: readonly HabitEntry[], all: readonly HabitEntry[]): void {
+		const settings = this.ui.settings();
+		const meta = header.createDiv("th-meta");
+		if (done.length) {
+			const toggle = meta.createEl("button", { cls: "th-meta-done", attr: { "aria-expanded": String(this.showDone || !settings.hideDone) } });
+			const dots = toggle.createSpan("th-done-dots");
+			for (const entry of done) dots.createSpan({ cls: ["th-done-dot", "th-habit", colorClass(entry.kind === "ok" ? entry.habit.color : undefined)] });
+			toggle.createSpan({ text: `${done.length} done` });
+			if (settings.hideDone) {
+				setIcon(toggle.createSpan("th-meta-chevron"), "chevron-right");
+				toggle.addEventListener("click", () => {
+					this.showDone = !this.showDone;
+					this.render();
+				});
+			} else toggle.disabled = true;
+		}
+		if (settings.showWins) meta.createSpan({ cls: "th-wins", text: winsLabel(totalWins(all)) });
+	}
+
+	private renderRing(column: HTMLElement, habits: readonly Habit[], justClosed: boolean): HTMLElement {
 		const today = this.ui.service.today();
 		const done = habits.filter((habit) => isDone(habit.markOn(today))).length;
 		const header = column.createDiv("th-ring-header");
@@ -204,6 +224,7 @@ export class TodayView extends ItemView {
 		header.createEl("h1", { cls: "th-title", text: closeDayTitle(0) });
 		header.createDiv({ cls: "th-ring-sub", text: closedDayLine(habits.length - done) });
 		if (justClosed) this.haptics.merge();
+		return header;
 	}
 
 	private renderEmpty(column: HTMLElement): void {
@@ -251,7 +272,8 @@ export class TodayView extends ItemView {
 	}
 
 	private renderMark(parent: HTMLElement, path: string, mark: DayMark | undefined): void {
-		const button = parent.createEl("button", { cls: "th-mark-button", attr: { "aria-label": mark ? "Undo — hold to change" : "Done — hold for more" } });
+		const button = parent.createEl("button", { cls: "th-mark-button" });
+		button.createSpan({ cls: "th-sr-only", text: mark ? "Undo — hold to change" : "Done — hold for more" });
 		const circle = button.createSpan("th-mark");
 		if (isDone(mark)) {
 			circle.addClass("is-done");
@@ -288,7 +310,8 @@ export class TodayView extends ItemView {
 	private renderAnswers(parent: HTMLElement, path: string, mark: DayMark | undefined): void {
 		const answers = parent.createDiv("th-answers");
 		const option = (answer: Answer, label: string, iconName: "x" | "spark" | "check", selected: boolean) => {
-			const button = answers.createEl("button", { cls: ["th-answer", `th-answer-${answer}`], attr: { "aria-label": label, title: label } });
+			const button = answers.createEl("button", { cls: ["th-answer", `th-answer-${answer}`] });
+		button.createSpan({ cls: "th-sr-only", text: label });
 			button.toggleClass("is-selected", selected);
 			icon(button, iconName);
 			button.addEventListener("click", (event) => void this.choose(path, answer, mark, event));
@@ -337,21 +360,6 @@ export class TodayView extends ItemView {
 		icon(link, "shrink");
 		link.appendText("Make it even tinier");
 		link.addEventListener("click", () => new EditSheet(this.app, this.ui.service, path, habit, "tiny").open());
-	}
-
-	private renderDoneRow(column: HTMLElement, hidden: readonly HabitEntry[]): void {
-		const button = column.createEl("button", { cls: "th-done-row" });
-		const dots = button.createSpan("th-done-dots");
-		for (const entry of hidden) {
-			const color = entry.kind === "ok" ? entry.habit.color : undefined;
-			dots.createSpan({ cls: ["th-done-dot", "th-habit", colorClass(color)] });
-		}
-		button.createSpan({ cls: "th-done-text", text: `${hidden.length} done` });
-		button.createSpan({ cls: "th-done-toggle", text: this.showDone ? "Hide" : "Show" });
-		button.addEventListener("click", () => {
-			this.showDone = !this.showDone;
-			this.render();
-		});
 	}
 
 	private showMenu(path: string): void {
