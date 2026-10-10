@@ -15,6 +15,7 @@ const RECIPE_ICONS: Record<TextPart | "schedule", string> = {
 	celebration: "party-popper",
 	schedule: "calendar-days",
 };
+const SECTION_ICON = "layers";
 
 /** Panels the reader folded, remembered while Obsidian is open. */
 const folded = new Set<string>();
@@ -111,18 +112,19 @@ export class HabitBlock {
 	private renderRecipe(rows: HTMLElement, habit: Habit): void {
 		const text = (part: TextPart) => habit.text(part).current();
 		for (const part of ["anchor", "tiny", "full", "celebration"] as const) {
-			this.editable(this.property(rows, RECIPE_ICONS[part], RECIPE_LABELS[part]), part, text(part) ?? "");
+			this.editable(this.property(rows, RECIPE_ICONS[part], RECIPE_LABELS[part]), text(part) ?? "", (next) => this.ui.service.replaceText(this.path, part, next));
 		}
 		const days = this.property(rows, RECIPE_ICONS.schedule, RECIPE_LABELS.schedule).createDiv({ cls: "metadata-input-longtext th-habit-days", text: recipeDays(habit.currentSchedule) });
 		days.addEventListener("click", () => new EditSheet(this.app, this.ui.service, this.path, habit, "schedule").open());
+		this.editable(this.property(rows, SECTION_ICON, "section"), habit.section ?? "", (next) => this.ui.service.setSection(this.path, next));
 	}
 
-	/** A value edited in place like a text property: saving starts a new version of that part of the recipe. */
-	private editable(parent: HTMLElement, part: TextPart, value: string): void {
+	/** A value edited in place like a text property, saved when the field loses focus. */
+	private editable(parent: HTMLElement, value: string, change: (next: string) => Promise<unknown>): void {
 		const input = parent.createDiv({ cls: "metadata-input-longtext", text: value, attr: { contenteditable: "true", spellcheck: "false", placeholder: "Empty" } });
 		const save = () => {
 			const next = (input.textContent ?? "").trim();
-			if (next !== value) void this.run(() => this.ui.service.replaceText(this.path, part, next)).then(() => this.render());
+			if (next !== value) void this.run(() => change(next)).then(() => this.render());
 			else if (this.stale) this.render();
 		};
 		input.addEventListener("keydown", (event) => {

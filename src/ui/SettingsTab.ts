@@ -34,6 +34,7 @@ const PROPERTY_LABELS: Record<keyof PropertyNames, string> = {
 	missed: "Skipped days",
 	color: "Color",
 	order: "Order",
+	section: "Section",
 	archived: "Archived",
 };
 

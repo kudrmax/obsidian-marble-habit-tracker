@@ -15,8 +15,9 @@ import { JarCanvas, JarItem } from "./jar/JarCanvas";
 import { KeyboardWatch } from "./KeyboardWatch";
 import { EARTH, Point } from "./jar/JarPhysics";
 import { TiltSensor } from "./jar/TiltSensor";
-import { moveAmongShown, visibleEntries } from "./order";
-import { RowDrag } from "./RowDrag";
+import { Placement, arrange, groupBySection, visibleEntries } from "./order";
+import { Drop, RowDrag } from "./RowDrag";
+import { SectionNameModal } from "./SectionNameModal";
 import { ScreenChrome } from "./ScreenChrome";
 import { closeDayTitle, closedDayLine, totalWins, winsLabel, offersShrink, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
@@ -98,10 +99,7 @@ export class TodayView extends ItemView {
 		this.rowDrag = new RowDrag(
 			this.columnEl,
 			() => this.haptics.tap(),
-			(path, to) => {
-				if (to !== null) void this.reorder(path, to);
-				else if (this.stale) this.render();
-			},
+			(drop) => this.dropped(drop),
 		);
 		this.jar = new JarCanvas(root, this.jarOptions());
 		this.chrome = new ScreenChrome(root, this.containerEl, (shelves, ledges) => {
@@ -183,28 +181,60 @@ export class TodayView extends ItemView {
 		this.wasClosed = closed;
 
 		const hideDone = this.ui.settings().hideDone;
-		for (const entry of entries) {
-			if (entry.kind === "broken") {
-				this.renderBroken(column, entry);
-				continue;
-			}
-			const done = isDone(entry.habit.markOn(today));
-			if (!done || !hideDone || this.showDone || this.menu === entry.path) this.renderRow(column, entry.path, entry.habit);
+		const shown = habits.filter((entry) => !isDone(entry.habit.markOn(today)) || !hideDone || this.showDone || this.menu === entry.path);
+		const sections = groupBySection(
+			all.flatMap((entry) => (entry.kind === "ok" ? [entry] : [])),
+			(entry) => entry.habit.section,
+		);
+		for (const group of sections) {
+			const rows = shown.filter((entry) => entry.habit.section === group.section);
+			if (rows.length === 0) continue;
+			if (group.section !== undefined) this.renderSection(column, group.section);
+			for (const entry of rows) this.renderRow(column, entry.path, entry.habit);
 		}
+		for (const entry of entries) if (entry.kind === "broken") this.renderBroken(column, entry);
+		this.renderNewSection(column);
 		this.shownRows = this.renderingRows;
 	}
 
-	/** Saves a row dragged to place `to` among the shown rows; the habits not shown keep their places. */
-	private async reorder(path: string, to: number): Promise<void> {
-		const shown = [...(this.columnEl?.querySelectorAll<HTMLElement>(".th-row[data-drag]") ?? [])].flatMap((row) => (row.dataset.drag && row.dataset.drag !== path ? [row.dataset.drag] : []));
-		shown.splice(to, 0, path);
-		const all = visibleEntries(this.ui.repository.list()).flatMap((entry) => (entry.kind === "ok" ? [entry.path] : []));
+	/** Reads the new order and sections off the screen after a drop and saves them; a row dropped past the new-section zone asks for a name first. */
+	private dropped(drop: Drop | null): void {
+		if (!drop || !this.columnEl) {
+			if (this.stale) this.render();
+			return;
+		}
+		const shown: Placement[] = [];
+		let section: string | undefined;
+		let fresh = false;
+		let named: Placement | null = null;
+		for (const slot of this.columnEl.querySelectorAll<HTMLElement>("[data-slot]")) {
+			if (slot.dataset.slot === "header") section = slot.dataset.section;
+			else if (slot.dataset.slot === "zone") fresh = true;
+			else if (slot.dataset.drag) {
+				const moved = drop.kind === "row" && slot === drop.element;
+				const placement = { path: slot.dataset.drag, section: moved ? section : slot.dataset.section || undefined };
+				shown.push(placement);
+				if (moved && fresh) named = placement;
+			}
+		}
+		if (!named) return void this.saveArrangement(shown);
+		const path = named.path;
+		new SectionNameModal(
+			this.app,
+			(name) => void this.saveArrangement(shown.map((item) => (item.path === path ? { path, section: name } : item))),
+			() => this.render(),
+		).open();
+	}
+
+	private async saveArrangement(shown: readonly Placement[]): Promise<void> {
+		const habits = visibleEntries(this.ui.repository.list()).flatMap((entry) => (entry.kind === "ok" ? [entry] : []));
+		const before = groupBySection(habits, (entry) => entry.habit.section).flatMap((group) => group.items.map((entry) => ({ path: entry.path, section: entry.habit.section })));
 		try {
-			await this.ui.service.reorder(moveAmongShown(all, shown, path, to));
+			await this.ui.service.arrange(arrange(before, shown));
 		} catch (error) {
 			new Notice(error instanceof Error ? error.message : String(error));
 		}
-		if (this.stale) this.render();
+		this.render();
 	}
 
 	private renderProgress(column: HTMLElement, left: number, total: number): HTMLElement {
@@ -274,6 +304,15 @@ export class TodayView extends ItemView {
 		iconButton(empty, { icon: "plus", label: "Create a tiny habit", primary: true, large: true, onClick: () => this.ui.newHabit() });
 	}
 
+	private renderSection(column: HTMLElement, section: string): void {
+		column.createDiv({ cls: "th-section", text: section, attr: { "data-slot": "header", "data-section": section } });
+	}
+
+	private renderNewSection(column: HTMLElement): void {
+		const zone = column.createDiv({ cls: "th-section-new", text: "+ New section", attr: { "data-slot": "zone" } });
+		zone.addEventListener("click", () => new Notice("Hold a habit and drag it here to start a new section."));
+	}
+
 	private renderBroken(column: HTMLElement, entry: Extract<HabitEntry, { kind: "broken" }>): void {
 		const row = column.createDiv("th-row is-answered");
 		const text = row.createDiv("th-row-main").createDiv("th-row-text");
@@ -285,7 +324,10 @@ export class TodayView extends ItemView {
 	private renderRow(column: HTMLElement, path: string, habit: Habit): void {
 		const today = this.ui.service.today();
 		const mark = habit.markOn(today);
-		const row = column.createDiv({ cls: ["th-row", "th-habit", colorClass(habit.color)], attr: { "data-drag": path } });
+		const row = column.createDiv({
+			cls: ["th-row", "th-habit", colorClass(habit.color)],
+			attr: { "data-slot": "row", "data-drag": path, "data-section": habit.section ?? "" },
+		});
 		row.toggleClass("is-answered", mark !== undefined);
 		row.toggleClass("is-new", !this.shownRows.has(path));
 		this.renderingRows.add(path);

@@ -20,6 +20,8 @@ export const sameSchedule = (a: Schedule, b: Schedule): boolean => a.equals(b);
 export interface HabitState {
 	readonly name: string;
 	readonly order?: number;
+	/** The group the habit is listed under on Today, like "Morning"; none for the habits at the top. */
+	readonly section?: string;
 	readonly color?: HabitColor;
 	readonly archived: boolean;
 	readonly schedule: Component<Schedule>;
@@ -89,6 +91,10 @@ export class Habit {
 
 	get name(): string {
 		return this.state.name;
+	}
+
+	get section(): string | undefined {
+		return this.state.section;
 	}
 
 	get order(): number | undefined {
@@ -165,6 +171,10 @@ export class Habit {
 
 	withOrder(order: number): Habit {
 		return new Habit({ ...this.state, order });
+	}
+
+	withSection(section: string | undefined): Habit {
+		return new Habit({ ...this.state, section: section?.trim() || undefined });
 	}
 
 	withColor(color: HabitColor | undefined): Habit {

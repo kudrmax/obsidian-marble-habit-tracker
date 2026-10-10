@@ -29,19 +29,26 @@ describe("HabitService", () => {
 		await expect(service.create({ name: "Зарядка", anchor: "a", tiny: "b", days: WEEKDAYS })).rejects.toThrow(DomainError);
 	});
 
-	it("numbers habits in the given order, writing only the changed ones", async () => {
+	it("numbers habits in the given order with their sections, writing only the changed ones", async () => {
 		const second = await service.create({ name: "Чтение", anchor: "Кофе", tiny: "1 страница", days: WEEKDAYS });
-		await service.reorder([second, path]);
+		await service.arrange([{ path: second, section: "Утро" }, { path }]);
 		expect(repository.habit(second).order).toBe(1);
+		expect(repository.habit(second).section).toBe("Утро");
 		expect(repository.habit(path).order).toBe(2);
+		expect(repository.habit(path).section).toBeUndefined();
 		let writes = 0;
 		const update = repository.update.bind(repository);
 		repository.update = (...args) => {
 			writes++;
 			return update(...args);
 		};
-		await service.reorder([second, path]);
+		await service.arrange([{ path: second, section: "Утро" }, { path }]);
 		expect(writes).toBe(0);
+	});
+
+	it("sets and clears a section", async () => {
+		expect((await service.setSection(path, " Вечер ")).section).toBe("Вечер");
+		expect((await service.setSection(path, "")).section).toBeUndefined();
 	});
 
 	it("answers a day and stores the result", async () => {

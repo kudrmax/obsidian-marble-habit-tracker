@@ -43,13 +43,17 @@ export class HabitService {
 		return this.repository.update(path, (habit) => habit.withColor(color));
 	}
 
-	/** Numbers the habits 1, 2, 3… in the given order, writing only the ones whose number changes. */
-	async reorder(paths: readonly string[]): Promise<void> {
-		for (const [index, path] of paths.entries()) {
+	/** Numbers the habits 1, 2, 3… in the given order with the given sections, writing only the ones that change. */
+	async arrange(placements: readonly { readonly path: string; readonly section?: string }[]): Promise<void> {
+		for (const [index, { path, section }] of placements.entries()) {
 			const entry = this.repository.get(path);
-			if (entry?.kind !== "ok" || entry.habit.order === index + 1) continue;
-			await this.repository.update(path, (habit) => habit.withOrder(index + 1));
+			if (entry?.kind !== "ok" || (entry.habit.order === index + 1 && entry.habit.section === section)) continue;
+			await this.repository.update(path, (habit) => habit.withOrder(index + 1).withSection(section));
 		}
+	}
+
+	async setSection(path: string, section: string | undefined): Promise<Habit> {
+		return this.repository.update(path, (habit) => habit.withSection(section));
 	}
 
 	async archive(path: string): Promise<Habit> {

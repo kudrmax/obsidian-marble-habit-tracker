@@ -13,6 +13,7 @@ export class HabitDecodeError extends Error {}
 /** The frontmatter property each part of a habit is stored under. */
 export interface PropertyNames {
 	readonly order: string;
+	readonly section: string;
 	readonly color: string;
 	readonly archived: string;
 	readonly schedule: string;
@@ -27,6 +28,7 @@ export interface PropertyNames {
 
 export const DEFAULT_PROPERTY_NAMES: PropertyNames = {
 	order: "order",
+	section: "section",
 	color: "color",
 	archived: "archived",
 	schedule: "schedule",
@@ -49,6 +51,7 @@ export function decodeHabit(name: string, frontmatter: Frontmatter | null | unde
 		return Habit.restore({
 			name,
 			order: readOrder(frontmatter[keys.order], keys.order),
+			section: readSection(frontmatter[keys.section]),
 			color: readColor(frontmatter[keys.color], keys.color),
 			archived: frontmatter[keys.archived] === true,
 			schedule: readVersions(frontmatter, keys.schedule, readSchedule, sameSchedule),
@@ -63,6 +66,7 @@ export function decodeHabit(name: string, frontmatter: Frontmatter | null | unde
 
 export function encodeHabit(habit: Habit, frontmatter: Frontmatter, keys: PropertyNames = DEFAULT_PROPERTY_NAMES): void {
 	put(frontmatter, keys.order, habit.order);
+	put(frontmatter, keys.section, habit.section);
 	put(frontmatter, keys.color, habit.color);
 	frontmatter[keys.schedule] = encodeVersions(habit.schedule.versions, (schedule) => schedule.weekdays);
 	for (const part of TEXT_PARTS) put(frontmatter, keys[part], nonEmpty(encodeVersions(habit.text(part).versions, (value) => value)));
@@ -110,6 +114,11 @@ function readOrder(value: unknown, key: string): number | undefined {
 	if (value === undefined || value === null) return undefined;
 	if (typeof value === "number" && Number.isFinite(value)) return value;
 	throw new HabitDecodeError(`${key}: expected a number, got "${String(value)}"`);
+}
+
+function readSection(value: unknown): string | undefined {
+	if (typeof value === "number") return String(value);
+	return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
 function readColor(value: unknown, key: string): HabitColor | undefined {

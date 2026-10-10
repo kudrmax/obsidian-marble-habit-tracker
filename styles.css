@@ -434,3 +434,10 @@ button.th-style-tile.is-selected { border-color: var(--interactive-accent); }
 .th-row-text { -webkit-user-select: none; user-select: none; }
 .th-row.is-dragging { z-index: 5; background: var(--background-primary); border-radius: var(--radius-m); box-shadow: var(--shadow-l); scale: 1.02; transition: scale var(--th-fast), box-shadow var(--th-fast); }
 .th-row.is-shifting { transition: transform 160ms ease; }
+
+/* Sections on Today: a header over each group, and a zone to drop a habit into a new one. */
+.th-section { padding: 18px 0 6px; font-size: var(--font-ui-small); font-weight: 600; color: var(--text-muted); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: grab; }
+.th-section.is-dragging { position: relative; z-index: 5; background: var(--background-primary); }
+.th-section.is-shifting, .th-section-new.is-shifting { transition: transform 160ms ease; }
+.th-section-new { margin-top: 12px; padding: 12px 16px; border: 1px dashed var(--background-modifier-border); border-radius: var(--radius-m); color: var(--text-faint); font-size: var(--font-ui-small); text-align: center; -webkit-user-select: none; user-select: none; }
+.th-section-name { width: 100%; }
