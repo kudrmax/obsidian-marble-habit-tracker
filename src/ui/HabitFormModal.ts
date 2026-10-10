@@ -3,7 +3,7 @@ import { HabitService } from "../application/HabitService";
 import { HabitColor } from "../domain/HabitColor";
 import { WEEKDAYS, Weekday } from "../domain/LocalDate";
 import { colorCircles, textField, weekdayCircles } from "./components";
-import { FIELD_LABELS } from "./format";
+import { partTitle } from "./format";
 import { Sheet } from "./Sheet";
 
 export class HabitFormModal extends Sheet {
@@ -33,10 +33,10 @@ export class HabitFormModal extends Sheet {
 					this.refreshReady();
 				},
 			});
-		const first = field(FIELD_LABELS.anchor, "something I already do every day", true, (value) => (this.anchor = value));
-		field(FIELD_LABELS.tiny, "the tiniest version", true, (value) => (this.tiny = value));
-		field(`${FIELD_LABELS.full} · optional`, "the bigger version", false, (value) => (this.full = value));
-		field(`${FIELD_LABELS.celebration} · optional`, "a word or a gesture, like “Yes!”", false, (value) => (this.celebration = value));
+		const first = field(partTitle("anchor"), "something I already do every day", true, (value) => (this.anchor = value));
+		field(partTitle("tiny"), "the tiniest version", true, (value) => (this.tiny = value));
+		field(`${partTitle("full")} · optional`, "the bigger version", false, (value) => (this.full = value));
+		field(`${partTitle("celebration")} · optional`, "a word or a gesture, like “Yes!”", false, (value) => (this.celebration = value));
 		field("Call it", "Read", false, (value) => (this.name = value));
 
 		const days = body.createDiv("th-sheet-group");

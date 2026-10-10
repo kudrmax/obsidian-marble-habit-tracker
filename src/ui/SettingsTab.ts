@@ -2,6 +2,7 @@ import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
 import { JarSize } from "../domain/Jar";
 import { PropertyNames } from "../infrastructure/HabitCodec";
 import { DEFAULT_SETTINGS, HabitSettings, parseReasons } from "../settings";
+import { partTitle } from "./format";
 import { Hsl, parseColor } from "./jar/color";
 import { JAR_DIAMETER, JAR_MATERIALS, JarMaterial, assetSvg } from "./jar/JarAssets";
 
@@ -18,11 +19,11 @@ const PREVIEW: ReadonlyArray<{ color: string; size: JarSize; full: boolean }> = 
 	{ color: "--color-orange", size: "small", full: true },
 ];
 const PROPERTY_LABELS: Record<keyof PropertyNames, string> = {
-	anchor: "After I (anchor)",
-	tiny: "I will (tiny version)",
-	full: "On a good day (bigger version)",
-	celebration: "And celebrate",
-	schedule: "Days",
+	anchor: partTitle("anchor"),
+	tiny: partTitle("tiny"),
+	full: partTitle("full"),
+	celebration: partTitle("celebration"),
+	schedule: partTitle("schedule"),
 	doneTiny: "Done days",
 	doneFull: "Did-more days",
 	missed: "Not-today days",

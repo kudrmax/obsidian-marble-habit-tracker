@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Schedule } from "../src/domain/Schedule";
-import { anchorLine, dayMonth, describeChange, longDate, recipeDays, scheduleLabel } from "../src/ui/format";
+import { anchorLine, dayMonth, describeChange, longDate, recipeDays } from "../src/ui/format";
 import { d } from "./support/dates";
 import { habitNote } from "./support/habits";
 
@@ -8,11 +8,6 @@ describe("format", () => {
 	it("finishes the recipe sentence after \"every\"", () => {
 		expect(recipeDays(Schedule.everyDay())).toBe("day");
 		expect(recipeDays(new Schedule(["fri", "mon", "wed"]))).toBe("Mon, Wed, Fri");
-	});
-
-	it("labels schedules", () => {
-		expect(scheduleLabel(Schedule.everyDay())).toBe("Every day");
-		expect(scheduleLabel(new Schedule(["fri", "mon", "wed"]))).toBe("Mon, Wed, Fri");
 	});
 
 	it("formats dates", () => {
@@ -25,10 +20,10 @@ describe("format", () => {
 	});
 
 	it("describes a recipe change by its new value", () => {
-		expect(describeChange({ part: "tiny", date: d("2026-10-01"), from: "read a page", to: "open the book" })).toBe("Tiny → open the book");
-		expect(describeChange({ part: "full", date: d("2026-10-01"), to: "15 min workout" })).toBe("More → 15 min workout");
+		expect(describeChange({ part: "tiny", date: d("2026-10-01"), from: "read a page", to: "open the book" })).toBe("I will → open the book");
+		expect(describeChange({ part: "full", date: d("2026-10-01"), to: "15 min workout" })).toBe("on a good day → 15 min workout");
 		expect(describeChange({ part: "schedule", date: d("2026-10-01"), from: Schedule.everyDay(), to: new Schedule(["sat"]) })).toBe(
-			"Days → Sat",
+			"every → Sat",
 		);
 	});
 });

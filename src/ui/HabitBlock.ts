@@ -8,7 +8,6 @@ import { EditSheet } from "./EditSheet";
 import { RECIPE_LABELS, dayMonth, describeChange, monthShort, recipeDays } from "./format";
 import { UiContext } from "./UiContext";
 
-const MIN_WEEKS = 12;
 const RECIPE_ICONS: Record<TextPart | "schedule", string> = {
 	anchor: "anchor",
 	tiny: "sprout",
@@ -60,9 +59,10 @@ export class HabitBlock {
 			return;
 		}
 		if (habit.archived) this.renderArchived(content);
-		this.renderRecipe(content, habit);
-		this.renderProgress(content, habit);
-		this.renderHistory(content, habit);
+		const rows = content.createDiv("metadata-properties");
+		this.renderRecipe(rows, habit);
+		this.renderProgress(rows, habit);
+		this.renderHistory(rows, habit);
 	}
 
 	private renderHeading(panel: HTMLElement): void {
@@ -85,28 +85,23 @@ export class HabitBlock {
 		restore.addEventListener("click", () => void this.run(() => this.ui.service.restore(this.path)));
 	}
 
-	private renderRecipe(content: HTMLElement, habit: Habit): void {
-		const rows = content.createDiv("metadata-properties");
-		const row = (part: TextPart | "schedule", value: string | undefined) => {
-			const item = rows.createDiv("metadata-property th-habit-property");
-			const key = item.createDiv("metadata-property-key");
-			setIcon(key.createSpan("metadata-property-icon"), RECIPE_ICONS[part]);
-			const label = key.createEl("input", { cls: "metadata-property-key-input", type: "text", attr: { readonly: "true", tabindex: "-1" } });
-			label.value = RECIPE_LABELS[part];
-			const valueEl = item.createDiv("metadata-property-value");
-			if (part === "schedule") {
-				const days = valueEl.createDiv({ cls: "metadata-input-longtext th-habit-days", text: value ?? "" });
-				days.addEventListener("click", () => new EditSheet(this.app, this.ui.service, this.path, habit, "schedule").open());
-				return;
-			}
-			this.editable(valueEl, part, value ?? "");
-		};
+	/** One row of the panel, shaped like a property: icon and name on the left, the content on the right. */
+	private property(rows: HTMLElement, icon: string, name: string): HTMLElement {
+		const item = rows.createDiv("metadata-property th-habit-property");
+		const key = item.createDiv("metadata-property-key");
+		setIcon(key.createSpan("metadata-property-icon"), icon);
+		const label = key.createEl("input", { cls: "metadata-property-key-input", type: "text", attr: { readonly: "true", tabindex: "-1" } });
+		label.value = name;
+		return item.createDiv("metadata-property-value");
+	}
+
+	private renderRecipe(rows: HTMLElement, habit: Habit): void {
 		const text = (part: TextPart) => habit.text(part).current();
-		row("anchor", text("anchor"));
-		row("tiny", text("tiny"));
-		row("full", text("full"));
-		row("celebration", text("celebration"));
-		row("schedule", recipeDays(habit.currentSchedule));
+		for (const part of ["anchor", "tiny", "full", "celebration"] as const) {
+			this.editable(this.property(rows, RECIPE_ICONS[part], RECIPE_LABELS[part]), part, text(part) ?? "");
+		}
+		const days = this.property(rows, RECIPE_ICONS.schedule, RECIPE_LABELS.schedule).createDiv({ cls: "metadata-input-longtext th-habit-days", text: recipeDays(habit.currentSchedule) });
+		days.addEventListener("click", () => new EditSheet(this.app, this.ui.service, this.path, habit, "schedule").open());
 	}
 
 	/** A value edited in place like a text property: saving starts a new version of that part of the recipe. */
@@ -130,30 +125,28 @@ export class HabitBlock {
 		input.addEventListener("blur", save);
 	}
 
-	private renderProgress(panel: HTMLElement, habit: Habit): void {
+	private renderProgress(rows: HTMLElement, habit: Habit): void {
 		const today = this.ui.service.today();
 		const stats = computeStats(habit, today);
-		const numbers = panel.createDiv("th-panel-stats");
+		const numbers = this.property(rows, "flame", "progress").createDiv("th-panel-cell th-panel-stats");
 		const stat = (value: number, label: string) => {
-			const item = numbers.createDiv("th-panel-stat");
-			item.createDiv({ cls: "th-panel-stat-value", text: String(value) });
-			item.createDiv({ cls: "th-panel-stat-label", text: label });
+			const item = numbers.createSpan("th-panel-stat");
+			item.createSpan({ cls: "th-panel-stat-value", text: String(value) });
+			item.appendText(` ${label}`);
 		};
 		stat(stats.current?.length ?? 0, "in a row");
 		stat(stats.best, "best");
 		stat(stats.total, "wins");
-		this.renderGrid(panel, habit, today);
+		this.renderGrid(this.property(rows, "layout-grid", "days").createDiv("th-panel-cell"), habit, today);
 	}
 
-	private renderGrid(panel: HTMLElement, habit: Habit, today: LocalDate): void {
-		const year = panel.createDiv("th-year");
+	private renderGrid(cell: HTMLElement, habit: Habit, today: LocalDate): void {
+		const year = cell.createDiv("th-year");
 		const labels = year.createDiv("th-year-labels");
 		["M", "", "W", "", "F", "", ""].forEach((label) => labels.createSpan({ text: label }));
 		const scroller = year.createDiv("th-year-scroll");
 		const weeks = scroller.createDiv("th-year-weeks");
-		const earliest = today.addDays(-7 * (MIN_WEEKS - 1));
-		const start = calendarStart(habit, today);
-		calendarWeeks(start.isBefore(earliest) ? start : earliest, today).forEach((week, index) => {
+		calendarWeeks(calendarStart(habit, today), today).forEach((week, index) => {
 			const column = weeks.createDiv("th-year-week");
 			const monthStart = week.find((date) => date?.day === 1) ?? (index === 0 ? week.find((date) => date) : undefined);
 			column.createDiv({ cls: "th-year-month", text: monthStart ? monthShort(monthStart) : "" });
@@ -177,24 +170,24 @@ export class HabitBlock {
 		window.requestAnimationFrame(toToday);
 	}
 
-	private renderHistory(panel: HTMLElement, habit: Habit): void {
+	private renderHistory(rows: HTMLElement, habit: Habit): void {
 		const misses = habit.marks().flatMap(([date, mark]) => (mark.kind === "missed" ? [{ date, reason: mark.reason }] : []));
 		const changes = habit.changes();
 		if (misses.length === 0 && changes.length === 0) return;
 		const open = openHistory.has(this.path);
-		const toggle = panel.createEl("button", { cls: "th-panel-history", attr: { "aria-expanded": String(open) } });
-		setIcon(toggle.createSpan("th-panel-chevron"), "chevron-right");
+		const cell = this.property(rows, "history", "history").createDiv("th-panel-cell th-panel-history");
+		const toggle = cell.createDiv({ cls: "th-panel-history-toggle", attr: { role: "button", "aria-expanded": String(open) } });
 		const summary = [misses.length ? `${misses.length} skipped` : "", changes.length ? `${changes.length} recipe ${changes.length === 1 ? "change" : "changes"}` : ""];
-		toggle.createSpan({ text: `History · ${summary.filter(Boolean).join(" · ")}` });
+		toggle.createSpan({ text: summary.filter(Boolean).join(" · ") });
+		setIcon(toggle.createSpan("th-panel-chevron"), "chevron-right");
 		toggle.addEventListener("click", () => {
 			if (open) openHistory.delete(this.path);
 			else openHistory.add(this.path);
 			this.render();
 		});
 		if (!open) return;
-		const list = panel.createDiv("th-panel-history-list");
 		const row = (date: LocalDate, kind: "missed" | "change", text: string, note?: string) => {
-			const item = list.createDiv("th-history-row");
+			const item = cell.createDiv("th-history-row");
 			item.createSpan({ cls: "th-history-date", text: dayMonth(date) });
 			item.createSpan({ cls: ["th-history-icon", `is-${kind}`] });
 			const body = item.createSpan({ cls: "th-history-text", text });

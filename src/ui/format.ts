@@ -1,27 +1,14 @@
-import { Habit, Part, RecipeChange, TextPart } from "../domain/Habit";
+import { Habit, Part, RecipeChange } from "../domain/Habit";
 import { LocalDate, Weekday } from "../domain/LocalDate";
 import { Schedule } from "../domain/Schedule";
 
 const WEEKDAY_SHORT: Record<Weekday, string> = { mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun" };
 const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export const PART_LABELS: Record<Part, string> = {
-	anchor: "Anchor",
-	tiny: "Tiny",
-	full: "More",
-	celebration: "Celebrate",
-	schedule: "Days",
-};
-
-/** Field labels in the edit and new-habit sheets, worded like the recipe sentence on the habit screen. */
-export const FIELD_LABELS: Record<TextPart, string> = {
-	anchor: "After I",
-	tiny: "I will",
-	full: "On a good day",
-	celebration: "And celebrate",
-};
-
-/** The recipe reads as one sentence: "after I … I will … on a good day … and celebrate … every …". */
+/**
+ * The only names the parts of a recipe have. The recipe reads as one sentence:
+ * "after I … I will … on a good day … and celebrate … every …"; everything else (sheets, history, settings) uses these.
+ */
 export const RECIPE_LABELS: Record<Part, string> = {
 	anchor: "after I",
 	tiny: "I will",
@@ -30,16 +17,18 @@ export const RECIPE_LABELS: Record<Part, string> = {
 	schedule: "every",
 };
 
+/** The same label at the start of a line, as a field title. */
+export function partTitle(part: Part): string {
+	const label = RECIPE_LABELS[part];
+	return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
 export function recipeDays(schedule: Schedule): string {
 	return schedule.isEveryDay ? "day" : schedule.weekdays.map(weekdayShort).join(", ");
 }
 
 export function weekdayShort(day: Weekday): string {
 	return WEEKDAY_SHORT[day];
-}
-
-export function scheduleLabel(schedule: Schedule): string {
-	return schedule.isEveryDay ? "Every day" : schedule.weekdays.map(weekdayShort).join(", ");
 }
 
 export function monthShort(date: LocalDate): string {
@@ -59,6 +48,6 @@ export function anchorLine(habit: Habit): string {
 }
 
 export function describeChange(change: RecipeChange): string {
-	const to = change.to instanceof Schedule ? scheduleLabel(change.to) : change.to;
-	return `${PART_LABELS[change.part]} → ${to}`;
+	const to = change.to instanceof Schedule ? recipeDays(change.to) : change.to;
+	return `${RECIPE_LABELS[change.part]} → ${to}`;
 }
