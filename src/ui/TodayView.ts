@@ -50,8 +50,6 @@ export class TodayView extends ItemView {
 	private shownRows = new Set<string>();
 	private renderingRows = new Set<string>();
 	private wasClosed: boolean | null = null;
-	private onScreen = false;
-	private visibility: IntersectionObserver | null = null;
 	private held = false;
 	private holdTimer = 0;
 	private captionTimer = 0;
@@ -108,19 +106,16 @@ export class TodayView extends ItemView {
 		this.registerDomEvent(root, "pointerdown", () => {
 			if (this.tiltEnabled()) void this.tilt.askOnTap();
 		});
-		this.visibility = new IntersectionObserver((records) => {
-			this.onScreen = records.some((record) => record.isIntersecting);
-			this.applyTilt();
-		});
-		this.visibility.observe(root);
-		this.registerDomEvent(document, "visibilitychange", () => this.applyTilt());
+		const recheck = () => this.applyTilt();
+		this.registerEvent(this.app.workspace.on("active-leaf-change", recheck));
+		this.registerEvent(this.app.workspace.on("layout-change", recheck));
+		this.registerEvent(this.app.workspace.on("resize", recheck));
+		this.registerDomEvent(document, "visibilitychange", recheck);
 		this.applyTilt();
 		this.render();
 	}
 
 	override async onClose(): Promise<void> {
-		this.visibility?.disconnect();
-		this.visibility = null;
 		this.tilt.stop();
 		this.chrome?.destroy();
 		this.chrome = null;
@@ -496,7 +491,7 @@ export class TodayView extends ItemView {
 			this.jar?.setGravity(EARTH);
 			return;
 		}
-		if (!this.onScreen || document.hidden) {
+		if (!this.contentEl.isShown() || document.hidden) {
 			this.tilt.stop();
 			return;
 		}
