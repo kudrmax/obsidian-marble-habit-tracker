@@ -168,14 +168,42 @@ describe("JarPhysics", () => {
 		expect(physics.get("a")?.y).toBeGreaterThan(140);
 	});
 
-	it("slides a body that does not fit under a shelf out to the side", () => {
+	it("moves a body that does not fit under a shelf out from beneath it", () => {
 		const physics = new JarPhysics(400, 300);
 		physics.setObstacles([{ left: 60, top: 230, right: 340, bottom: 270, radius: 20 }]);
 		physics.add({ id: "big", x: 120, y: 280, r: 22 });
-		for (let frame = 0; frame < 300; frame++) physics.step();
+		settle(physics);
 		const big = physics.get("big");
-		expect(big?.x).toBeLessThan(60);
-		expect(big?.y).toBeCloseTo(278, 0);
+		expect(big!.x <= 60 - 22 || big!.x >= 340 + 22 || big!.y <= 230 - 22).toBe(true);
+	});
+
+	it("lets a body too big to pass under a shelf lie on the floor beside it, not under its end", () => {
+		const physics = new JarPhysics(400, 300);
+		physics.setObstacles([{ left: 50, top: 230, right: 350, bottom: 270, radius: 20 }]);
+		physics.add({ id: "medium", x: 30, y: 0, r: 22 });
+		settle(physics);
+		const medium = physics.get("medium");
+		expect(medium?.y).toBeCloseTo(278, 0);
+		expect(medium?.x).toBeLessThanOrEqual(28);
+	});
+
+	it("settles a pile around a floating shelf instead of jittering at its ends", () => {
+		for (let run = 0; run < 10; run++) {
+			let seed = run * 9301 + 49297;
+			const random = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+			const physics = new JarPhysics(402, 874);
+			physics.setObstacles([{ left: 44, top: 795, right: 358, bottom: 837, radius: 21 }]);
+			for (let index = 0; index < 30; index++) {
+				const r = [12, 22, 34][Math.floor(random() * 3)];
+				physics.add({ id: String(index), x: r + random() * (402 - 2 * r), y: -r - index * 18, r });
+			}
+			let frames = 0;
+			while (!physics.isSettled() && frames < 8000) {
+				physics.step();
+				frames++;
+			}
+			expect(physics.isSettled()).toBe(true);
+		}
 	});
 
 	it("lets a small body rest under a shelf", () => {

@@ -42,7 +42,6 @@ const ATTRACTION = 0.22;
 const REST_SPEED = 0.05;
 const REST_FRAMES = 30;
 const GRAVITY_EPSILON = 0.01;
-const SQUEEZE = 2;
 const CONTACT = 1;
 
 export class JarPhysics {
@@ -51,8 +50,8 @@ export class JarPhysics {
 	private gravity: Point = EARTH;
 	private obstacles: readonly Box[] = [];
 	private ledges: readonly Box[] = [];
-	/** Obstacles and ledges together, for landed bodies; rebuilt when either changes, not per body per frame. */
-	private solids: readonly Box[] = [];
+	/** The boxes as a body of each radius meets them; rebuilt when the boxes or the size change, not per body per frame. */
+	private readonly shapes = new Map<number, Shapes>();
 	/** Reused every step so the hot loop allocates nothing. */
 	private readonly free: Body[] = [];
 	private before = new Float64Array(64);
@@ -66,19 +65,20 @@ export class JarPhysics {
 	resize(width: number, height: number): void {
 		this.width = width;
 		this.height = height;
+		this.shapes.clear();
 		this.quietFrames = 0;
 	}
 
 	setObstacles(obstacles: readonly Box[]): void {
 		this.obstacles = obstacles;
-		this.solids = [...obstacles, ...this.ledges];
+		this.shapes.clear();
 		this.quietFrames = 0;
 	}
 
 	/** Boxes that falling bodies pass through and landed bodies bounce off. */
 	setLedges(ledges: readonly Box[]): void {
 		this.ledges = ledges;
-		this.solids = [...this.obstacles, ...ledges];
+		this.shapes.clear();
 		this.quietFrames = 0;
 	}
 
@@ -155,7 +155,7 @@ export class JarPhysics {
 			}
 		}
 		for (const body of free) {
-			if (body.passing) body.passing = free.some((other) => other !== body && overlaps(body, other)) || this.obstacles.some((box) => touches(body, box));
+			if (body.passing) body.passing = free.some((other) => other !== body && overlaps(body, other)) || this.shapesFor(body).obstacles.some((box) => touches(body, box));
 		}
 		for (const body of free) if (!body.landed && !body.passing) body.landed = this.lands(body, free);
 		let fastest = 0;
@@ -172,14 +172,31 @@ export class JarPhysics {
 
 	private solidFor(body: Body): readonly Box[] {
 		if (body.passing) return NONE;
-		return body.landed ? this.solids : this.obstacles;
+		const shapes = this.shapesFor(body);
+		return body.landed ? shapes.solids : shapes.obstacles;
+	}
+
+	private shapesFor(body: Body): Shapes {
+		let shapes = this.shapes.get(body.r);
+		if (!shapes) {
+			const obstacles = this.obstacles.map((box) => this.walled(box, body.r));
+			shapes = { obstacles, solids: [...obstacles, ...this.ledges] };
+			this.shapes.set(body.r, shapes);
+		}
+		return shapes;
+	}
+
+	/** A body too big to pass under a box meets it as reaching the floor, so it can't wedge itself half under the box's end. */
+	private walled(box: Box, r: number): Box {
+		if (2 * r <= this.height - box.bottom) return box;
+		return { ...box, bottom: 2 * this.height + box.radius };
 	}
 
 	private lands(body: Body, free: readonly Body[]): boolean {
 		if (this.ledges.some((box) => touches(body, box))) return false;
 		if (body.y >= this.height - body.r - CONTACT) return true;
 		const near = { ...body, r: body.r + CONTACT };
-		return this.obstacles.some((box) => touches(near, box)) || free.some((other) => other !== body && other.landed && overlaps(near, other));
+		return this.shapesFor(body).obstacles.some((box) => touches(near, box)) || free.some((other) => other !== body && other.landed && overlaps(near, other));
 	}
 
 	private separate(a: Body, b: Body): void {
@@ -207,7 +224,6 @@ export class JarPhysics {
 		if (body.x < body.r) body.x = body.r;
 		if (body.x > this.width - body.r) body.x = this.width - body.r;
 		if (body.y > this.height - body.r) body.y = this.height - body.r;
-		for (const box of solid) if (touches(body, box)) squeeze(body, box, this.width);
 		if (!body.inside) {
 			body.inside = body.y >= body.r;
 			return;
@@ -217,6 +233,11 @@ export class JarPhysics {
 }
 
 const NONE: readonly Box[] = [];
+
+interface Shapes {
+	readonly obstacles: readonly Box[];
+	readonly solids: readonly Box[];
+}
 
 function overlaps(a: Body, b: Body): boolean {
 	return Math.hypot(b.x - a.x, b.y - a.y) < a.r + b.r;
@@ -232,12 +253,6 @@ function touches(body: Body, box: Box): boolean {
 	const dx = body.x - Math.max(core.left, Math.min(core.right, body.x));
 	const dy = body.y - Math.max(core.top, Math.min(core.bottom, body.y));
 	return Math.hypot(dx, dy) < core.radius + body.r;
-}
-
-/** A body jammed between a box and the floor slides out towards the nearer end of the box. */
-function squeeze(body: Body, box: Box, width: number): void {
-	const towardsLeft = body.x - box.left < box.right - body.x;
-	body.x = Math.max(body.r, Math.min(width - body.r, body.x + (towardsLeft ? -SQUEEZE : SQUEEZE)));
 }
 
 function pushOut(body: Body, box: Box): void {
