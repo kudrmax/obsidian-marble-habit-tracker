@@ -82,6 +82,12 @@ export class JarCanvas {
 	private readonly timers = new Set<number>();
 	private width = 0;
 	private height = 0;
+	/** The size the marbles live in; it lags behind the canvas while held. */
+	private worldWidth = 0;
+	private worldHeight = 0;
+	private held: () => boolean = () => false;
+	private pendingObstacles: readonly Box[] | null = null;
+	private pendingLedges: readonly Box[] | null = null;
 	private frame = 0;
 	private readonly clock = new FixedStep();
 	private filled = false;
@@ -108,13 +114,38 @@ export class JarCanvas {
 	}
 
 	setObstacles(obstacles: readonly Box[]): void {
+		if (this.worldWidth > 0 && this.held()) {
+			this.pendingObstacles = obstacles;
+			return;
+		}
 		this.physics.setObstacles(obstacles);
 		this.wake();
 	}
 
 	setLedges(ledges: readonly Box[]): void {
+		if (this.worldWidth > 0 && this.held()) {
+			this.pendingLedges = ledges;
+			return;
+		}
 		this.physics.setLedges(ledges);
 		this.wake();
+	}
+
+	/**
+	 * While `held` says so, the marbles keep their world as it was: a keyboard shrinking the screen for a moment must not
+	 * squeeze the pile. It is asked at the moment the size changes; call `refit` once it no longer holds.
+	 */
+	holdWhile(held: () => boolean): void {
+		this.held = held;
+	}
+
+	refit(): void {
+		if (this.held()) return;
+		if (this.pendingObstacles) this.setObstacles(this.pendingObstacles);
+		if (this.pendingLedges) this.setLedges(this.pendingLedges);
+		this.pendingObstacles = null;
+		this.pendingLedges = null;
+		this.measure();
 	}
 
 	setGravity(gravity: Point): void {
@@ -184,7 +215,7 @@ export class JarCanvas {
 			if (bodies.length === 0) return finish({ x: this.randomX(item), y: -this.radius(item) });
 			const center = {
 				x: bodies.reduce((sum, body) => sum + body.x, 0) / bodies.length,
-				y: Math.min(this.height - this.radius(item), bodies.reduce((sum, body) => sum + body.y, 0) / bodies.length),
+				y: Math.min(this.worldHeight - this.radius(item), bodies.reduce((sum, body) => sum + body.y, 0) / bodies.length),
 			};
 			if (this.options.reduceMotion) return finish(center);
 			this.physics.attract(ids, center);
@@ -251,19 +282,25 @@ export class JarCanvas {
 
 	private randomX(item: JarItem): number {
 		const r = this.radius(item);
-		return r + Math.random() * Math.max(0, this.width - 2 * r);
+		return r + Math.random() * Math.max(0, this.worldWidth - 2 * r);
 	}
 
 	private measure(): void {
 		const box = this.canvas.getBoundingClientRect();
 		const width = Math.round(box.width);
 		const height = Math.round(box.height);
-		if (width === this.width && height === this.height) return;
-		this.width = width;
-		this.height = height;
-		const ratio = window.devicePixelRatio || 1;
-		this.canvas.width = Math.max(1, Math.round(width * ratio));
-		this.canvas.height = Math.max(1, Math.round(height * ratio));
+		if (width !== this.width || height !== this.height) {
+			this.width = width;
+			this.height = height;
+			const ratio = window.devicePixelRatio || 1;
+			this.canvas.width = Math.max(1, Math.round(width * ratio));
+			this.canvas.height = Math.max(1, Math.round(height * ratio));
+			this.wake();
+		}
+		if (this.worldWidth === width && this.worldHeight === height) return;
+		if (this.worldWidth > 0 && this.held()) return;
+		this.worldWidth = width;
+		this.worldHeight = height;
 		this.physics.resize(width, height);
 		this.wake();
 	}

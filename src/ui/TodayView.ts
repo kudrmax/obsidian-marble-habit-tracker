@@ -12,6 +12,7 @@ import { Haptics } from "./Haptics";
 import { anchorLine } from "./format";
 import { Hsl, parseColor } from "./jar/color";
 import { JarCanvas, JarItem } from "./jar/JarCanvas";
+import { KeyboardWatch } from "./KeyboardWatch";
 import { EARTH, Point } from "./jar/JarPhysics";
 import { TiltSensor } from "./jar/TiltSensor";
 import { visibleEntries } from "./order";
@@ -41,6 +42,7 @@ export class TodayView extends ItemView {
 	private captionEl: HTMLElement | null = null;
 	private jar: JarCanvas | null = null;
 	private chrome: ScreenChrome | null = null;
+	private keyboard: KeyboardWatch | null = null;
 	private menu: string | null = null;
 	private asking: string | null = null;
 	private other: string | null = null;
@@ -94,6 +96,9 @@ export class TodayView extends ItemView {
 			this.jar?.setObstacles(shelves);
 			this.jar?.setLedges(ledges);
 		});
+		const keyboard = new KeyboardWatch(root, () => this.jar?.refit());
+		this.keyboard = keyboard;
+		this.jar.holdWhile(() => keyboard.isOpen());
 		this.registerEvent(this.app.workspace.on("layout-change", () => this.chrome?.measure()));
 		this.registerDomEvent(window, "resize", () => this.chrome?.measure());
 		this.registerEvent(
@@ -119,6 +124,8 @@ export class TodayView extends ItemView {
 		this.tilt.stop();
 		this.chrome?.destroy();
 		this.chrome = null;
+		this.keyboard?.destroy();
+		this.keyboard = null;
 		this.jar?.destroy();
 		this.jar = null;
 		window.clearTimeout(this.holdTimer);
