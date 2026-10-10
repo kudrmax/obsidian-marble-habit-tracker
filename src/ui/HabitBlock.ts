@@ -47,36 +47,35 @@ export class HabitBlock {
 	render(): void {
 		const panel = this.el;
 		panel.empty();
-		panel.className = "tiny-habits th-habit-panel";
+		panel.className = "metadata-container th-habit-panel";
+		panel.toggleClass("is-collapsed", folded.has(this.path));
 		const entry = this.ui.repository.get(this.path);
 		const habit = entry?.kind === "ok" ? entry.habit : undefined;
 		if (habit) panel.addClasses(["th-habit", colorClass(habit.color)]);
-		this.renderHeading(panel, habit);
+		this.renderHeading(panel);
 		if (folded.has(this.path)) return;
+		const content = panel.createDiv("metadata-content");
 		if (!habit) {
-			panel.createDiv({ cls: "th-panel-quiet", text: entry?.kind === "broken" ? `Can't read this habit: ${entry.problem}` : "Habit not found" });
+			content.createDiv({ cls: "th-panel-quiet", text: entry?.kind === "broken" ? `Can't read this habit: ${entry.problem}` : "Habit not found" });
 			return;
 		}
-		if (habit.archived) this.renderArchived(panel);
-		this.renderRecipe(panel, habit);
-		this.renderProgress(panel, habit);
-		this.renderHistory(panel, habit);
+		if (habit.archived) this.renderArchived(content);
+		this.renderRecipe(content, habit);
+		this.renderProgress(content, habit);
+		this.renderHistory(content, habit);
 	}
 
-	private renderHeading(panel: HTMLElement, habit: Habit | undefined): void {
-		const heading = panel.createDiv("th-panel-heading");
-		const toggle = heading.createEl("button", { cls: "th-panel-toggle", attr: { "aria-expanded": String(!folded.has(this.path)) } });
-		const chevron = toggle.createSpan("th-panel-chevron");
-		setIcon(chevron, "chevron-down");
-		toggle.createSpan({ text: "Habit" });
-		toggle.addEventListener("click", () => {
+	private renderHeading(panel: HTMLElement): void {
+		const heading = panel.createDiv({ cls: "metadata-properties-heading", attr: { tabindex: "0" } });
+		const fold = heading.createDiv({ cls: "collapse-indicator collapse-icon" });
+		fold.toggleClass("is-collapsed", folded.has(this.path));
+		setIcon(fold, "right-triangle");
+		heading.createDiv({ cls: "metadata-properties-title", text: "Habit" });
+		heading.addEventListener("click", () => {
 			if (folded.has(this.path)) folded.delete(this.path);
 			else folded.add(this.path);
 			this.render();
 		});
-		if (!habit) return;
-		const dot = heading.createEl("button", { cls: "th-panel-dot", attr: { "aria-label": "Habit color" } });
-		dot.addEventListener("click", () => new EditSheet(this.app, this.ui.service, this.path, habit, "color").open());
 	}
 
 	private renderArchived(panel: HTMLElement): void {
@@ -86,19 +85,21 @@ export class HabitBlock {
 		restore.addEventListener("click", () => void this.run(() => this.ui.service.restore(this.path)));
 	}
 
-	private renderRecipe(panel: HTMLElement, habit: Habit): void {
-		const rows = panel.createDiv("th-panel-rows");
+	private renderRecipe(content: HTMLElement, habit: Habit): void {
+		const rows = content.createDiv("metadata-properties");
 		const row = (part: TextPart | "schedule", value: string | undefined) => {
-			const item = rows.createDiv("th-panel-row");
-			const key = item.createDiv("th-panel-key");
-			setIcon(key.createSpan("th-panel-icon"), RECIPE_ICONS[part]);
-			key.createSpan({ text: RECIPE_LABELS[part] });
-			const cell = item.createDiv({ cls: "th-panel-value", text: value ?? "Empty" });
-			cell.toggleClass("is-empty", value === undefined);
-			cell.addEventListener("click", () => {
-				if (part === "schedule") new EditSheet(this.app, this.ui.service, this.path, habit, "schedule").open();
-				else this.editInline(cell, part, value ?? "");
-			});
+			const item = rows.createDiv("metadata-property th-habit-property");
+			const key = item.createDiv("metadata-property-key");
+			setIcon(key.createSpan("metadata-property-icon"), RECIPE_ICONS[part]);
+			const label = key.createEl("input", { cls: "metadata-property-key-input", type: "text", attr: { readonly: "true", tabindex: "-1" } });
+			label.value = RECIPE_LABELS[part];
+			const valueEl = item.createDiv("metadata-property-value");
+			if (part === "schedule") {
+				const days = valueEl.createDiv({ cls: "metadata-input-longtext th-habit-days", text: value ?? "" });
+				days.addEventListener("click", () => new EditSheet(this.app, this.ui.service, this.path, habit, "schedule").open());
+				return;
+			}
+			this.editable(valueEl, part, value ?? "");
 		};
 		const text = (part: TextPart) => habit.text(part).current();
 		row("anchor", text("anchor"));
@@ -108,25 +109,25 @@ export class HabitBlock {
 		row("schedule", recipeDays(habit.currentSchedule));
 	}
 
-	private editInline(cell: HTMLElement, part: TextPart, value: string): void {
-		cell.empty();
-		cell.removeClass("is-empty");
-		const input = cell.createEl("input", { cls: "th-panel-input", type: "text", value });
-		let done = false;
-		const finish = (save: boolean) => {
-			if (done) return;
-			done = true;
-			const next = input.value.trim();
-			if (!save || next === value) return this.render();
+	/** A value edited in place like a text property: saving starts a new version of that part of the recipe. */
+	private editable(parent: HTMLElement, part: TextPart, value: string): void {
+		const input = parent.createDiv({ cls: "metadata-input-longtext", text: value, attr: { contenteditable: "true", spellcheck: "false", placeholder: "Empty" } });
+		const save = () => {
+			const next = (input.textContent ?? "").trim();
+			if (next === value) return;
 			void this.run(() => this.ui.service.replaceText(this.path, part, next)).then(() => this.render());
 		};
 		input.addEventListener("keydown", (event) => {
-			if (event.key === "Enter") finish(true);
-			if (event.key === "Escape") finish(false);
+			if (event.key === "Enter") {
+				event.preventDefault();
+				input.blur();
+			}
+			if (event.key === "Escape") {
+				input.textContent = value;
+				input.blur();
+			}
 		});
-		input.addEventListener("blur", () => finish(true));
-		input.focus();
-		input.select();
+		input.addEventListener("blur", save);
 	}
 
 	private renderProgress(panel: HTMLElement, habit: Habit): void {

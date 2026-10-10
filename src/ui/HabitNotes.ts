@@ -149,7 +149,7 @@ export class HabitNotes extends Component {
 		const notOurs = keys.map((key) => `:not(${row(key)})`).join("");
 		return [
 			`.${NOTE_CLASS} .metadata-property:is(${ours}) { display: none; }`,
-			`.${NOTE_CLASS} .metadata-container:not(:has(.metadata-property${notOurs})) { display: none; }`,
+			`.${NOTE_CLASS} .metadata-container:not(.th-habit-panel):not(:has(.metadata-property${notOurs})) { display: none; }`,
 		].join("\n");
 	}
 }
