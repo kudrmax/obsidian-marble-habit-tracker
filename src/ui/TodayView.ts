@@ -50,6 +50,8 @@ export class TodayView extends ItemView {
 	private shownRows = new Set<string>();
 	private renderingRows = new Set<string>();
 	private wasClosed: boolean | null = null;
+	private onScreen = false;
+	private visibility: IntersectionObserver | null = null;
 	private held = false;
 	private holdTimer = 0;
 	private captionTimer = 0;
@@ -106,11 +108,19 @@ export class TodayView extends ItemView {
 		this.registerDomEvent(root, "pointerdown", () => {
 			if (this.tiltEnabled()) void this.tilt.askOnTap();
 		});
+		this.visibility = new IntersectionObserver((records) => {
+			this.onScreen = records.some((record) => record.isIntersecting);
+			this.applyTilt();
+		});
+		this.visibility.observe(root);
+		this.registerDomEvent(document, "visibilitychange", () => this.applyTilt());
 		this.applyTilt();
 		this.render();
 	}
 
 	override async onClose(): Promise<void> {
+		this.visibility?.disconnect();
+		this.visibility = null;
 		this.tilt.stop();
 		this.chrome?.destroy();
 		this.chrome = null;
@@ -479,14 +489,19 @@ export class TodayView extends ItemView {
 		return settings.tilt && !settings.reduceMotion;
 	}
 
+	/** The motion sensor runs only while Today is actually on screen: not in a background tab, not with the app hidden. */
 	private applyTilt(): void {
-		if (this.tiltEnabled()) {
-			this.tilt.start();
-			void this.tilt.askSilently();
+		if (!this.tiltEnabled()) {
+			this.tilt.stop();
+			this.jar?.setGravity(EARTH);
 			return;
 		}
-		this.tilt.stop();
-		this.jar?.setGravity(EARTH);
+		if (!this.onScreen || document.hidden) {
+			this.tilt.stop();
+			return;
+		}
+		this.tilt.start();
+		void this.tilt.askSilently();
 	}
 
 	private resolve(color: HabitColor | undefined): Hsl {
