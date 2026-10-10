@@ -30,25 +30,39 @@ const KICK = 8;
 const RAIN_GAP = 18;
 const QUIET_STEPS = 1500;
 
+/**
+ * Marble sprites drawn once from their SVG into a bitmap. Drawing a bitmap each frame is cheap; drawing an SVG image
+ * can make Safari rasterize it again every frame, and the grain filter is costly to rasterize.
+ */
 class SpriteCache {
-	private readonly images = new Map<string, HTMLImageElement>();
+	private readonly sprites = new Map<string, HTMLCanvasElement | null>();
+	private generation = 0;
 
 	constructor(private readonly onReady: () => void) {}
 
-	get(spec: AssetSpec): HTMLImageElement | null {
+	get(spec: AssetSpec): HTMLCanvasElement | null {
 		const key = assetKey(spec);
-		const cached = this.images.get(key);
-		if (cached) return cached.complete && cached.naturalWidth > 0 ? cached : null;
-		const image = new Image();
+		if (this.sprites.has(key)) return this.sprites.get(key) ?? null;
+		this.sprites.set(key, null);
 		const pixels = Math.ceil(JAR_DIAMETER[spec.size] * Math.max(2, window.devicePixelRatio || 1));
-		image.onload = () => this.onReady();
+		const generation = this.generation;
+		const image = new Image();
+		image.onload = () => {
+			if (generation !== this.generation) return;
+			const bitmap = document.createElement("canvas");
+			bitmap.width = pixels;
+			bitmap.height = pixels;
+			bitmap.getContext("2d")?.drawImage(image, 0, 0, pixels, pixels);
+			this.sprites.set(key, bitmap);
+			this.onReady();
+		};
 		image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(assetSvg(spec, pixels))}`;
-		this.images.set(key, image);
 		return null;
 	}
 
 	clear(): void {
-		this.images.clear();
+		this.generation++;
+		this.sprites.clear();
 	}
 }
 
