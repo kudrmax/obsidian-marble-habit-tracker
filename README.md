@@ -22,4 +22,4 @@ npm test
 npm run build
 ```
 
-`npm run deploy` builds and copies the plugin into `~/Obsidian` (or `$VAULT`).
+Releases are published on GitHub; BRAT installs and updates the plugin from them.
