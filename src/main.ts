@@ -17,7 +17,7 @@ const DAY_CHECK_MS = 60_000;
 export default class MarbleHabitTrackerPlugin extends Plugin implements SettingsHost {
 	override settings: HabitSettings = loadSettings(null);
 	newHabit: () => void = () => undefined;
-	readonly device = new DeviceSettings(this.app, () => this.refreshViews());
+	readonly device = new DeviceSettings(() => this.refreshViews());
 	private notes: HabitNotes | null = null;
 	/** Habits as of the last refresh, so a note that just stopped being a habit (lost its tag) still refreshes Today. */
 	private habitPaths = new Set<string>();
