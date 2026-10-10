@@ -4,7 +4,12 @@ import { Hsl, hsl } from "./color";
 export const JAR_MATERIALS = ["grain", "aura", "halftone"] as const;
 export type JarMaterial = (typeof JAR_MATERIALS)[number];
 
-export const JAR_DIAMETER: Record<JarSize, number> = { small: 24, medium: 44, big: 68 };
+/** Marble diameters in CSS pixels. */
+export type MarbleSizes = Readonly<Record<JarSize, number>>;
+
+export const DEFAULT_MARBLE_SIZES: MarbleSizes = { small: 24, medium: 44, big: 68 };
+export const MIN_MARBLE = 12;
+export const MAX_MARBLE = 100;
 
 export interface AssetSpec {
 	readonly material: JarMaterial;

@@ -14,6 +14,7 @@ describe("loadSettings", () => {
 			missReasons: ["Forgot", "Anchor didn't happen", "No energy", "Felt too big"],
 			shrinkReason: "Felt too big",
 			material: "grain",
+			marbleSizes: { small: 24, medium: 44, big: 68 },
 			merge: { smallPerMedium: 7, mediumPerBig: 4 },
 			hideDone: true,
 			showWins: true,
@@ -37,6 +38,7 @@ describe("loadSettings", () => {
 				missReasons: [" Ill ", "", "Ill", "Travel"],
 				shrinkReason: "",
 				material: "halftone",
+				marbleSizes: { small: 20, medium: 48, big: 80 },
 				merge: { smallPerMedium: 5, mediumPerBig: 3 },
 				hideDone: false,
 				showWins: false,
@@ -55,6 +57,7 @@ describe("loadSettings", () => {
 			missReasons: ["Ill", "Travel"],
 			shrinkReason: "",
 			material: "halftone",
+			marbleSizes: { small: 20, medium: 48, big: 80 },
 			merge: { smallPerMedium: 5, mediumPerBig: 3 },
 			hideDone: false,
 			showWins: false,
@@ -63,6 +66,11 @@ describe("loadSettings", () => {
 			tilt: false,
 			haptics: false,
 		});
+	});
+
+	it("replaces marble sizes out of range or not whole with defaults", () => {
+		expect(loadSettings({ marbleSizes: { small: 4, medium: 44.5, big: 72 } }).marbleSizes).toEqual({ small: 24, medium: 44, big: 72 });
+		expect(loadSettings({ marbleSizes: "big" }).marbleSizes).toEqual({ small: 24, medium: 44, big: 68 });
 	});
 
 	it("replaces invalid values with defaults", () => {

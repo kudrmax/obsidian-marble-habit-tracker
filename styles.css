@@ -425,3 +425,7 @@ button.th-style-tile.is-selected { border-color: var(--interactive-accent); }
 .th-calibration-row input { flex: 1; min-width: 0; }
 .th-calibration-row button { width: 44px; height: 44px; border-radius: 50%; corner-shape: round; padding: 0; font-size: 22px; }
 .th-calibration-actions { display: flex; justify-content: center; gap: 12px; }
+
+/* Marble sizes: a small jar that follows the sliders. */
+.th-sizes-stage { position: relative; height: 320px; margin-bottom: var(--size-4-3); border-radius: var(--radius-m); background: var(--background-primary); overflow: hidden; }
+.th-sizes .modal-button-container { flex-wrap: wrap; }

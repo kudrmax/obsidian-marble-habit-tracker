@@ -1,6 +1,6 @@
 import { DEFAULT_MERGE_RULE, MergeRule } from "./domain/Jar";
 import { DEFAULT_PROPERTY_NAMES, PropertyNames } from "./infrastructure/HabitCodec";
-import { JarMaterial, isJarMaterial } from "./ui/jar/JarAssets";
+import { DEFAULT_MARBLE_SIZES, JarMaterial, MAX_MARBLE, MIN_MARBLE, MarbleSizes, isJarMaterial } from "./ui/jar/JarAssets";
 
 export type HabitSource = "tag" | "folder";
 
@@ -14,6 +14,7 @@ export interface HabitSettings {
 	missReasons: string[];
 	shrinkReason: string;
 	material: JarMaterial;
+	marbleSizes: MarbleSizes;
 	merge: MergeRule;
 	hideDone: boolean;
 	showWins: boolean;
@@ -33,6 +34,7 @@ export const DEFAULT_SETTINGS: HabitSettings = {
 	missReasons: ["Forgot", "Anchor didn't happen", "No energy", "Felt too big"],
 	shrinkReason: "Felt too big",
 	material: "grain",
+	marbleSizes: DEFAULT_MARBLE_SIZES,
 	merge: DEFAULT_MERGE_RULE,
 	hideDone: true,
 	showWins: true,
@@ -61,6 +63,7 @@ export function loadSettings(data: unknown): HabitSettings {
 		missReasons: loadReasons(raw.missReasons),
 		shrinkReason: typeof raw.shrinkReason === "string" ? raw.shrinkReason.trim() : DEFAULT_SETTINGS.shrinkReason,
 		material: isJarMaterial(raw.material) ? raw.material : DEFAULT_SETTINGS.material,
+		marbleSizes: loadMarbleSizes(raw.marbleSizes),
 		merge: loadMerge(raw.merge, (raw as Record<string, unknown>).mergeSize),
 		hideDone: flag(raw.hideDone, DEFAULT_SETTINGS.hideDone),
 		showWins: flag(raw.showWins, DEFAULT_SETTINGS.showWins),
@@ -75,6 +78,15 @@ export function loadSettings(data: unknown): HabitSettings {
 function loadSource(value: unknown, folder: unknown): HabitSource {
 	if (value === "tag" || value === "folder") return value;
 	return typeof folder === "string" && folder.trim() ? "folder" : DEFAULT_SETTINGS.source;
+}
+
+function loadMarbleSizes(value: unknown): MarbleSizes {
+	const raw = (typeof value === "object" && value !== null ? value : {}) as Partial<Record<keyof MarbleSizes, unknown>>;
+	const size = (key: keyof MarbleSizes) => {
+		const diameter = raw[key];
+		return typeof diameter === "number" && Number.isInteger(diameter) && diameter >= MIN_MARBLE && diameter <= MAX_MARBLE ? diameter : DEFAULT_MARBLE_SIZES[key];
+	};
+	return { small: size("small"), medium: size("medium"), big: size("big") };
 }
 
 /** `mergeSize` is how 1.1–1.7 stored the small-to-medium count. */

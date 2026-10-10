@@ -100,6 +100,13 @@ export class JarPhysics {
 		this.quietFrames = 0;
 	}
 
+	setRadius(id: string, r: number): void {
+		const body = this.items.get(id);
+		if (!body || body.r === r) return;
+		body.r = r;
+		this.quietFrames = 0;
+	}
+
 	remove(id: string): void {
 		this.items.delete(id);
 		this.targets.delete(id);

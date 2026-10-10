@@ -4,9 +4,10 @@ import { PropertyNames } from "../infrastructure/HabitCodec";
 import { DEFAULT_SETTINGS, HabitSettings, parseReasons } from "../settings";
 import { partTitle } from "./format";
 import { Hsl, parseColor } from "./jar/color";
-import { JAR_DIAMETER, JAR_MATERIALS, JarMaterial, assetSvg } from "./jar/JarAssets";
+import { DEFAULT_MARBLE_SIZES, JAR_MATERIALS, JarMaterial, assetSvg } from "./jar/JarAssets";
 import { CornerCalibration } from "./CornerCalibration";
 import { DeviceSettings } from "./DeviceSettings";
+import { MarbleSizesModal } from "./MarbleSizesModal";
 import { FolderSuggest, TagSuggest } from "./suggest";
 
 export interface SettingsHost {
@@ -68,6 +69,17 @@ export class SettingsTab extends PluginSettingTab {
 		new Setting(containerEl).setName("Marbles").setHeading();
 		new Setting(containerEl).setName("Style").setDesc("How your marbles look.");
 		this.stylePicker(containerEl);
+		const sizes = settings.marbleSizes;
+		new Setting(containerEl)
+			.setName("Marble sizes")
+			.setDesc(`Small ${sizes.small}, medium ${sizes.medium}, big ${sizes.big} px. Pick them on a jar of falling marbles.`)
+			.addButton((button) =>
+				button.setButtonText("Adjust").onClick(() =>
+					new MarbleSizesModal(this.app, sizes, settings.material, (next) => {
+						void this.save((changed) => (changed.marbleSizes = next)).then(() => this.display());
+					}).open(),
+				),
+			);
 		const merge = (name: string, desc: string, key: keyof HabitSettings["merge"]) =>
 			new Setting(containerEl)
 				.setName(name)
@@ -91,7 +103,7 @@ export class SettingsTab extends PluginSettingTab {
 			.setDesc(`Marbles roll along a phone's rounded screen corners instead of slipping behind them. Set on each device: now ${corners === 0 ? "square" : `${corners} px`}.`)
 			.addButton((button) =>
 				button.setButtonText("Calibrate").onClick(() =>
-					new CornerCalibration(corners, (radius) => {
+					new CornerCalibration(corners, settings.marbleSizes.medium, (radius) => {
 						this.host.device.setScreenCorners(radius);
 						this.display();
 					}),
@@ -219,7 +231,7 @@ export class SettingsTab extends PluginSettingTab {
 			const marbles = tile.createDiv("th-style-marbles");
 			for (const sample of PREVIEW) {
 				const color = this.resolve(sample.color) ?? { h: 258, s: 88, l: 66 };
-				const diameter = JAR_DIAMETER[sample.size];
+				const diameter = DEFAULT_MARBLE_SIZES[sample.size];
 				const spec = { material, color, background, size: sample.size, full: sample.full };
 				marbles.createEl("img", {
 					attr: { src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(assetSvg(spec, diameter * 2))}`, width: diameter, height: diameter, alt: "" },

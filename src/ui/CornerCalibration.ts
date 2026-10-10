@@ -1,5 +1,3 @@
-import { JAR_DIAMETER } from "./jar/JarAssets";
-
 const MAX_RADIUS = 100;
 const BAND = 3;
 
@@ -13,6 +11,7 @@ export class CornerCalibration {
 
 	constructor(
 		radius: number,
+		marble: number,
 		private readonly onSave: (radius: number) => void,
 	) {
 		this.radius = radius;
@@ -39,7 +38,7 @@ export class CornerCalibration {
 			slider.value = String(this.radius);
 			value.setText(this.radius === 0 ? "Square corners" : `${this.radius} px`);
 			this.root.style.setProperty("--th-corner", `${this.radius}px`);
-			const r = JAR_DIAMETER.medium / 2;
+			const r = marble / 2;
 			const inset = this.radius > r ? this.radius - (this.radius - r) / Math.SQRT2 - r : 0;
 			for (const corner of corners) corner.style.setProperty("--th-corner-inset", `${inset}px`);
 		};
@@ -47,7 +46,7 @@ export class CornerCalibration {
 		less.addEventListener("click", () => show(this.radius - 1));
 		more.addEventListener("click", () => show(this.radius + 1));
 		this.root.style.setProperty("--th-band", `${BAND}px`);
-		this.root.style.setProperty("--th-marble", `${JAR_DIAMETER.medium}px`);
+		this.root.style.setProperty("--th-marble", `${marble}px`);
 		show(radius);
 		document.addEventListener("keydown", this.onKey, true);
 	}

@@ -1,5 +1,5 @@
 import { JarSize } from "../../domain/Jar";
-import { AssetSpec, JAR_DIAMETER, JarMaterial, assetKey, assetSvg } from "./JarAssets";
+import { AssetSpec, JarMaterial, MarbleSizes, assetKey, assetSvg } from "./JarAssets";
 import { Hsl, hsl } from "./color";
 import { FixedStep } from "./FixedStep";
 import { Box, JarPhysics, Point } from "./JarPhysics";
@@ -17,6 +17,7 @@ export interface JarOptions {
 	readonly material: JarMaterial;
 	readonly background: Hsl;
 	readonly reduceMotion: boolean;
+	readonly sizes: MarbleSizes;
 	/** The radius of the screen's rounded corners; marbles roll along them. */
 	readonly screenCorners: number;
 	onMerge?(item: JarItem): void;
@@ -43,11 +44,11 @@ class SpriteCache {
 	constructor(private readonly onReady: () => void) {}
 
 	/** `spec` is only built the first time a key is seen. */
-	get(key: string, spec: () => AssetSpec): HTMLCanvasElement | null {
+	get(key: string, spec: () => AssetSpec, diameter: number): HTMLCanvasElement | null {
 		if (this.sprites.has(key)) return this.sprites.get(key) ?? null;
 		this.sprites.set(key, null);
 		const asset = spec();
-		const pixels = Math.ceil(JAR_DIAMETER[asset.size] * Math.max(2, window.devicePixelRatio || 1));
+		const pixels = Math.ceil(diameter * Math.max(2, window.devicePixelRatio || 1));
 		const generation = this.generation;
 		const image = new Image();
 		image.onload = () => {
@@ -107,13 +108,15 @@ export class JarCanvas {
 	}
 
 	setOptions(options: JarOptions): void {
-		if (options.material !== this.options.material || hsl(options.background) !== hsl(this.options.background)) {
+		const resized = (["small", "medium", "big"] as const).some((size) => options.sizes[size] !== this.options.sizes[size]);
+		if (resized || options.material !== this.options.material || hsl(options.background) !== hsl(this.options.background)) {
 			this.sprites.clear();
 			this.spriteKeys = new WeakMap();
 		}
 		const corners = options.screenCorners !== this.options.screenCorners;
 		this.options = options;
 		if (corners) this.placeScreen();
+		if (resized) for (const item of this.drawn.values()) this.physics.setRadius(item.key, this.radius(item));
 		this.wake();
 	}
 
@@ -281,7 +284,7 @@ export class JarCanvas {
 	}
 
 	private radius(item: JarItem): number {
-		return JAR_DIAMETER[item.size] / 2;
+		return this.options.sizes[item.size] / 2;
 	}
 
 	private randomX(item: JarItem): number {
@@ -363,7 +366,7 @@ export class JarCanvas {
 			const start = this.born.get(body.id);
 			const scale = start === undefined ? 1 : popScale((now - start) / BORN_MS);
 			const r = body.r * scale;
-			const sprite = this.sprites.get(this.spriteKey(item), () => this.assetOf(item));
+			const sprite = this.sprites.get(this.spriteKey(item), () => this.assetOf(item), this.options.sizes[item.size]);
 			if (sprite) {
 				context.drawImage(sprite, body.x - r, body.y - r, r * 2, r * 2);
 				continue;
