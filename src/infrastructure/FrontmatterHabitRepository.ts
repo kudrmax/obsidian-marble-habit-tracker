@@ -2,12 +2,13 @@ import { App, TFile, TFolder, normalizePath } from "obsidian";
 import { HabitEntry, HabitRepository } from "../application/ports";
 import { DomainError } from "../domain/DomainError";
 import { Habit } from "../domain/Habit";
-import { HabitDecodeError, decodeHabit, encodeHabit } from "./HabitCodec";
+import { HabitDecodeError, PropertyNames, decodeHabit, encodeHabit } from "./HabitCodec";
 
 export class FrontmatterHabitRepository implements HabitRepository {
 	constructor(
 		private readonly app: App,
 		private readonly folder: () => string,
+		private readonly keys: () => PropertyNames,
 	) {}
 
 	contains(path: string): boolean {
@@ -34,7 +35,7 @@ export class FrontmatterHabitRepository implements HabitRepository {
 		let updated: Habit | undefined;
 		await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
 			updated = change(this.decodeFresh(file, frontmatter));
-			encodeHabit(updated, frontmatter);
+			encodeHabit(updated, frontmatter, this.keys());
 		});
 		if (!updated) throw new DomainError("Habit not found");
 		return updated;
@@ -46,7 +47,7 @@ export class FrontmatterHabitRepository implements HabitRepository {
 		if (this.app.vault.getAbstractFileByPath(path)) throw new DomainError(`Habit "${habit.name}" already exists`);
 		if (!this.app.vault.getAbstractFileByPath(folder)) await this.app.vault.createFolder(folder);
 		const file = await this.app.vault.create(path, "");
-		await this.app.fileManager.processFrontMatter(file, (frontmatter) => encodeHabit(habit, frontmatter));
+		await this.app.fileManager.processFrontMatter(file, (frontmatter) => encodeHabit(habit, frontmatter, this.keys()));
 		return path;
 	}
 
@@ -56,7 +57,7 @@ export class FrontmatterHabitRepository implements HabitRepository {
 
 	private decodeFresh(file: TFile, frontmatter: Record<string, unknown>): Habit {
 		try {
-			return decodeHabit(file.basename, frontmatter);
+			return decodeHabit(file.basename, frontmatter, this.keys());
 		} catch (error) {
 			if (error instanceof HabitDecodeError) throw new DomainError(`Habit can't be read: ${error.message}`);
 			throw error;
@@ -65,7 +66,7 @@ export class FrontmatterHabitRepository implements HabitRepository {
 
 	private read(file: TFile): HabitEntry {
 		try {
-			const habit = decodeHabit(file.basename, this.app.metadataCache.getFileCache(file)?.frontmatter);
+			const habit = decodeHabit(file.basename, this.app.metadataCache.getFileCache(file)?.frontmatter, this.keys());
 			return { kind: "ok", path: file.path, habit };
 		} catch (error) {
 			if (error instanceof HabitDecodeError) return { kind: "broken", path: file.path, name: file.basename, problem: error.message };

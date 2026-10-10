@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FULL, missed } from "../src/domain/DayMark";
-import { Frontmatter, HabitDecodeError, decodeHabit, encodeHabit } from "../src/infrastructure/HabitCodec";
+import { DEFAULT_PROPERTY_NAMES, Frontmatter, HabitDecodeError, decodeHabit, encodeHabit } from "../src/infrastructure/HabitCodec";
 import { d } from "./support/dates";
 
 const EXAMPLE: Frontmatter = {
@@ -132,5 +132,16 @@ describe("encodeHabit", () => {
 		const frontmatter: Frontmatter = {};
 		encodeHabit(decodeHabit("Зарядка", example()).archive(), frontmatter);
 		expect(frontmatter.archived).toBe(true);
+	});
+
+	it("reads and writes under custom property names", () => {
+		const keys = { ...DEFAULT_PROPERTY_NAMES, doneTiny: "wins", anchor: "after" };
+		const habit = decodeHabit("Read", { ...example(), after: example().anchor, anchor: undefined, wins: ["2026-10-01"] }, keys);
+		expect(habit.markOn(d("2026-10-01"))).toEqual({ kind: "tiny" });
+		const frontmatter: Frontmatter = {};
+		encodeHabit(habit, frontmatter, keys);
+		expect(frontmatter.wins).toContain("2026-10-01");
+		expect(frontmatter.after).toBeDefined();
+		expect(frontmatter.anchor).toBeUndefined();
 	});
 });

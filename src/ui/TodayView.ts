@@ -3,7 +3,7 @@ import { HabitEntry } from "../application/ports";
 import { DayMark, FULL, TINY, isDone, missed } from "../domain/DayMark";
 import { Habit } from "../domain/Habit";
 import { HabitColor } from "../domain/HabitColor";
-import { buildJar } from "../domain/Jar";
+import { MEDIUMS_PER_BIG, buildJar } from "../domain/Jar";
 import { colorClass } from "./colors";
 import { chip, icon, iconButton } from "./components";
 import { DayWatcher } from "./DayWatcher";
@@ -16,7 +16,7 @@ import { EARTH, Point } from "./jar/JarPhysics";
 import { TiltSensor } from "./jar/TiltSensor";
 import { visibleEntries } from "./order";
 import { ScreenChrome } from "./ScreenChrome";
-import { REASONS, celebrationLine, closeDayTitle, closedDayLine, totalWins, winsLabel, offersShrink, todayEntries } from "./today";
+import { celebrationLine, closeDayTitle, closedDayLine, totalWins, winsLabel, offersShrink, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
 
 export const HABITS_VIEW = "tiny-habits-grid";
@@ -95,7 +95,6 @@ export class TodayView extends ItemView {
 		});
 		this.registerEvent(this.app.workspace.on("layout-change", () => this.chrome?.measure()));
 		this.registerDomEvent(window, "resize", () => this.chrome?.measure());
-		this.addAction("plus", "New habit", () => this.ui.newHabit());
 		this.registerEvent(
 			this.app.workspace.on("css-change", () => {
 				this.colors.clear();
@@ -154,7 +153,7 @@ export class TodayView extends ItemView {
 			header.createEl("h1", { cls: "th-title", text: closeDayTitle(habits.length - answered) });
 			const progress = header.createDiv("th-progress");
 			progress.createDiv("th-progress-fill").style.width = `${habits.length ? (answered / habits.length) * 100 : 100}%`;
-			header.createDiv({ cls: "th-wins", text: winsLabel(totalWins(all)) });
+			if (this.ui.settings().showWins) header.createDiv({ cls: "th-wins", text: winsLabel(totalWins(all)) });
 		}
 		this.wasClosed = closed;
 
@@ -165,11 +164,12 @@ export class TodayView extends ItemView {
 				continue;
 			}
 			const done = isDone(entry.habit.markOn(today));
-			const visible = !done || this.showDone || this.celebrating.has(entry.path) || this.menu === entry.path;
+			const hideDone = this.ui.settings().hideDone;
+			const visible = !done || !hideDone || this.showDone || this.celebrating.has(entry.path) || this.menu === entry.path;
 			if (done) hidden.push(entry);
 			if (visible) this.renderRow(column, entry.path, entry.habit);
 		}
-		if (hidden.length) this.renderDoneRow(column, hidden);
+		if (hidden.length && this.ui.settings().hideDone) this.renderDoneRow(column, hidden);
 		this.shownRows = this.renderingRows;
 	}
 
@@ -304,7 +304,7 @@ export class TodayView extends ItemView {
 		const extra = row.createDiv("th-row-extra");
 		extra.createDiv({ cls: "th-label", text: "What got in the way?" });
 		const chips = extra.createDiv("th-chips");
-		for (const reason of REASONS) chip(chips, reason, () => void this.answer(path, missed(reason)));
+		for (const reason of this.ui.settings().missReasons) chip(chips, reason, () => void this.answer(path, missed(reason)));
 		const other = chip(chips, "Other…", () => {
 			this.other = path;
 			this.render();
@@ -397,7 +397,7 @@ export class TodayView extends ItemView {
 			this.asking = null;
 			this.other = null;
 			this.otherText = "";
-			this.shrink = mark && offersShrink(habit, mark, this.ui.settings().redesignThreshold) ? path : null;
+			this.shrink = mark && offersShrink(habit, mark, this.ui.settings().redesignThreshold, this.ui.settings().shrinkReason) ? path : null;
 			if (isDone(mark)) {
 				this.haptics.tap();
 				this.celebrate(path);
@@ -433,7 +433,7 @@ export class TodayView extends ItemView {
 			if (entry.kind !== "ok") return [];
 			names.set(entry.path, entry.habit);
 			const color = this.resolve(entry.habit.color);
-			return buildJar(entry.habit, today).map((piece) => ({ ...piece, key: `${entry.path}|${piece.id}`, group: entry.path, color }));
+			return buildJar(entry.habit, today, this.ui.settings().mergeSize).map((piece) => ({ ...piece, key: `${entry.path}|${piece.id}`, group: entry.path, color }));
 		});
 		this.jar.setOptions({
 			...this.jarOptions(),
@@ -452,7 +452,8 @@ export class TodayView extends ItemView {
 		if (!habit) return;
 		this.captionEl?.remove();
 		window.clearTimeout(this.captionTimer);
-		const text = `${habit.name} · ${item.size === "big" ? "28" : "7"} wins`;
+		const size = this.ui.settings().mergeSize;
+		const text = `${habit.name} · ${item.size === "big" ? size * MEDIUMS_PER_BIG : size} wins`;
 		this.captionEl = this.contentEl.createDiv({ cls: ["th-caption", "th-habit", colorClass(habit.color)], text });
 		this.captionTimer = window.setTimeout(() => {
 			this.captionEl?.remove();

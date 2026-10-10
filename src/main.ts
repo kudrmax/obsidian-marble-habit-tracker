@@ -14,7 +14,7 @@ export default class TinyHabitsPlugin extends Plugin implements SettingsHost {
 
 	override async onload(): Promise<void> {
 		this.settings = loadSettings(await this.loadData());
-		const repository = new FrontmatterHabitRepository(this.app, () => this.settings.folder);
+		const repository = new FrontmatterHabitRepository(this.app, () => this.settings.folder, () => this.settings.properties);
 		const service = new HabitService(repository, systemClock);
 		const ui: UiContext = {
 			service,
@@ -29,7 +29,7 @@ export default class TinyHabitsPlugin extends Plugin implements SettingsHost {
 		this.addRibbonIcon("sprout", "Habits", () => void this.openGrid());
 		this.addCommand({ id: "open", name: "Open habits", callback: () => void this.openGrid() });
 		this.addCommand({ id: "new", name: "New habit", callback: () => ui.newHabit() });
-		this.addCommand({ id: "replay-jar", name: "Replay the jar", callback: () => this.todayViews().forEach((view) => view.replayJar()) });
+		this.addCommand({ id: "replay-jar", name: "Replay the marbles", callback: () => this.todayViews().forEach((view) => view.replayJar()) });
 		this.addSettingTab(new SettingsTab(this.app, this));
 
 		const refreshIfHabit = (...paths: string[]) => {

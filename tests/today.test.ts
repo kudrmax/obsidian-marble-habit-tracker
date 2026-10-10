@@ -63,16 +63,17 @@ describe("celebrationLine", () => {
 
 describe("offersShrink", () => {
 	it("offers a tinier recipe when it felt too big", () => {
-		expect(offersShrink(habitNote("Read"), missed("Felt too big"), 3)).toBe(true);
-		expect(offersShrink(habitNote("Read"), missed("Forgot"), 3)).toBe(false);
+		expect(offersShrink(habitNote("Read"), missed("Felt too big"), 3, "Felt too big")).toBe(true);
+		expect(offersShrink(habitNote("Read"), missed("Felt too big"), 3, "")).toBe(false);
+		expect(offersShrink(habitNote("Read"), missed("Forgot"), 3, "Felt too big")).toBe(false);
 	});
 
 	it("offers it after too many misses in a row", () => {
 		const habit = habitNote("Read", { missed: [{ date: "2026-10-08", reason: "a" }, { date: "2026-10-07", reason: "b" }, { date: "2026-10-06", reason: "c" }] });
-		expect(offersShrink(habit, missed("Forgot"), 3)).toBe(true);
+		expect(offersShrink(habit, missed("Forgot"), 3, "Felt too big")).toBe(true);
 	});
 
 	it("never offers it for done days", () => {
-		expect(offersShrink(habitNote("Read"), TINY, 3)).toBe(false);
+		expect(offersShrink(habitNote("Read"), TINY, 3, "Felt too big")).toBe(false);
 	});
 });

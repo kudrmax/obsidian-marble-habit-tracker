@@ -387,3 +387,24 @@ button.th-done-row {
 .th-sheet-title { text-align: center; font-size: 16px; font-weight: 600; color: var(--th-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .th-sheet-body { padding: 16px var(--th-gutter) 28px; }
 .th-sheet-group { padding: 14px 0 6px; }
+
+.th-style-picker { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 0 0 16px; }
+button.th-style-tile {
+	height: auto;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	padding: 14px 6px 10px;
+	border: 1.5px solid var(--background-modifier-border);
+	border-radius: 14px;
+	background: var(--background-primary);
+	box-shadow: none;
+	cursor: pointer;
+	-webkit-tap-highlight-color: transparent;
+}
+button.th-style-tile.is-selected { border-color: var(--interactive-accent); }
+.th-style-marbles { display: flex; align-items: flex-end; justify-content: center; height: 68px; }
+.th-style-marbles img { display: block; margin-left: -6px; }
+.th-style-marbles img:first-child { margin-left: 0; }
+.th-style-name { font-size: var(--font-ui-small); color: var(--text-normal); }

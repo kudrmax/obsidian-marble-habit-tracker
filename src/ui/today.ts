@@ -5,8 +5,6 @@ import { LocalDate } from "../domain/LocalDate";
 import { needsRedesign } from "../domain/RedesignRule";
 import { visibleEntries } from "./order";
 
-export const FELT_TOO_BIG = "Felt too big";
-export const REASONS = ["Forgot", "Anchor didn't happen", "No energy", FELT_TOO_BIG] as const;
 
 const WORDS = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
 
@@ -37,7 +35,8 @@ export function celebrationLine(habit: Habit, mark: DayMark): string {
 	return habit.text("celebration").current() ?? (mark.kind === "full" ? "Did more" : "Done");
 }
 
-export function offersShrink(habit: Habit, mark: DayMark, threshold: number): boolean {
+/** A miss offers to make the habit tinier when its reason is the shrink reason, or after too many misses in a row. */
+export function offersShrink(habit: Habit, mark: DayMark, threshold: number, shrinkReason: string): boolean {
 	if (mark.kind !== "missed") return false;
-	return mark.reason === FELT_TOO_BIG || needsRedesign(habit, threshold);
+	return (shrinkReason !== "" && mark.reason === shrinkReason) || needsRedesign(habit, threshold);
 }

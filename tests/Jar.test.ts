@@ -71,4 +71,10 @@ describe("buildJar", () => {
 	it("is empty without done days", () => {
 		expect(buildJar(habit("2026-10-01"), today)).toEqual([]);
 	});
+
+	it("merges by the chosen size", () => {
+		const jar = buildJar(marked(habit("2026-09-01"), doneDays("2026-09-01", 13)), today, 5);
+		expect(sizes(jar)).toEqual(["medium", "medium", "small", "small", "small"]);
+		expect(sizes(buildJar(marked(habit("2026-09-01"), doneDays("2026-09-01", 20)), today, 5))).toEqual(["big"]);
+	});
 });
