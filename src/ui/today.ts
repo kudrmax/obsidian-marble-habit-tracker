@@ -31,10 +31,6 @@ export function todayEntries(entries: readonly HabitEntry[], today: LocalDate): 
 	);
 }
 
-export function celebrationLine(habit: Habit, mark: DayMark): string {
-	return habit.text("celebration").current() ?? (mark.kind === "full" ? "Did more" : "Done");
-}
-
 /** A miss offers to make the habit tinier when its reason is the shrink reason, or after too many misses in a row. */
 export function offersShrink(habit: Habit, mark: DayMark, threshold: number, shrinkReason: string): boolean {
 	if (mark.kind !== "missed") return false;

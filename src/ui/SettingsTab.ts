@@ -96,7 +96,7 @@ export class SettingsTab extends PluginSettingTab {
 			.addToggle((toggle) => toggle.setValue(settings.hideDone).onChange((value) => void this.save((next) => (next.hideDone = value))));
 		new Setting(containerEl)
 			.setName("Celebration line")
-			.setDesc("After you mark a habit, its celebration shows for two seconds.")
+			.setDesc("After you mark a habit, its celebration shows above the marbles for two seconds.")
 			.addToggle((toggle) =>
 				toggle.setValue(settings.celebrationLine).onChange((value) => void this.save((next) => (next.celebrationLine = value))),
 			);

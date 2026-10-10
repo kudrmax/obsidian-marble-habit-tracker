@@ -268,7 +268,6 @@ button.th-swatch.is-on { box-shadow: 0 0 0 3px var(--th-bg), 0 0 0 5px var(--th-
 .th-row-title { font-size: var(--th-text-size); font-weight: 500; color: var(--th-text); overflow-wrap: anywhere; }
 .th-row-sub { margin-top: 2px; font-size: var(--th-small-size); color: var(--th-faint); }
 .th-row.is-answered .th-row-title { color: var(--th-faint); }
-.th-row-sub.is-celebrating { color: var(--th-habit); font-weight: 600; }
 .th-row-extra { padding: 0 0 14px; animation: th-in 200ms ease; }
 .th-row-extra .th-label { margin-bottom: 8px; }
 .th-chips { display: flex; flex-wrap: wrap; gap: 6px; }

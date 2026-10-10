@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HabitEntry } from "../src/application/ports";
-import { FULL, TINY, missed } from "../src/domain/DayMark";
-import { celebrationLine, closeDayTitle, closedDayLine, totalWins, winsLabel, offersShrink, todayEntries } from "../src/ui/today";
+import { TINY, missed } from "../src/domain/DayMark";
+import { closeDayTitle, closedDayLine, totalWins, winsLabel, offersShrink, todayEntries } from "../src/ui/today";
 import { d } from "./support/dates";
 import { habitNote } from "./support/habits";
 
@@ -46,18 +46,6 @@ describe("todayEntries", () => {
 			{ kind: "broken", path: "Habits/Broken.md", name: "Broken", problem: "no schedule" },
 		];
 		expect(names(todayEntries(entries, today))).toEqual(["Broken", "Daily", "Weekend done"]);
-	});
-});
-
-describe("celebrationLine", () => {
-	it("uses the celebration from the recipe", () => {
-		const habit = habitNote("Read", { celebration: [{ value: "Yes!", since: "2026-10-01" }] });
-		expect(celebrationLine(habit, TINY)).toBe("Yes!");
-	});
-
-	it("falls back to a quiet word", () => {
-		expect(celebrationLine(habitNote("Read"), TINY)).toBe("Done");
-		expect(celebrationLine(habitNote("Read"), FULL)).toBe("Did more");
 	});
 });
 

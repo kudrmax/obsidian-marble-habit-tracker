@@ -16,14 +16,15 @@ import { EARTH, Point } from "./jar/JarPhysics";
 import { TiltSensor } from "./jar/TiltSensor";
 import { visibleEntries } from "./order";
 import { ScreenChrome } from "./ScreenChrome";
-import { celebrationLine, closeDayTitle, closedDayLine, totalWins, winsLabel, offersShrink, todayEntries } from "./today";
+import { closeDayTitle, closedDayLine, totalWins, winsLabel, offersShrink, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
 
 export const HABITS_VIEW = "tiny-habits-grid";
 
 const HOLD_MS = 450;
-const CELEBRATE_MS = 2200;
-const CAPTION_MS = 2600;
+/** How long the circle of a just-marked habit keeps popping, while its row is still on screen. */
+const POP_MS = 450;
+const CAPTION_MS = 2000;
 const DAY_CHECK_MS = 60_000;
 /** Obsidian re-reads a note a moment after it is written, so the tap point has to wait for the new mark. */
 const ORIGIN_TTL_MS = 4000;
@@ -165,7 +166,7 @@ export class TodayView extends ItemView {
 			}
 			const done = isDone(entry.habit.markOn(today));
 			const hideDone = this.ui.settings().hideDone;
-			const visible = !done || !hideDone || this.showDone || this.celebrating.has(entry.path) || this.menu === entry.path;
+			const visible = !done || !hideDone || this.showDone || this.menu === entry.path;
 			if (done) hidden.push(entry);
 			if (visible) this.renderRow(column, entry.path, entry.habit);
 		}
@@ -222,7 +223,6 @@ export class TodayView extends ItemView {
 	private renderRow(column: HTMLElement, path: string, habit: Habit): void {
 		const today = this.ui.service.today();
 		const mark = habit.markOn(today);
-		const done = isDone(mark);
 		const row = column.createDiv({ cls: ["th-row", "th-habit", colorClass(habit.color)] });
 		row.toggleClass("is-answered", mark !== undefined);
 		row.toggleClass("is-new", !this.shownRows.has(path));
@@ -231,8 +231,7 @@ export class TodayView extends ItemView {
 
 		const text = main.createDiv("th-row-text");
 		text.createDiv({ cls: "th-row-title", text: habit.text("tiny").current() ?? habit.name });
-		const sub = text.createDiv({ cls: "th-row-sub", text: this.subtitle(path, habit, mark) });
-		sub.toggleClass("is-celebrating", done && this.celebrating.has(path) && this.ui.settings().celebrationLine);
+		text.createDiv({ cls: "th-row-sub", text: this.subtitle(path, habit, mark) });
 		text.addEventListener("click", () => this.ui.openHabit(path, this.leaf));
 
 		if (this.menu === path) this.renderAnswers(main, path, mark);
@@ -248,7 +247,6 @@ export class TodayView extends ItemView {
 		if (this.asking === path) return "not today — why?";
 		if (!mark) return anchorLine(habit);
 		if (mark.kind === "missed") return `not today · ${mark.reason.toLowerCase()}`;
-		if (this.celebrating.has(path) && this.ui.settings().celebrationLine) return celebrationLine(habit, mark);
 		return mark.kind === "full" ? `did more · ${habit.text("full").current() ?? ""}`.replace(/ · $/, "") : "done";
 	}
 
@@ -398,9 +396,11 @@ export class TodayView extends ItemView {
 			this.other = null;
 			this.otherText = "";
 			this.shrink = mark && offersShrink(habit, mark, this.ui.settings().redesignThreshold, this.ui.settings().shrinkReason) ? path : null;
-			if (isDone(mark)) {
+			if (mark && isDone(mark)) {
 				this.haptics.tap();
 				this.celebrate(path);
+				const phrase = habit.text("celebration").current();
+				if (phrase && this.ui.settings().celebrationLine) this.caption(habit, phrase);
 			}
 			else this.stopCelebrating(path);
 		} catch (error) {
@@ -415,8 +415,7 @@ export class TodayView extends ItemView {
 			path,
 			window.setTimeout(() => {
 				this.celebrating.delete(path);
-				this.render();
-			}, CELEBRATE_MS),
+			}, POP_MS),
 		);
 	}
 
@@ -439,7 +438,9 @@ export class TodayView extends ItemView {
 			...this.jarOptions(),
 			onMerge: (item) => {
 				this.haptics.merge();
-				this.caption(names.get(item.group), item);
+				const habit = names.get(item.group);
+				const size = this.ui.settings().mergeSize;
+				if (habit) this.caption(habit, `${item.size === "big" ? size * MEDIUMS_PER_BIG : size} wins`);
 			},
 		});
 		const now = Date.now();
@@ -448,12 +449,10 @@ export class TodayView extends ItemView {
 		for (const path of used) this.origins.delete(path);
 	}
 
-	private caption(habit: Habit | undefined, item: JarItem): void {
-		if (!habit) return;
+	/** A short line above the marbles in the habit's color; a new one replaces the one on screen. */
+	private caption(habit: Habit, text: string): void {
 		this.captionEl?.remove();
 		window.clearTimeout(this.captionTimer);
-		const size = this.ui.settings().mergeSize;
-		const text = `${habit.name} · ${item.size === "big" ? size * MEDIUMS_PER_BIG : size} wins`;
 		this.captionEl = this.contentEl.createDiv({ cls: ["th-caption", "th-habit", colorClass(habit.color)], text });
 		this.captionTimer = window.setTimeout(() => {
 			this.captionEl?.remove();
