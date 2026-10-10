@@ -18,6 +18,7 @@ export function tiltGravity(beta: number, gamma: number, screenAngle: number, st
 export class TiltSensor {
 	private listening = false;
 	private asked = false;
+	private askedSilently = false;
 	private smoothed: Point | null = null;
 	private readonly listener = (event: DeviceOrientationEvent) => this.read(event);
 
@@ -36,10 +37,14 @@ export class TiltSensor {
 		this.smoothed = null;
 	}
 
-	/** iOS answers at once when motion was allowed before; otherwise the first prompt needs a tap, see askOnTap. */
+	/**
+	 * iOS answers at once when motion was allowed before; otherwise the first prompt needs a tap, see askOnTap.
+	 * Asked once per sensor, not on every refresh of the screen.
+	 */
 	async askSilently(): Promise<void> {
 		const request = this.permissionRequest();
-		if (!request) return;
+		if (!request || this.askedSilently || this.asked) return;
+		this.askedSilently = true;
 		try {
 			if ((await request.call(window.DeviceOrientationEvent)) === "granted") {
 				this.asked = true;
