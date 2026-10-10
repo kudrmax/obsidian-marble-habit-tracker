@@ -142,6 +142,10 @@ export class SettingsTab extends PluginSettingTab {
 			.setDesc("One note per habit. Subfolders are ignored.")
 			.addText((text) => text.setValue(settings.folder).onChange((value) => void this.save((next) => (next.folder = value.trim() || DEFAULT_SETTINGS.folder))));
 		new Setting(containerEl)
+			.setName("Habit block in notes")
+			.setDesc("Show the recipe, progress and history at the top of each habit note, above your own text.")
+			.addToggle((toggle) => toggle.setValue(settings.habitBlock).onChange((value) => void this.save((next) => (next.habitBlock = value))));
+		new Setting(containerEl)
 			.setName("Property names")
 			.setDesc("Where each part of a habit is stored in the note's properties. Renaming here doesn't rename properties in notes you already have.");
 		for (const key of Object.keys(PROPERTY_LABELS) as Array<keyof PropertyNames>) {

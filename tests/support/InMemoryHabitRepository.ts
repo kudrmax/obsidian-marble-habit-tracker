@@ -5,6 +5,10 @@ import { Habit } from "../../src/domain/Habit";
 export class InMemoryHabitRepository implements HabitRepository {
 	readonly entries = new Map<string, HabitEntry>();
 
+	contains(path: string): boolean {
+		return this.entries.has(path);
+	}
+
 	list(): HabitEntry[] {
 		return [...this.entries.values()];
 	}

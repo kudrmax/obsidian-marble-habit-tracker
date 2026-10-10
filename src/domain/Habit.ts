@@ -171,6 +171,10 @@ export class Habit {
 		return new Habit({ ...this.state, archived: true });
 	}
 
+	restore(): Habit {
+		return new Habit({ ...this.state, archived: false });
+	}
+
 	changes(): RecipeChange[] {
 		const created = this.createdOn;
 		const collect = <T>(

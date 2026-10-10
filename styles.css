@@ -408,3 +408,8 @@ button.th-style-tile.is-selected { border-color: var(--interactive-accent); }
 .th-style-marbles img { display: block; margin-left: -6px; }
 .th-style-marbles img:first-child { margin-left: 0; }
 .th-style-name { font-size: var(--font-ui-small); color: var(--text-normal); }
+
+.tiny-habits.th-screen.th-note-block { max-width: none; margin: 0 0 28px; padding: 4px 0 20px; border-bottom: var(--th-line-width) solid var(--th-line); font-size: var(--font-text-size); cursor: default; }
+.th-note-block .th-section-first { padding-top: 0; margin-top: 12px; border-top: none; }
+.th-archived { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 0 4px; padding: 10px 14px; border-radius: 12px; background: var(--background-secondary); }
+.th-archived-text { font-size: var(--th-small-size); color: var(--th-muted); }

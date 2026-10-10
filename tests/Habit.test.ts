@@ -95,6 +95,7 @@ describe("Habit", () => {
 
 	it("archives", () => {
 		expect(base().archive().archived).toBe(true);
+		expect(base().archive().restore().archived).toBe(false);
 	});
 
 	it("has an optional color from the theme palette", () => {

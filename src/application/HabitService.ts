@@ -47,6 +47,10 @@ export class HabitService {
 		return this.repository.update(path, (habit) => habit.archive());
 	}
 
+	async restore(path: string): Promise<Habit> {
+		return this.repository.update(path, (habit) => habit.restore());
+	}
+
 	async create(input: NewHabit): Promise<string> {
 		return this.repository.create(Habit.create(input, this.today()));
 	}

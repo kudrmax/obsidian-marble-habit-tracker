@@ -6,6 +6,7 @@ describe("loadSettings", () => {
 	it("uses defaults for missing data", () => {
 		expect(loadSettings(null)).toEqual({
 			folder: "Habits",
+			habitBlock: true,
 			properties: DEFAULT_PROPERTY_NAMES,
 			redesignThreshold: 3,
 			missReasons: ["Forgot", "Anchor didn't happen", "No energy", "Felt too big"],
@@ -26,6 +27,7 @@ describe("loadSettings", () => {
 		expect(
 			loadSettings({
 				folder: " Привычки ",
+				habitBlock: false,
 				properties: { doneTiny: " done ", missed: "" },
 				redesignThreshold: 5,
 				missReasons: [" Ill ", "", "Ill", "Travel"],
@@ -41,6 +43,7 @@ describe("loadSettings", () => {
 			}),
 		).toEqual({
 			folder: "Привычки",
+			habitBlock: false,
 			properties: { ...DEFAULT_PROPERTY_NAMES, doneTiny: "done" },
 			redesignThreshold: 5,
 			missReasons: ["Ill", "Travel"],

@@ -3,6 +3,7 @@ import { JarMaterial, isJarMaterial } from "./ui/jar/JarAssets";
 
 export interface HabitSettings {
 	folder: string;
+	habitBlock: boolean;
 	properties: PropertyNames;
 	redesignThreshold: number;
 	missReasons: string[];
@@ -19,6 +20,7 @@ export interface HabitSettings {
 
 export const DEFAULT_SETTINGS: HabitSettings = {
 	folder: "Habits",
+	habitBlock: true,
 	properties: DEFAULT_PROPERTY_NAMES,
 	redesignThreshold: 3,
 	missReasons: ["Forgot", "Anchor didn't happen", "No energy", "Felt too big"],
@@ -44,6 +46,7 @@ export function loadSettings(data: unknown): HabitSettings {
 	const text = (value: unknown, fallback: string) => (typeof value === "string" && value.trim() ? value.trim() : fallback);
 	return {
 		folder: text(raw.folder, DEFAULT_SETTINGS.folder),
+		habitBlock: flag(raw.habitBlock, DEFAULT_SETTINGS.habitBlock),
 		properties: loadProperties(raw.properties),
 		redesignThreshold: integer(raw.redesignThreshold, 1, Number.MAX_SAFE_INTEGER, DEFAULT_SETTINGS.redesignThreshold),
 		missReasons: loadReasons(raw.missReasons),
