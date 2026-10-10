@@ -1,9 +1,9 @@
-/** Physics always advances in 60 Hz steps, so marbles move the same on 60 Hz and 120 Hz screens. */
-export const STEP_MS = 1000 / 60;
+/** Physics always advances in 120 Hz steps, the speed the marbles were tuned at on a 120 Hz iPhone, on every screen. */
+export const STEP_MS = 1000 / 120;
 /** After a pause (hidden tab, slow frame) catch up at most this many steps instead of jumping. */
-const MAX_STEPS_PER_FRAME = 4;
+const MAX_STEPS_PER_FRAME = 8;
 
-/** Turns frame timestamps into the number of 60 Hz physics steps owed: one per frame at 60 Hz, every other frame at 120 Hz. */
+/** Turns frame timestamps into the number of 120 Hz physics steps owed: one per frame at 120 Hz, two per frame at 60 Hz. */
 export class FixedStep {
 	private last: number | null = null;
 	private pending = 0;
