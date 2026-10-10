@@ -9,6 +9,7 @@ import { HabitNotes } from "./ui/HabitNotes";
 import { HABIT_VIEW, HabitScreenView } from "./ui/HabitScreenView";
 import { HABITS_VIEW, TodayView } from "./ui/TodayView";
 import { SettingsHost, SettingsTab } from "./ui/SettingsTab";
+import { DeviceSettings } from "./ui/DeviceSettings";
 import { UiContext } from "./ui/UiContext";
 
 const DAY_CHECK_MS = 60_000;
@@ -16,6 +17,7 @@ const DAY_CHECK_MS = 60_000;
 export default class MarbleHabitTrackerPlugin extends Plugin implements SettingsHost {
 	override settings: HabitSettings = loadSettings(null);
 	newHabit: () => void = () => undefined;
+	readonly device = new DeviceSettings(this.app, () => this.refreshViews());
 	private notes: HabitNotes | null = null;
 	/** Habits as of the last refresh, so a note that just stopped being a habit (lost its tag) still refreshes Today. */
 	private habitPaths = new Set<string>();
@@ -29,6 +31,7 @@ export default class MarbleHabitTrackerPlugin extends Plugin implements Settings
 			service,
 			repository,
 			settings: () => this.settings,
+			screenCorners: () => this.device.screenCorners,
 			openHabit: (path, leaf) => void this.openHabit(path, leaf),
 			newHabit: () => new HabitFormModal(this.app, service).open(),
 		};

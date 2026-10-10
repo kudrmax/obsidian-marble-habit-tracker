@@ -408,3 +408,20 @@ button.th-style-tile.is-selected { border-color: var(--interactive-accent); }
 /* Fingers need bigger circles than a mouse: on phones the mark and the three answers grow together. */
 .is-mobile .tiny-habits { --th-mark: 40px; }
 .is-mobile .th-mark svg, .is-mobile .th-answer-circle svg { width: 18px; height: 18px; }
+
+/* Screen corner calibration: a band along the screen edge that is equally thin everywhere when the radius is right. */
+.th-calibration { position: fixed; inset: 0; z-index: 10000; background: var(--color-yellow); }
+.th-calibration-screen { position: absolute; inset: var(--th-band); background: #000; border-radius: max(0px, calc(var(--th-corner) - var(--th-band))); corner-shape: round; }
+.th-calibration-marble { position: absolute; width: var(--th-marble); height: var(--th-marble); border-radius: 50%; corner-shape: round; background: var(--color-cyan); }
+.th-calibration-marble.is-top-left { top: var(--th-corner-inset); left: var(--th-corner-inset); }
+.th-calibration-marble.is-top-right { top: var(--th-corner-inset); right: var(--th-corner-inset); }
+.th-calibration-marble.is-bottom-left { bottom: var(--th-corner-inset); left: var(--th-corner-inset); }
+.th-calibration-marble.is-bottom-right { bottom: var(--th-corner-inset); right: var(--th-corner-inset); }
+.th-calibration-panel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(320px, calc(100% - 64px)); display: flex; flex-direction: column; gap: 12px; color: #fff; text-align: center; }
+.th-calibration-title { font-size: var(--font-ui-large); font-weight: 600; }
+.th-calibration-hint { font-size: var(--font-ui-small); color: rgba(255, 255, 255, 0.7); }
+.th-calibration-value { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.th-calibration-row { display: flex; align-items: center; gap: 12px; }
+.th-calibration-row input { flex: 1; min-width: 0; }
+.th-calibration-row button { width: 44px; height: 44px; border-radius: 50%; corner-shape: round; padding: 0; font-size: 22px; }
+.th-calibration-actions { display: flex; justify-content: center; gap: 12px; }

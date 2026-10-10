@@ -5,12 +5,15 @@ import { DEFAULT_SETTINGS, HabitSettings, parseReasons } from "../settings";
 import { partTitle } from "./format";
 import { Hsl, parseColor } from "./jar/color";
 import { JAR_DIAMETER, JAR_MATERIALS, JarMaterial, assetSvg } from "./jar/JarAssets";
+import { CornerCalibration } from "./CornerCalibration";
+import { DeviceSettings } from "./DeviceSettings";
 import { FolderSuggest, TagSuggest } from "./suggest";
 
 export interface SettingsHost {
 	settings: HabitSettings;
 	saveSettings(): Promise<void>;
 	newHabit(): void;
+	readonly device: DeviceSettings;
 }
 
 const MATERIAL_NAMES: Record<JarMaterial, string> = { grain: "Grain", aura: "Aura", halftone: "Halftone" };
@@ -82,6 +85,18 @@ export class SettingsTab extends PluginSettingTab {
 			.setName("Tilt to roll")
 			.setDesc("On a phone, marbles roll the way you tilt it.")
 			.addToggle((toggle) => toggle.setValue(settings.tilt).onChange((value) => void this.save((next) => (next.tilt = value))));
+		const corners = this.host.device.screenCorners;
+		new Setting(containerEl)
+			.setName("Screen corners")
+			.setDesc(`Marbles roll along a phone's rounded screen corners instead of slipping behind them. Set on each device: now ${corners === 0 ? "square" : `${corners} px`}.`)
+			.addButton((button) =>
+				button.setButtonText("Calibrate").onClick(() =>
+					new CornerCalibration(corners, (radius) => {
+						this.host.device.setScreenCorners(radius);
+						this.display();
+					}),
+				),
+			);
 		new Setting(containerEl)
 			.setName("Vibration")
 			.setDesc("A light tap when you mark a habit, when marbles bump and when they merge.")

@@ -50,6 +50,8 @@ export class JarPhysics {
 	private gravity: Point = EARTH;
 	private obstacles: readonly Box[] = [];
 	private ledges: readonly Box[] = [];
+	/** The screen with its rounded corners, in the same coordinates as the bodies; the bodies stay inside its corners. */
+	private screen: Box | null = null;
 	/** The boxes as a body of each radius meets them; rebuilt when the boxes or the size change, not per body per frame. */
 	private readonly shapes = new Map<number, Shapes>();
 	/** Reused every step so the hot loop allocates nothing. */
@@ -72,6 +74,11 @@ export class JarPhysics {
 	setObstacles(obstacles: readonly Box[]): void {
 		this.obstacles = obstacles;
 		this.shapes.clear();
+		this.quietFrames = 0;
+	}
+
+	setScreen(screen: Box | null): void {
+		this.screen = screen;
 		this.quietFrames = 0;
 	}
 
@@ -229,6 +236,7 @@ export class JarPhysics {
 			return;
 		}
 		if (body.y < body.r) body.y = body.r;
+		if (this.screen) keepInCorners(body, this.screen);
 	}
 }
 
@@ -253,6 +261,21 @@ function touches(body: Body, box: Box): boolean {
 	const dx = body.x - Math.max(core.left, Math.min(core.right, body.x));
 	const dy = body.y - Math.max(core.top, Math.min(core.bottom, body.y));
 	return Math.hypot(dx, dy) < core.radius + body.r;
+}
+
+/** Pulls a body in a corner of `screen` back inside the corner's curve. */
+function keepInCorners(body: Body, screen: Box): void {
+	const reach = Math.max(screen.radius, body.r);
+	const x = Math.max(screen.left + reach, Math.min(screen.right - reach, body.x));
+	const y = Math.max(screen.top + reach, Math.min(screen.bottom - reach, body.y));
+	if (x === body.x || y === body.y) return;
+	const dx = body.x - x;
+	const dy = body.y - y;
+	const distance = Math.hypot(dx, dy);
+	const limit = reach - body.r;
+	if (distance <= limit) return;
+	body.x = x + (dx / distance) * limit;
+	body.y = y + (dy / distance) * limit;
 }
 
 function pushOut(body: Body, box: Box): void {

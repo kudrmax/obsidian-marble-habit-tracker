@@ -481,6 +481,7 @@ export class TodayView extends ItemView {
 		return {
 			material: settings.material,
 			reduceMotion: settings.reduceMotion,
+			screenCorners: this.ui.screenCorners(),
 			background: this.resolveVar("--background-primary"),
 			onImpact: (strength: number) => this.haptics.impact(strength),
 		};

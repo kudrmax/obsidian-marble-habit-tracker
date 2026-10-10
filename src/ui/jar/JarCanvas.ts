@@ -17,6 +17,8 @@ export interface JarOptions {
 	readonly material: JarMaterial;
 	readonly background: Hsl;
 	readonly reduceMotion: boolean;
+	/** The radius of the screen's rounded corners; marbles roll along them. */
+	readonly screenCorners: number;
 	onMerge?(item: JarItem): void;
 	onImpact?(strength: number): void;
 }
@@ -109,7 +111,9 @@ export class JarCanvas {
 			this.sprites.clear();
 			this.spriteKeys = new WeakMap();
 		}
+		const corners = options.screenCorners !== this.options.screenCorners;
 		this.options = options;
+		if (corners) this.placeScreen();
 		this.wake();
 	}
 
@@ -302,7 +306,16 @@ export class JarCanvas {
 		this.worldWidth = width;
 		this.worldHeight = height;
 		this.physics.resize(width, height);
+		this.placeScreen();
 		this.wake();
+	}
+
+	/** Where the screen's corners are as seen from the canvas, which may not start at the screen's edge. */
+	private placeScreen(): void {
+		const radius = this.options.screenCorners;
+		if (radius <= 0) return this.physics.setScreen(null);
+		const box = this.canvas.getBoundingClientRect();
+		this.physics.setScreen({ left: -box.left, top: -box.top, right: window.innerWidth - box.left, bottom: window.innerHeight - box.top, radius });
 	}
 
 	private wake(): void {

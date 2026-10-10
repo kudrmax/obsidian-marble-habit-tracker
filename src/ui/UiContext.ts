@@ -7,6 +7,8 @@ export interface UiContext {
 	readonly service: HabitService;
 	readonly repository: HabitRepository;
 	settings(): HabitSettings;
+	/** This device's screen corner radius, see `DeviceSettings`. */
+	screenCorners(): number;
 	openHabit(path: string, leaf?: WorkspaceLeaf): void;
 	newHabit(): void;
 }

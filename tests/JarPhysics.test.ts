@@ -214,6 +214,27 @@ describe("JarPhysics", () => {
 		expect(physics.get("small")?.x).toBeCloseTo(200, 0);
 	});
 
+	it("keeps bodies inside the screen's rounded corners", () => {
+		const physics = new JarPhysics(400, 300);
+		physics.setScreen({ left: 0, top: -100, right: 400, bottom: 300, radius: 60 });
+		physics.setGravity({ x: -0.3, y: 0.3 });
+		physics.add({ id: "corner", x: 100, y: 12, r: 12 });
+		settle(physics);
+		const corner = physics.get("corner")!;
+		expect(Math.hypot(corner.x - 60, corner.y - 240)).toBeCloseTo(48, 0);
+		expect(corner.x).toBeCloseTo(60 - 48 / Math.SQRT2, 0);
+	});
+
+	it("leaves the corners alone for a body as round as them", () => {
+		const physics = new JarPhysics(400, 300);
+		physics.setScreen({ left: 0, top: 0, right: 400, bottom: 300, radius: 10 });
+		physics.setGravity({ x: -0.3, y: 0.3 });
+		physics.add({ id: "a", x: 100, y: 22, r: 22 });
+		settle(physics);
+		expect(physics.get("a")?.x).toBeCloseTo(22, 0);
+		expect(physics.get("a")?.y).toBeCloseTo(278, 0);
+	});
+
 	it("lets falling bodies pass through ledges and landed ones bounce off them", () => {
 		const physics = new JarPhysics(200, 300);
 		physics.setLedges([{ left: 0, top: 100, right: 200, bottom: 120, radius: 4 }]);
