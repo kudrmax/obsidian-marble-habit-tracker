@@ -59,6 +59,8 @@ export class JarCanvas {
 	private readonly sprites = new SpriteCache(() => this.wake());
 	private readonly drawn = new Map<string, JarItem>();
 	private readonly born = new Map<string, number>();
+	/** Marbles flying into a merge (the merging ones and the one launched from the button): a later sync must not delete them mid-flight. */
+	private readonly inFlight = new Set<string>();
 	private readonly resizer: ResizeObserver;
 	private readonly timers = new Set<number>();
 	private width = 0;
@@ -103,7 +105,7 @@ export class JarCanvas {
 	/** Returns the groups whose origin was used, so the caller can forget them. */
 	sync(items: readonly JarItem[], origins: ReadonlyMap<string, Point>): Set<string> {
 		const next = new Map(items.map((item) => [item.key, item]));
-		const removed = [...this.drawn.values()].filter((item) => !next.has(item.key));
+		const removed = [...this.drawn.values()].filter((item) => !next.has(item.key) && !this.inFlight.has(item.key));
 		const added = items.filter((item) => !this.drawn.has(item.key));
 		for (const item of items) this.drawn.set(item.key, item);
 		const used = new Set<string>();
@@ -147,31 +149,32 @@ export class JarCanvas {
 
 	private merge(item: JarItem, sources: readonly JarItem[], origin: Point | undefined): void {
 		const ids = sources.map((source) => source.key);
+		ids.forEach((id) => this.inFlight.add(id));
+		const finish = (at: Point) => {
+			ids.forEach((id) => this.forget(id));
+			if (!this.drawn.has(item.key)) return;
+			this.spawn(item, at);
+			this.options.onMerge?.(item);
+		};
 		const gather = () => {
 			const bodies = ids.flatMap((id) => {
 				const body = this.physics.get(id);
 				return body ? [body] : [];
 			});
-			if (bodies.length === 0) return this.spawn(item, { x: this.randomX(item), y: -this.radius(item) });
+			if (bodies.length === 0) return finish({ x: this.randomX(item), y: -this.radius(item) });
 			const center = {
 				x: bodies.reduce((sum, body) => sum + body.x, 0) / bodies.length,
 				y: Math.min(this.height - this.radius(item), bodies.reduce((sum, body) => sum + body.y, 0) / bodies.length),
 			};
-			if (this.options.reduceMotion) {
-				ids.forEach((id) => this.forget(id));
-				return this.spawn(item, center);
-			}
+			if (this.options.reduceMotion) return finish(center);
 			this.physics.attract(ids, center);
-			this.later(MERGE_MS, () => {
-				ids.forEach((id) => this.forget(id));
-				this.spawn(item, center);
-				this.options.onMerge?.(item);
-			});
+			this.later(MERGE_MS, () => finish(center));
 		};
 		if (!origin || this.options.reduceMotion) return gather();
 		const ghost: JarItem = { ...item, key: `ghost:${this.ghost++}`, size: "small", full: item.full };
 		this.launch(ghost, this.local(origin));
 		ids.push(ghost.key);
+		this.inFlight.add(ghost.key);
 		this.later(DROP_MS, gather);
 	}
 
@@ -199,6 +202,7 @@ export class JarCanvas {
 	}
 
 	private forget(key: string): void {
+		this.inFlight.delete(key);
 		this.physics.remove(key);
 		this.drawn.delete(key);
 		this.born.delete(key);
