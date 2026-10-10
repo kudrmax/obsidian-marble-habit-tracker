@@ -11,18 +11,22 @@ export interface JarPiece {
 	readonly today: boolean;
 }
 
-export const DEFAULT_MERGE_SIZE = 7;
-/** How many medium balls merge into a big one. */
-export const MEDIUMS_PER_BIG = 4;
+/** How many marbles merge into the next size up. */
+export interface MergeRule {
+	readonly smallPerMedium: number;
+	readonly mediumPerBig: number;
+}
+
+export const DEFAULT_MERGE_RULE: MergeRule = { smallPerMedium: 7, mediumPerBig: 4 };
 
 interface DoneDay {
 	readonly date: LocalDate;
 	readonly full: boolean;
 }
 
-/** Every `mergeSize` done days of a habit merge into a medium ball and four mediums into a big one, gaps or not. */
-export function buildJar(habit: Habit, today: LocalDate, mergeSize = DEFAULT_MERGE_SIZE): JarPiece[] {
-	return piecesOf(doneDays(habit, today), today, mergeSize);
+/** A habit's done days become small marbles that merge by the rule into medium and big ones, gaps or not. */
+export function buildJar(habit: Habit, today: LocalDate, rule: MergeRule = DEFAULT_MERGE_RULE): JarPiece[] {
+	return piecesOf(doneDays(habit, today), today, rule);
 }
 
 function doneDays(habit: Habit, today: LocalDate): DoneDay[] {
@@ -33,8 +37,9 @@ function doneDays(habit: Habit, today: LocalDate): DoneDay[] {
 		.reverse();
 }
 
-function piecesOf(days: readonly DoneDay[], today: LocalDate, mergeSize: number): JarPiece[] {
-	const bigSize = mergeSize * MEDIUMS_PER_BIG;
+function piecesOf(days: readonly DoneDay[], today: LocalDate, rule: MergeRule): JarPiece[] {
+	const mergeSize = rule.smallPerMedium;
+	const bigSize = mergeSize * rule.mediumPerBig;
 	const pieces: JarPiece[] = [];
 	const block = (from: number, length: number, size: JarSize) => {
 		const last = days[from + length - 1];

@@ -63,16 +63,19 @@ export class SettingsTab extends PluginSettingTab {
 		new Setting(containerEl).setName("Marbles").setHeading();
 		new Setting(containerEl).setName("Style").setDesc("How your marbles look.");
 		this.stylePicker(containerEl);
-		new Setting(containerEl)
-			.setName("Marbles to merge")
-			.setDesc(`How many marbles of one habit merge into a bigger one. Four bigger ones merge into the biggest. Default ${DEFAULT_SETTINGS.mergeSize}.`)
-			.addSlider((slider) =>
-				slider
-					.setLimits(2, 30, 1)
-					.setDynamicTooltip()
-					.setValue(settings.mergeSize)
-					.onChange((value) => void this.save((next) => (next.mergeSize = value))),
-			);
+		const merge = (name: string, desc: string, key: keyof HabitSettings["merge"]) =>
+			new Setting(containerEl)
+				.setName(name)
+				.setDesc(desc)
+				.addSlider((slider) =>
+					slider
+						.setLimits(2, 30, 1)
+						.setDynamicTooltip()
+						.setValue(settings.merge[key])
+						.onChange((value) => void this.save((next) => (next.merge = { ...next.merge, [key]: value }))),
+				);
+		merge("Small to medium", `How many small marbles of one habit merge into a medium one. Default ${DEFAULT_SETTINGS.merge.smallPerMedium}.`, "smallPerMedium");
+		merge("Medium to big", `How many medium marbles merge into a big one. Default ${DEFAULT_SETTINGS.merge.mediumPerBig}.`, "mediumPerBig");
 		new Setting(containerEl)
 			.setName("Tilt to roll")
 			.setDesc("On a phone, marbles roll the way you tilt it.")

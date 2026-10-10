@@ -1,3 +1,4 @@
+import { DEFAULT_MERGE_RULE, MergeRule } from "./domain/Jar";
 import { DEFAULT_PROPERTY_NAMES, PropertyNames } from "./infrastructure/HabitCodec";
 import { JarMaterial, isJarMaterial } from "./ui/jar/JarAssets";
 
@@ -9,7 +10,7 @@ export interface HabitSettings {
 	missReasons: string[];
 	shrinkReason: string;
 	material: JarMaterial;
-	mergeSize: number;
+	merge: MergeRule;
 	hideDone: boolean;
 	showWins: boolean;
 	celebrationLine: boolean;
@@ -26,7 +27,7 @@ export const DEFAULT_SETTINGS: HabitSettings = {
 	missReasons: ["Forgot", "Anchor didn't happen", "No energy", "Felt too big"],
 	shrinkReason: "Felt too big",
 	material: "grain",
-	mergeSize: 7,
+	merge: DEFAULT_MERGE_RULE,
 	hideDone: true,
 	showWins: true,
 	celebrationLine: true,
@@ -52,13 +53,24 @@ export function loadSettings(data: unknown): HabitSettings {
 		missReasons: loadReasons(raw.missReasons),
 		shrinkReason: typeof raw.shrinkReason === "string" ? raw.shrinkReason.trim() : DEFAULT_SETTINGS.shrinkReason,
 		material: isJarMaterial(raw.material) ? raw.material : DEFAULT_SETTINGS.material,
-		mergeSize: integer(raw.mergeSize, MIN_MERGE, MAX_MERGE, DEFAULT_SETTINGS.mergeSize),
+		merge: loadMerge(raw.merge, (raw as Record<string, unknown>).mergeSize),
 		hideDone: flag(raw.hideDone, DEFAULT_SETTINGS.hideDone),
 		showWins: flag(raw.showWins, DEFAULT_SETTINGS.showWins),
 		celebrationLine: flag(raw.celebrationLine, DEFAULT_SETTINGS.celebrationLine),
 		reduceMotion: flag(raw.reduceMotion, DEFAULT_SETTINGS.reduceMotion),
 		tilt: flag(raw.tilt, DEFAULT_SETTINGS.tilt),
 		haptics: flag(raw.haptics, DEFAULT_SETTINGS.haptics),
+	};
+}
+
+/** `mergeSize` is how 1.1–1.7 stored the small-to-medium count. */
+function loadMerge(value: unknown, legacySmall: unknown): MergeRule {
+	const raw = (typeof value === "object" && value !== null ? value : {}) as Record<string, unknown>;
+	const count = (input: unknown, fallback: number) =>
+		typeof input === "number" && Number.isInteger(input) && input >= MIN_MERGE && input <= MAX_MERGE ? input : fallback;
+	return {
+		smallPerMedium: count(raw.smallPerMedium, count(legacySmall, DEFAULT_MERGE_RULE.smallPerMedium)),
+		mediumPerBig: count(raw.mediumPerBig, DEFAULT_MERGE_RULE.mediumPerBig),
 	};
 }
 

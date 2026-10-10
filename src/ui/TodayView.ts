@@ -3,7 +3,7 @@ import { HabitEntry } from "../application/ports";
 import { DayMark, FULL, TINY, isDone, missed } from "../domain/DayMark";
 import { Habit } from "../domain/Habit";
 import { HabitColor } from "../domain/HabitColor";
-import { MEDIUMS_PER_BIG, buildJar } from "../domain/Jar";
+import { buildJar } from "../domain/Jar";
 import { colorClass } from "./colors";
 import { chip, icon, iconButton } from "./components";
 import { DayWatcher } from "./DayWatcher";
@@ -436,15 +436,15 @@ export class TodayView extends ItemView {
 			if (entry.kind !== "ok") return [];
 			names.set(entry.path, entry.habit);
 			const color = this.resolve(entry.habit.color);
-			return buildJar(entry.habit, today, this.ui.settings().mergeSize).map((piece) => ({ ...piece, key: `${entry.path}|${piece.id}`, group: entry.path, color }));
+			return buildJar(entry.habit, today, this.ui.settings().merge).map((piece) => ({ ...piece, key: `${entry.path}|${piece.id}`, group: entry.path, color }));
 		});
 		this.jar.setOptions({
 			...this.jarOptions(),
 			onMerge: (item) => {
 				this.haptics.merge();
 				const habit = names.get(item.group);
-				const size = this.ui.settings().mergeSize;
-				if (habit) this.caption(habit, `${item.size === "big" ? size * MEDIUMS_PER_BIG : size} wins`);
+				const { smallPerMedium, mediumPerBig } = this.ui.settings().merge;
+				if (habit) this.caption(habit, `${item.size === "big" ? smallPerMedium * mediumPerBig : smallPerMedium} wins`);
 			},
 		});
 		const now = Date.now();

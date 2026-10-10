@@ -12,7 +12,7 @@ describe("loadSettings", () => {
 			missReasons: ["Forgot", "Anchor didn't happen", "No energy", "Felt too big"],
 			shrinkReason: "Felt too big",
 			material: "grain",
-			mergeSize: 7,
+			merge: { smallPerMedium: 7, mediumPerBig: 4 },
 			hideDone: true,
 			showWins: true,
 			celebrationLine: true,
@@ -33,7 +33,7 @@ describe("loadSettings", () => {
 				missReasons: [" Ill ", "", "Ill", "Travel"],
 				shrinkReason: "",
 				material: "halftone",
-				mergeSize: 5,
+				merge: { smallPerMedium: 5, mediumPerBig: 3 },
 				hideDone: false,
 				showWins: false,
 				celebrationLine: false,
@@ -49,7 +49,7 @@ describe("loadSettings", () => {
 			missReasons: ["Ill", "Travel"],
 			shrinkReason: "",
 			material: "halftone",
-			mergeSize: 5,
+			merge: { smallPerMedium: 5, mediumPerBig: 3 },
 			hideDone: false,
 			showWins: false,
 			celebrationLine: false,
@@ -72,5 +72,9 @@ describe("loadSettings", () => {
 
 	it("reads reasons one per line without blanks or repeats", () => {
 		expect(parseReasons(" Forgot \n\nNo energy\nForgot")).toEqual(["Forgot", "No energy"]);
+	});
+
+	it("reads the old merge size as small marbles per medium", () => {
+		expect(loadSettings({ mergeSize: 5 }).merge).toEqual({ smallPerMedium: 5, mediumPerBig: 4 });
 	});
 });

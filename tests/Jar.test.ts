@@ -73,8 +73,9 @@ describe("buildJar", () => {
 	});
 
 	it("merges by the chosen size", () => {
-		const jar = buildJar(marked(habit("2026-09-01"), doneDays("2026-09-01", 13)), today, 5);
+		const rule = { smallPerMedium: 5, mediumPerBig: 3 };
+		const jar = buildJar(marked(habit("2026-09-01"), doneDays("2026-09-01", 13)), today, rule);
 		expect(sizes(jar)).toEqual(["medium", "medium", "small", "small", "small"]);
-		expect(sizes(buildJar(marked(habit("2026-09-01"), doneDays("2026-09-01", 20)), today, 5))).toEqual(["big"]);
+		expect(sizes(buildJar(marked(habit("2026-09-01"), doneDays("2026-09-01", 17)), today, rule))).toEqual(["big", "small", "small"]);
 	});
 });
