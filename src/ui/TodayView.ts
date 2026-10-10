@@ -197,7 +197,7 @@ export class TodayView extends ItemView {
 		this.shownRows = this.renderingRows;
 	}
 
-	/** Reads the new order and sections off the screen after a drop and saves them; a row dropped past the new-section zone asks for a name first. */
+	/** Reads the new order and sections off the screen after a drop and saves them; a row dropped into the new-section zone asks for a name first. */
 	private dropped(drop: Drop | null): void {
 		if (!drop || !this.columnEl) {
 			if (this.stale) this.render();
@@ -205,20 +205,15 @@ export class TodayView extends ItemView {
 		}
 		const shown: Placement[] = [];
 		let section: string | undefined;
-		let fresh = false;
-		let named: Placement | null = null;
 		for (const slot of this.columnEl.querySelectorAll<HTMLElement>("[data-slot]")) {
 			if (slot.dataset.slot === "header") section = slot.dataset.section;
-			else if (slot.dataset.slot === "zone") fresh = true;
 			else if (slot.dataset.drag) {
 				const moved = drop.kind === "row" && slot === drop.element;
-				const placement = { path: slot.dataset.drag, section: moved ? section : slot.dataset.section || undefined };
-				shown.push(placement);
-				if (moved && fresh) named = placement;
+				shown.push({ path: slot.dataset.drag, section: moved ? section : slot.dataset.section || undefined });
 			}
 		}
-		if (!named) return void this.saveArrangement(shown);
-		const path = named.path;
+		const path = drop.element.dataset.drag;
+		if (!drop.newSection || !path) return void this.saveArrangement(shown);
 		new SectionNameModal(
 			this.app,
 			(name) => void this.saveArrangement(shown.map((item) => (item.path === path ? { path, section: name } : item))),
@@ -305,12 +300,11 @@ export class TodayView extends ItemView {
 	}
 
 	private renderSection(column: HTMLElement, section: string): void {
-		column.createDiv({ cls: "th-section", text: section, attr: { "data-slot": "header", "data-section": section } });
+		column.createDiv({ cls: "th-group", text: section, attr: { "data-slot": "header", "data-section": section } });
 	}
 
 	private renderNewSection(column: HTMLElement): void {
-		const zone = column.createDiv({ cls: "th-section-new", text: "+ New section", attr: { "data-slot": "zone" } });
-		zone.addEventListener("click", () => new Notice("Hold a habit and drag it here to start a new section."));
+		column.createDiv({ cls: "th-section-new", text: "+ New section", attr: { "data-zone": "" } });
 	}
 
 	private renderBroken(column: HTMLElement, entry: Extract<HabitEntry, { kind: "broken" }>): void {

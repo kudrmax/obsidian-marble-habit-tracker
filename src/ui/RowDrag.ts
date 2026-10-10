@@ -2,14 +2,19 @@ const LIFT_MS = 400;
 /** How far a finger may wander before the hold counts as a scroll instead of a lift. */
 const SLOP = 8;
 const SLOT = "[data-slot]";
+const ZONE = "[data-zone]";
 const ROW_HANDLE = ".th-row-text";
 
 export type DragKind = "row" | "header";
 
-/** What was dropped: a habit row or a section header (which carries its rows); the screen already shows the new order. */
+/**
+ * What was dropped: a habit row or a section header (which carries its rows); the screen already shows the new order.
+ * `newSection` is a row dropped into the new-section zone.
+ */
 export interface Drop {
 	readonly kind: DragKind;
 	readonly element: HTMLElement;
+	readonly newSection: boolean;
 }
 
 interface Dragging {
@@ -21,13 +26,17 @@ interface Dragging {
 	readonly middle: number;
 	readonly step: number;
 	readonly middles: number[];
+	/** The new-section zone and where it shows, for a dragged row. */
+	readonly zone: { readonly element: HTMLElement; readonly top: number } | null;
 	to: number;
+	intoZone: boolean;
 }
 
 /**
- * Reordering on Today. The column holds slots in screen order: habit rows (`data-slot="row"`), section headers
- * (`"header"`) and the new-section zone (`"zone"`). Hold a row's text or a header, then drag; a header carries the
- * rows under it and lands only between sections. While dragging the page doesn't scroll, and the tap that ends a drag
+ * Reordering on Today. The column holds slots in screen order: habit rows (`data-slot="row"`) and section headers
+ * (`"header"`), plus a new-section zone (`data-zone`) that shows while a row is dragged (the column gets
+ * `is-dragging-row`). Hold a row's text or a header, then drag; a header carries the rows under it and lands only
+ * between sections. While dragging the page doesn't scroll, and the tap that ends a drag
  * doesn't open anything. `onDrop` gets null when the slot went back where it was.
  */
 export class RowDrag {
@@ -90,6 +99,8 @@ export class RowDrag {
 		const block = [pressed.element];
 		if (pressed.kind === "header") for (let index = from + 1; slots[index]?.dataset.slot === "row"; index++) block.push(slots[index]);
 		const others = slots.filter((slot) => !block.includes(slot));
+		if (pressed.kind === "row") this.column.addClass("is-dragging-row");
+		const zone = pressed.kind === "row" ? this.column.querySelector<HTMLElement>(ZONE) : null;
 		const top = block[0].getBoundingClientRect().top;
 		const last = block[block.length - 1];
 		const bottom = last.getBoundingClientRect().bottom;
@@ -106,6 +117,8 @@ export class RowDrag {
 				const rect = slot.getBoundingClientRect();
 				return rect.top + rect.height / 2;
 			}),
+			zone: zone ? { element: zone, top: zone.getBoundingClientRect().top } : null,
+			intoZone: false,
 		};
 		this.swallowClick = true;
 		for (const element of block) element.addClass("is-dragging");
@@ -115,9 +128,7 @@ export class RowDrag {
 
 	/** A header lands only right before another header or the new-section zone, so it never splits a section. */
 	private allowed(dragging: Dragging, to: number): boolean {
-		if (dragging.kind === "row") return true;
-		const next = dragging.others[to]?.dataset.slot;
-		return next === "header" || next === "zone";
+		return dragging.kind === "row" || to === dragging.others.length || dragging.others[to]?.dataset.slot === "header";
 	}
 
 	private nearestAllowed(dragging: Dragging, wanted: number): number {
@@ -133,7 +144,9 @@ export class RowDrag {
 		const offset = y - dragging.startY;
 		for (const element of dragging.block) element.style.transform = `translateY(${offset}px)`;
 		const center = dragging.middle + offset;
-		dragging.to = this.nearestAllowed(dragging, dragging.middles.filter((middle) => middle < center).length);
+		dragging.intoZone = dragging.zone !== null && center >= dragging.zone.top;
+		dragging.zone?.element.toggleClass("is-target", dragging.intoZone);
+		dragging.to = dragging.intoZone ? dragging.others.length : this.nearestAllowed(dragging, dragging.middles.filter((middle) => middle < center).length);
 		dragging.others.forEach((slot, index) => {
 			const shift = index >= dragging.from && index < dragging.to ? -dragging.step : index < dragging.from && index >= dragging.to ? dragging.step : 0;
 			slot.style.transform = shift ? `translateY(${shift}px)` : "";
@@ -161,11 +174,11 @@ export class RowDrag {
 		const dragging = this.dragging;
 		if (!dragging) return this.release();
 		this.settle(dragging);
-		if (dragging.to === dragging.from) return this.onDrop(null);
+		if (dragging.to === dragging.from && !dragging.intoZone) return this.onDrop(null);
 		const anchor = dragging.others[dragging.to];
 		if (anchor) anchor.before(...dragging.block);
 		else dragging.others[dragging.others.length - 1]?.after(...dragging.block);
-		this.onDrop({ kind: dragging.kind, element: dragging.block[0] });
+		this.onDrop({ kind: dragging.kind, element: dragging.block[0], newSection: dragging.intoZone });
 	};
 
 	private readonly abort = () => {
@@ -178,6 +191,8 @@ export class RowDrag {
 
 	private settle(dragging: Dragging): void {
 		this.dragging = null;
+		this.column.removeClass("is-dragging-row");
+		dragging.zone?.element.removeClass("is-target");
 		for (const element of dragging.block) {
 			element.removeClass("is-dragging");
 			element.style.transform = "";

@@ -58,16 +58,6 @@ body {
 	color: var(--th-text);
 }
 .th-label { font-size: var(--th-small-size); color: var(--th-faint); }
-.th-section { padding-top: 24px; margin-top: 32px; border-top: var(--th-line-width) solid var(--th-line); }
-.th-screen-header + .th-section { padding-top: 0; margin-top: 28px; border-top: none; }
-.th-section-title {
-	margin: 0 0 12px;
-	font-size: var(--th-small-size);
-	font-weight: 600;
-	letter-spacing: 0.04em;
-	text-transform: uppercase;
-	color: var(--th-faint);
-}
 .th-subtitle { margin: 18px 0 2px; font-size: 15px; font-weight: 600; color: var(--th-muted); }
 
 /* Buttons */
@@ -435,9 +425,11 @@ button.th-style-tile.is-selected { border-color: var(--interactive-accent); }
 .th-row.is-dragging { z-index: 5; background: var(--background-primary); border-radius: var(--radius-m); box-shadow: var(--shadow-l); scale: 1.02; transition: scale var(--th-fast), box-shadow var(--th-fast); }
 .th-row.is-shifting { transition: transform 160ms ease; }
 
-/* Sections on Today: a header over each group, and a zone to drop a habit into a new one. */
-.th-section { padding: 18px 0 6px; font-size: var(--font-ui-small); font-weight: 600; color: var(--text-muted); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: grab; }
-.th-section.is-dragging { position: relative; z-index: 5; background: var(--background-primary); }
-.th-section.is-shifting, .th-section-new.is-shifting { transition: transform 160ms ease; }
-.th-section-new { margin-top: 12px; padding: 12px 16px; border: 1px dashed var(--background-modifier-border); border-radius: var(--radius-m); color: var(--text-faint); font-size: var(--font-ui-small); text-align: center; -webkit-user-select: none; user-select: none; }
+/* Sections on Today: a quiet header over each group; the new-section zone shows only while a habit is being dragged. */
+.th-group { padding: 10px 0 0; font-size: var(--font-ui-small); font-weight: 600; color: var(--text-muted); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: grab; }
+.th-group.is-dragging { position: relative; z-index: 5; background: var(--background-primary); }
+.th-group.is-shifting { transition: transform 160ms ease; }
+.th-section-new { display: none; margin-top: 8px; padding: 14px 16px; border: 1px dashed var(--background-modifier-border); border-radius: var(--radius-m); color: var(--text-faint); font-size: var(--font-ui-small); text-align: center; transition: border-color var(--th-fast), color var(--th-fast), background-color var(--th-fast); }
+.is-dragging-row .th-section-new { display: block; }
+.th-section-new.is-target { border-color: var(--interactive-accent); color: var(--text-accent); background: var(--background-modifier-hover); }
 .th-section-name { width: 100%; }
