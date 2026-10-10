@@ -5,6 +5,8 @@ import { DEFAULT_SETTINGS, loadSettings, parseReasons } from "../src/settings";
 describe("loadSettings", () => {
 	it("uses defaults for missing data", () => {
 		expect(loadSettings(null)).toEqual({
+			source: "tag",
+			tag: "habit",
 			folder: "Habits",
 			habitBlock: true,
 			properties: DEFAULT_PROPERTY_NAMES,
@@ -26,6 +28,8 @@ describe("loadSettings", () => {
 	it("keeps valid values", () => {
 		expect(
 			loadSettings({
+				source: "folder",
+				tag: "#routine",
 				folder: " Привычки ",
 				habitBlock: false,
 				properties: { doneTiny: " done ", missed: "" },
@@ -42,6 +46,8 @@ describe("loadSettings", () => {
 				haptics: false,
 			}),
 		).toEqual({
+			source: "folder",
+			tag: "routine",
 			folder: "Привычки",
 			habitBlock: false,
 			properties: { ...DEFAULT_PROPERTY_NAMES, doneTiny: "done" },
@@ -76,5 +82,10 @@ describe("loadSettings", () => {
 
 	it("reads the old merge size as small marbles per medium", () => {
 		expect(loadSettings({ mergeSize: 5 }).merge).toEqual({ smallPerMedium: 5, mediumPerBig: 4 });
+	});
+
+	it("keeps habits found by folder when the folder was saved before tags existed", () => {
+		expect(loadSettings({ folder: "Habits" }).source).toBe("folder");
+		expect(loadSettings({}).source).toBe("tag");
 	});
 });

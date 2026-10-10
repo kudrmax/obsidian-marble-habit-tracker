@@ -5,6 +5,7 @@ import { DEFAULT_SETTINGS, HabitSettings, parseReasons } from "../settings";
 import { partTitle } from "./format";
 import { Hsl, parseColor } from "./jar/color";
 import { JAR_DIAMETER, JAR_MATERIALS, JarMaterial, assetSvg } from "./jar/JarAssets";
+import { FolderSuggest, TagSuggest } from "./suggest";
 
 export interface SettingsHost {
 	settings: HabitSettings;
@@ -47,10 +48,11 @@ export class SettingsTab extends PluginSettingTab {
 			.setName("New habit")
 			.setDesc("Write a new habit as a recipe. Also in the command palette: “New habit”.")
 			.addButton((button) => button.setButtonText("New habit").setCta().onClick(() => this.host.newHabit()));
+		this.habits(containerEl);
 		this.marbles(containerEl);
 		this.today(containerEl);
-		this.notToday(containerEl);
-		this.notes(containerEl);
+		this.skipped(containerEl);
+		this.properties(containerEl);
 	}
 
 	private async save(change: (settings: HabitSettings) => void): Promise<void> {
@@ -109,7 +111,7 @@ export class SettingsTab extends PluginSettingTab {
 			.addToggle((toggle) => toggle.setValue(settings.showWins).onChange((value) => void this.save((next) => (next.showWins = value))));
 	}
 
-	private notToday(containerEl: HTMLElement): void {
+	private skipped(containerEl: HTMLElement): void {
 		const settings = this.host.settings;
 		new Setting(containerEl).setName("Skipped").setHeading();
 		new Setting(containerEl)
@@ -138,20 +140,52 @@ export class SettingsTab extends PluginSettingTab {
 			});
 	}
 
-	private notes(containerEl: HTMLElement): void {
+	private habits(containerEl: HTMLElement): void {
 		const settings = this.host.settings;
-		new Setting(containerEl).setName("Notes").setHeading();
+		new Setting(containerEl).setName("Habits").setHeading();
 		new Setting(containerEl)
-			.setName("Folder")
-			.setDesc("One note per habit. Subfolders are ignored.")
-			.addText((text) => text.setValue(settings.folder).onChange((value) => void this.save((next) => (next.folder = value.trim() || DEFAULT_SETTINGS.folder))));
+			.setName("Find habits by")
+			.setDesc("A note is a habit when it has the tag, or when it lives in the folder.")
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption("tag", "Tag")
+					.addOption("folder", "Folder")
+					.setValue(settings.source)
+					.onChange(async (value) => {
+						await this.save((next) => (next.source = value === "folder" ? "folder" : "tag"));
+						this.display();
+					}),
+			);
+		if (settings.source === "tag") {
+			new Setting(containerEl)
+				.setName("Tag")
+				.setDesc("Notes with this tag, or a tag nested under it, are habits.")
+				.addText((text) => {
+					const save = (value: string) => void this.save((next) => (next.tag = value.trim().replace(/^#/, "") || DEFAULT_SETTINGS.tag));
+					text.setPlaceholder(`#${DEFAULT_SETTINGS.tag}`).setValue(`#${settings.tag}`).onChange(save);
+					new TagSuggest(this.app, text.inputEl, save);
+				});
+		}
+		new Setting(containerEl)
+			.setName(settings.source === "tag" ? "Folder for new habits" : "Folder")
+			.setDesc(settings.source === "tag" ? "Where New habit creates its note." : "Every note in this folder is a habit. Subfolders are ignored.")
+			.addText((text) => {
+				const save = (value: string) => void this.save((next) => (next.folder = value.trim() || DEFAULT_SETTINGS.folder));
+				text.setPlaceholder(DEFAULT_SETTINGS.folder).setValue(settings.folder).onChange(save);
+				new FolderSuggest(this.app, text.inputEl, save);
+			});
 		new Setting(containerEl)
 			.setName("Habit block in notes")
 			.setDesc("Show the recipe, progress and history at the top of each habit note, above your own text.")
 			.addToggle((toggle) => toggle.setValue(settings.habitBlock).onChange((value) => void this.save((next) => (next.habitBlock = value))));
+	}
+
+	private properties(containerEl: HTMLElement): void {
+		const settings = this.host.settings;
 		new Setting(containerEl)
-			.setName("Property names")
-			.setDesc("Where each part of a habit is stored in the note's properties. Renaming here doesn't rename properties in notes you already have.");
+			.setName("Note properties")
+			.setDesc("Where each part of a habit is stored in its note. Renaming here doesn't rename properties in notes you already have.")
+			.setHeading();
 		for (const key of Object.keys(PROPERTY_LABELS) as Array<keyof PropertyNames>) {
 			new Setting(containerEl).setName(PROPERTY_LABELS[key]).addText((text) =>
 				text

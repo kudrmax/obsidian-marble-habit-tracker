@@ -2,7 +2,11 @@ import { DEFAULT_MERGE_RULE, MergeRule } from "./domain/Jar";
 import { DEFAULT_PROPERTY_NAMES, PropertyNames } from "./infrastructure/HabitCodec";
 import { JarMaterial, isJarMaterial } from "./ui/jar/JarAssets";
 
+export type HabitSource = "tag" | "folder";
+
 export interface HabitSettings {
+	source: HabitSource;
+	tag: string;
 	folder: string;
 	habitBlock: boolean;
 	properties: PropertyNames;
@@ -20,6 +24,8 @@ export interface HabitSettings {
 }
 
 export const DEFAULT_SETTINGS: HabitSettings = {
+	source: "tag",
+	tag: "habit",
 	folder: "Habits",
 	habitBlock: true,
 	properties: DEFAULT_PROPERTY_NAMES,
@@ -46,6 +52,8 @@ export function loadSettings(data: unknown): HabitSettings {
 		typeof value === "number" && Number.isInteger(value) && value >= min && value <= max ? value : fallback;
 	const text = (value: unknown, fallback: string) => (typeof value === "string" && value.trim() ? value.trim() : fallback);
 	return {
+		source: loadSource(raw.source, raw.folder),
+		tag: text(raw.tag, DEFAULT_SETTINGS.tag).replace(/^#/, ""),
 		folder: text(raw.folder, DEFAULT_SETTINGS.folder),
 		habitBlock: flag(raw.habitBlock, DEFAULT_SETTINGS.habitBlock),
 		properties: loadProperties(raw.properties),
@@ -61,6 +69,12 @@ export function loadSettings(data: unknown): HabitSettings {
 		tilt: flag(raw.tilt, DEFAULT_SETTINGS.tilt),
 		haptics: flag(raw.haptics, DEFAULT_SETTINGS.haptics),
 	};
+}
+
+/** Before 1.8 habits were always found by folder: a saved folder keeps them where they are. */
+function loadSource(value: unknown, folder: unknown): HabitSource {
+	if (value === "tag" || value === "folder") return value;
+	return typeof folder === "string" && folder.trim() ? "folder" : DEFAULT_SETTINGS.source;
 }
 
 /** `mergeSize` is how 1.1–1.7 stored the small-to-medium count. */

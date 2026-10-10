@@ -17,10 +17,13 @@ export default class MarbleHabitTrackerPlugin extends Plugin implements Settings
 	override settings: HabitSettings = loadSettings(null);
 	newHabit: () => void = () => undefined;
 	private notes: HabitNotes | null = null;
+	/** Habits as of the last refresh, so a note that just stopped being a habit (lost its tag) still refreshes Today. */
+	private habitPaths = new Set<string>();
+	private listPaths: () => string[] = () => [];
 
 	override async onload(): Promise<void> {
 		this.settings = loadSettings(await this.loadData());
-		const repository = new FrontmatterHabitRepository(this.app, () => this.settings.folder, () => this.settings.properties);
+		const repository = new FrontmatterHabitRepository(this.app, () => this.settings, () => this.settings.properties);
 		const service = new HabitService(repository, systemClock);
 		const ui: UiContext = {
 			service,
@@ -30,6 +33,8 @@ export default class MarbleHabitTrackerPlugin extends Plugin implements Settings
 			newHabit: () => new HabitFormModal(this.app, service).open(),
 		};
 		this.newHabit = ui.newHabit;
+		this.listPaths = () => repository.list().map((entry) => entry.path);
+		this.habitPaths = new Set(this.listPaths());
 		const notes = this.addChild(new HabitNotes(this.app, ui));
 		this.notes = notes;
 
@@ -59,7 +64,7 @@ export default class MarbleHabitTrackerPlugin extends Plugin implements Settings
 		this.addSettingTab(new SettingsTab(this.app, this));
 
 		const refreshIfHabit = (...paths: string[]) => {
-			if (paths.some((path) => repository.contains(path))) this.refreshViews();
+			if (paths.some((path) => this.habitPaths.has(path) || repository.contains(path))) this.refreshViews();
 		};
 		this.registerEvent(this.app.metadataCache.on("changed", (file) => refreshIfHabit(file.path)));
 		this.registerEvent(this.app.vault.on("delete", (file) => refreshIfHabit(file.path)));
@@ -87,6 +92,7 @@ export default class MarbleHabitTrackerPlugin extends Plugin implements Settings
 	}
 
 	private refreshViews(): void {
+		this.habitPaths = new Set(this.listPaths());
 		for (const view of this.todayViews()) view.refresh();
 		this.notes?.refresh();
 	}

@@ -1,22 +1,32 @@
-import { App, TFile, TFolder, normalizePath } from "obsidian";
+import { App, TFile, TFolder, getAllTags, normalizePath } from "obsidian";
 import { HabitEntry, HabitRepository } from "../application/ports";
 import { DomainError } from "../domain/DomainError";
 import { Habit } from "../domain/Habit";
 import { HabitDecodeError, PropertyNames, decodeHabit, encodeHabit } from "./HabitCodec";
 
+/** Which notes are habits: every note carrying a tag, or every note in a folder. New habits go to the folder either way. */
+export interface HabitScope {
+	readonly source: "tag" | "folder";
+	readonly tag: string;
+	readonly folder: string;
+}
+
 export class FrontmatterHabitRepository implements HabitRepository {
 	constructor(
 		private readonly app: App,
-		private readonly folder: () => string,
+		private readonly scope: () => HabitScope,
 		private readonly keys: () => PropertyNames,
 	) {}
 
 	contains(path: string): boolean {
-		const parent = path.slice(0, Math.max(0, path.lastIndexOf("/")));
-		return path.endsWith(".md") && parent === this.folderPath();
+		if (!path.endsWith(".md")) return false;
+		if (this.scope().source === "folder") return path.slice(0, Math.max(0, path.lastIndexOf("/"))) === this.folderPath();
+		const file = this.app.vault.getAbstractFileByPath(path);
+		return file instanceof TFile && this.hasTag(file);
 	}
 
 	list(): HabitEntry[] {
+		if (this.scope().source === "tag") return this.app.vault.getMarkdownFiles().filter((file) => this.hasTag(file)).map((file) => this.read(file));
 		const folder = this.app.vault.getAbstractFileByPath(this.folderPath());
 		if (!(folder instanceof TFolder)) return [];
 		return folder.children
@@ -47,12 +57,30 @@ export class FrontmatterHabitRepository implements HabitRepository {
 		if (this.app.vault.getAbstractFileByPath(path)) throw new DomainError(`Habit "${habit.name}" already exists`);
 		if (!this.app.vault.getAbstractFileByPath(folder)) await this.app.vault.createFolder(folder);
 		const file = await this.app.vault.create(path, "");
-		await this.app.fileManager.processFrontMatter(file, (frontmatter) => encodeHabit(habit, frontmatter, this.keys()));
+		await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+			encodeHabit(habit, frontmatter, this.keys());
+			if (this.scope().source === "tag") frontmatter.tags = [this.tagName()];
+		});
 		return path;
 	}
 
 	private folderPath(): string {
-		return normalizePath(this.folder());
+		return normalizePath(this.scope().folder);
+	}
+
+	private tagName(): string {
+		return this.scope().tag.replace(/^#/, "").trim();
+	}
+
+	/** The tag itself or any tag nested under it, like #habit/health. */
+	private hasTag(file: TFile): boolean {
+		const wanted = `#${this.tagName()}`.toLowerCase();
+		const cache = this.app.metadataCache.getFileCache(file);
+		const tags = (cache && getAllTags(cache)) ?? [];
+		return tags.some((tag) => {
+			const lower = tag.toLowerCase();
+			return lower === wanted || lower.startsWith(`${wanted}/`);
+		});
 	}
 
 	private decodeFresh(file: TFile, frontmatter: Record<string, unknown>): Habit {
