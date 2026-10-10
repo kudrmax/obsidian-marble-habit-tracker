@@ -25,6 +25,8 @@ const HOLD_MS = 450;
 const CELEBRATE_MS = 2200;
 const CAPTION_MS = 2600;
 const DAY_CHECK_MS = 60_000;
+/** Obsidian re-reads a note a moment after it is written, so the tap point has to wait for the new mark. */
+const ORIGIN_TTL_MS = 4000;
 const SVG_NS = "http://www.w3.org/2000/svg";
 const RING_RADIUS = 50;
 const RING_GAP = 9;
@@ -44,12 +46,14 @@ export class TodayView extends ItemView {
 	private otherText = "";
 	private shrink: string | null = null;
 	private showDone = false;
+	private shownRows = new Set<string>();
+	private renderingRows = new Set<string>();
 	private wasClosed: boolean | null = null;
 	private held = false;
 	private holdTimer = 0;
 	private captionTimer = 0;
 	private readonly celebrating = new Map<string, number>();
-	private readonly origins = new Map<string, Point>();
+	private readonly origins = new Map<string, { point: Point; at: number }>();
 	private readonly colors = new Map<string, Hsl>();
 	private readonly haptics = new Haptics(() => this.ui.settings().haptics);
 	private readonly tilt = new TiltSensor((gravity) => this.jar?.setGravity(gravity));
@@ -131,6 +135,7 @@ export class TodayView extends ItemView {
 		if (!this.columnEl) return;
 		const column = this.columnEl;
 		column.empty();
+		this.renderingRows = new Set();
 		const all = visibleEntries(this.ui.repository.list());
 		this.syncJar(all);
 		if (all.length === 0) {
@@ -161,10 +166,11 @@ export class TodayView extends ItemView {
 			}
 			const done = isDone(entry.habit.markOn(today));
 			const visible = !done || this.showDone || this.celebrating.has(entry.path) || this.menu === entry.path;
-			if (done && !this.celebrating.has(entry.path) && this.menu !== entry.path) hidden.push(entry);
+			if (done) hidden.push(entry);
 			if (visible) this.renderRow(column, entry.path, entry.habit);
 		}
 		if (hidden.length) this.renderDoneRow(column, hidden);
+		this.shownRows = this.renderingRows;
 	}
 
 	private renderRing(column: HTMLElement, habits: readonly Habit[], justClosed: boolean): void {
@@ -219,6 +225,8 @@ export class TodayView extends ItemView {
 		const done = isDone(mark);
 		const row = column.createDiv({ cls: ["th-row", "th-habit", colorClass(habit.color)] });
 		row.toggleClass("is-answered", mark !== undefined);
+		row.toggleClass("is-new", !this.shownRows.has(path));
+		this.renderingRows.add(path);
 		const main = row.createDiv("th-row-main");
 
 		const text = main.createDiv("th-row-text");
@@ -377,10 +385,11 @@ export class TodayView extends ItemView {
 	}
 
 	private async answer(path: string, mark: DayMark | undefined, event?: MouseEvent): Promise<void> {
+		if (!isDone(mark)) this.origins.delete(path);
 		const target = event?.currentTarget as HTMLElement | null | undefined;
 		if (target && isDone(mark)) {
 			const box = target.getBoundingClientRect();
-			this.origins.set(path, { x: box.left + box.width / 2, y: box.top + box.height / 2 });
+			this.origins.set(path, { point: { x: box.left + box.width / 2, y: box.top + box.height / 2 }, at: Date.now() });
 		}
 		try {
 			const habit = await this.ui.service.setMark(path, this.ui.service.today(), mark);
@@ -433,8 +442,10 @@ export class TodayView extends ItemView {
 				this.caption(names.get(item.group), item);
 			},
 		});
-		this.jar.sync(items, this.origins);
-		this.origins.clear();
+		const now = Date.now();
+		for (const [path, origin] of this.origins) if (now - origin.at > ORIGIN_TTL_MS) this.origins.delete(path);
+		const used = this.jar.sync(items, new Map([...this.origins].map(([path, origin]) => [path, origin.point])));
+		for (const path of used) this.origins.delete(path);
 	}
 
 	private caption(habit: Habit | undefined, item: JarItem): void {

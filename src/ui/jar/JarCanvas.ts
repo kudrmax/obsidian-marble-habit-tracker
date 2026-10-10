@@ -106,19 +106,23 @@ export class JarCanvas {
 		this.sync(items, new Map());
 	}
 
-	sync(items: readonly JarItem[], origins: ReadonlyMap<string, Point>): void {
+	/** Returns the groups whose origin was used, so the caller can forget them. */
+	sync(items: readonly JarItem[], origins: ReadonlyMap<string, Point>): Set<string> {
 		const next = new Map(items.map((item) => [item.key, item]));
 		const removed = [...this.drawn.values()].filter((item) => !next.has(item.key));
 		const added = items.filter((item) => !this.drawn.has(item.key));
 		for (const item of items) this.drawn.set(item.key, item);
+		const used = new Set<string>();
 		if (!this.filled) {
 			this.filled = true;
 			this.rain(added);
-			return this.wake();
+			this.wake();
+			return used;
 		}
 		const leftovers = new Set(removed);
 		for (const item of added) {
-			const origin = origins.get(item.group);
+			const origin = item.today ? origins.get(item.group) : undefined;
+			if (origin) used.add(item.group);
 			const sources = item.today && item.size !== "small" ? removed.filter((old) => old.group === item.group && RANK[old.size] < RANK[item.size] && leftovers.has(old)) : [];
 			if (sources.length) {
 				sources.forEach((source) => leftovers.delete(source));
@@ -131,6 +135,7 @@ export class JarCanvas {
 		}
 		for (const item of leftovers) this.forget(item.key);
 		this.wake();
+		return used;
 	}
 
 	destroy(): void {
