@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { HabitEntry } from "../src/application/ports";
-import { visibleEntries } from "../src/ui/order";
+import { moveAmongShown, visibleEntries } from "../src/ui/order";
 import { habitNote } from "./support/habits";
 
 const ok = (name: string, extra = {}): HabitEntry => ({ kind: "ok", path: `Habits/${name}.md`, habit: habitNote(name, extra) });
@@ -20,5 +20,25 @@ describe("visibleEntries", () => {
 			"А",
 			"Б",
 		]);
+	});
+});
+
+describe("moveAmongShown", () => {
+	const all = ["a", "b", "c", "d", "e"];
+
+	it("moves a habit down among the shown ones", () => {
+		expect(moveAmongShown(all, ["a", "b", "c", "d", "e"], "a", 2)).toEqual(["b", "c", "a", "d", "e"]);
+	});
+
+	it("moves a habit up to the top", () => {
+		expect(moveAmongShown(all, all, "e", 0)).toEqual(["e", "a", "b", "c", "d"]);
+	});
+
+	it("keeps habits that aren't shown in their places", () => {
+		expect(moveAmongShown(all, ["a", "c", "e"], "e", 0)).toEqual(["e", "b", "a", "d", "c"]);
+	});
+
+	it("leaves the order alone when a habit is dropped where it was", () => {
+		expect(moveAmongShown(all, ["b", "d"], "d", 1)).toEqual(all);
 	});
 });

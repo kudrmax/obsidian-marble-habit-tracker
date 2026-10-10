@@ -163,6 +163,10 @@ export class Habit {
 		return new Habit({ ...this.state, schedule: this.state.schedule.correct(schedule) });
 	}
 
+	withOrder(order: number): Habit {
+		return new Habit({ ...this.state, order });
+	}
+
 	withColor(color: HabitColor | undefined): Habit {
 		return new Habit({ ...this.state, color });
 	}

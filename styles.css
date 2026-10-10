@@ -429,3 +429,8 @@ button.th-style-tile.is-selected { border-color: var(--interactive-accent); }
 /* Marble sizes: a small jar that follows the sliders. */
 .th-sizes-stage { position: relative; height: 320px; margin-bottom: var(--size-4-3); border-radius: var(--radius-m); background: var(--background-primary); overflow: hidden; }
 .th-sizes .modal-button-container { flex-wrap: wrap; }
+
+/* Reordering: hold a habit's text, then drag the row. */
+.th-row-text { -webkit-user-select: none; user-select: none; }
+.th-row.is-dragging { z-index: 5; background: var(--background-primary); border-radius: var(--radius-m); box-shadow: var(--shadow-l); scale: 1.02; transition: scale var(--th-fast), box-shadow var(--th-fast); }
+.th-row.is-shifting { transition: transform 160ms ease; }

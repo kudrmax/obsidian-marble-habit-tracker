@@ -43,6 +43,15 @@ export class HabitService {
 		return this.repository.update(path, (habit) => habit.withColor(color));
 	}
 
+	/** Numbers the habits 1, 2, 3… in the given order, writing only the ones whose number changes. */
+	async reorder(paths: readonly string[]): Promise<void> {
+		for (const [index, path] of paths.entries()) {
+			const entry = this.repository.get(path);
+			if (entry?.kind !== "ok" || entry.habit.order === index + 1) continue;
+			await this.repository.update(path, (habit) => habit.withOrder(index + 1));
+		}
+	}
+
 	async archive(path: string): Promise<Habit> {
 		return this.repository.update(path, (habit) => habit.archive());
 	}

@@ -15,7 +15,8 @@ import { JarCanvas, JarItem } from "./jar/JarCanvas";
 import { KeyboardWatch } from "./KeyboardWatch";
 import { EARTH, Point } from "./jar/JarPhysics";
 import { TiltSensor } from "./jar/TiltSensor";
-import { visibleEntries } from "./order";
+import { moveAmongShown, visibleEntries } from "./order";
+import { RowDrag } from "./RowDrag";
 import { ScreenChrome } from "./ScreenChrome";
 import { closeDayTitle, closedDayLine, totalWins, winsLabel, offersShrink, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
@@ -43,6 +44,9 @@ export class TodayView extends ItemView {
 	private jar: JarCanvas | null = null;
 	private chrome: ScreenChrome | null = null;
 	private keyboard: KeyboardWatch | null = null;
+	private rowDrag: RowDrag | null = null;
+	/** A redraw was asked for while a row was being dragged; it runs on drop. */
+	private stale = false;
 	private menu: string | null = null;
 	private asking: string | null = null;
 	private other: string | null = null;
@@ -91,6 +95,14 @@ export class TodayView extends ItemView {
 		root.addClass("tiny-habits", "th-today");
 		this.scrollEl = root.createDiv("th-today-scroll");
 		this.columnEl = this.scrollEl.createDiv("th-column");
+		this.rowDrag = new RowDrag(
+			this.columnEl,
+			() => this.haptics.tap(),
+			(path, to) => {
+				if (to !== null) void this.reorder(path, to);
+				else if (this.stale) this.render();
+			},
+		);
 		this.jar = new JarCanvas(root, this.jarOptions());
 		this.chrome = new ScreenChrome(root, this.containerEl, (shelves, ledges) => {
 			this.jar?.setObstacles(shelves);
@@ -126,6 +138,8 @@ export class TodayView extends ItemView {
 		this.chrome = null;
 		this.keyboard?.destroy();
 		this.keyboard = null;
+		this.rowDrag?.destroy();
+		this.rowDrag = null;
 		this.jar?.destroy();
 		this.jar = null;
 		window.clearTimeout(this.holdTimer);
@@ -141,6 +155,11 @@ export class TodayView extends ItemView {
 
 	private render(): void {
 		if (!this.columnEl) return;
+		if (this.rowDrag?.active) {
+			this.stale = true;
+			return;
+		}
+		this.stale = false;
 		const column = this.columnEl;
 		column.empty();
 		this.renderingRows = new Set();
@@ -173,6 +192,19 @@ export class TodayView extends ItemView {
 			if (!done || !hideDone || this.showDone || this.menu === entry.path) this.renderRow(column, entry.path, entry.habit);
 		}
 		this.shownRows = this.renderingRows;
+	}
+
+	/** Saves a row dragged to place `to` among the shown rows; the habits not shown keep their places. */
+	private async reorder(path: string, to: number): Promise<void> {
+		const shown = [...(this.columnEl?.querySelectorAll<HTMLElement>(".th-row[data-drag]") ?? [])].flatMap((row) => (row.dataset.drag && row.dataset.drag !== path ? [row.dataset.drag] : []));
+		shown.splice(to, 0, path);
+		const all = visibleEntries(this.ui.repository.list()).flatMap((entry) => (entry.kind === "ok" ? [entry.path] : []));
+		try {
+			await this.ui.service.reorder(moveAmongShown(all, shown, path, to));
+		} catch (error) {
+			new Notice(error instanceof Error ? error.message : String(error));
+		}
+		if (this.stale) this.render();
 	}
 
 	private renderProgress(column: HTMLElement, left: number, total: number): HTMLElement {
@@ -253,7 +285,7 @@ export class TodayView extends ItemView {
 	private renderRow(column: HTMLElement, path: string, habit: Habit): void {
 		const today = this.ui.service.today();
 		const mark = habit.markOn(today);
-		const row = column.createDiv({ cls: ["th-row", "th-habit", colorClass(habit.color)] });
+		const row = column.createDiv({ cls: ["th-row", "th-habit", colorClass(habit.color)], attr: { "data-drag": path } });
 		row.toggleClass("is-answered", mark !== undefined);
 		row.toggleClass("is-new", !this.shownRows.has(path));
 		this.renderingRows.add(path);

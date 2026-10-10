@@ -29,6 +29,21 @@ describe("HabitService", () => {
 		await expect(service.create({ name: "Зарядка", anchor: "a", tiny: "b", days: WEEKDAYS })).rejects.toThrow(DomainError);
 	});
 
+	it("numbers habits in the given order, writing only the changed ones", async () => {
+		const second = await service.create({ name: "Чтение", anchor: "Кофе", tiny: "1 страница", days: WEEKDAYS });
+		await service.reorder([second, path]);
+		expect(repository.habit(second).order).toBe(1);
+		expect(repository.habit(path).order).toBe(2);
+		let writes = 0;
+		const update = repository.update.bind(repository);
+		repository.update = (...args) => {
+			writes++;
+			return update(...args);
+		};
+		await service.reorder([second, path]);
+		expect(writes).toBe(0);
+	});
+
 	it("answers a day and stores the result", async () => {
 		expect((await service.setMark(path, today, TINY)).markOn(today)).toEqual(TINY);
 		expect((await service.setMark(path, today, FULL)).markOn(today)).toEqual(FULL);

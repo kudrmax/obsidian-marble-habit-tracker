@@ -17,3 +17,15 @@ export function visibleEntries(entries: readonly HabitEntry[]): HabitEntry[] {
 			return nameOf(a).localeCompare(nameOf(b));
 		});
 }
+
+/**
+ * The full order after a shown habit is moved to position `to` among the shown ones. Habits that aren't shown keep their
+ * places; the shown ones swap among the places they had.
+ */
+export function moveAmongShown(all: readonly string[], shown: readonly string[], moved: string, to: number): string[] {
+	const rest = shown.filter((path) => path !== moved);
+	const next = [...rest.slice(0, to), moved, ...rest.slice(to)];
+	const slots = new Set(shown);
+	let index = 0;
+	return all.map((path) => (slots.has(path) ? next[index++] : path));
+}
