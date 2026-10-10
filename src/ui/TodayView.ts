@@ -159,7 +159,7 @@ export class TodayView extends ItemView {
 		const closed = habits.length > 0 && answered === habits.length;
 		const header = closed
 			? this.renderRing(column, habits.map((entry) => entry.habit), this.wasClosed === false)
-			: this.renderProgress(column, habits.length - answered, habits.length ? answered / habits.length : 1);
+			: this.renderProgress(column, habits.length - answered, habits.length);
 		this.renderMeta(header, doneHabits, all);
 		this.wasClosed = closed;
 
@@ -175,9 +175,10 @@ export class TodayView extends ItemView {
 		this.shownRows = this.renderingRows;
 	}
 
-	private renderProgress(column: HTMLElement, left: number, share: number): HTMLElement {
+	private renderProgress(column: HTMLElement, left: number, total: number): HTMLElement {
 		const header = column.createDiv("th-today-header");
-		header.createEl("h1", { cls: "th-title", text: closeDayTitle(left) });
+		header.createEl("h1", { cls: "th-title", text: closeDayTitle(left, total) });
+		const share = total ? (total - left) / total : 0;
 		header.createDiv("th-progress").createDiv("th-progress-fill").style.width = `${share * 100}%`;
 		return header;
 	}
@@ -229,7 +230,7 @@ export class TodayView extends ItemView {
 			arc(classes, share - gap, index * share + gap / 2, index);
 		});
 		ring.createDiv({ cls: "th-ring-count", text: `${done}/${habits.length}` });
-		header.createEl("h1", { cls: "th-title", text: closeDayTitle(0) });
+		header.createEl("h1", { cls: "th-title", text: closeDayTitle(0, habits.length) });
 		header.createDiv({ cls: "th-ring-sub", text: closedDayLine(habits.length - done) });
 		if (justClosed) this.haptics.merge();
 		return header;

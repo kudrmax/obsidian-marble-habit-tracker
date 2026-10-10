@@ -8,7 +8,9 @@ import { visibleEntries } from "./order";
 
 const WORDS = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
 
-export function closeDayTitle(left: number): string {
+/** `total` is how many habits are due today; with none due there is no day to close. */
+export function closeDayTitle(left: number, total: number): string {
+	if (total === 0) return "Nothing for today";
 	if (left === 0) return "Day closed";
 	return `${WORDS[left] ?? left} left to close the day`;
 }

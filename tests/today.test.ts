@@ -28,10 +28,14 @@ describe("closedDayLine", () => {
 
 describe("closeDayTitle", () => {
 	it("counts what is left in words", () => {
-		expect(closeDayTitle(0)).toBe("Day closed");
-		expect(closeDayTitle(1)).toBe("One left to close the day");
-		expect(closeDayTitle(3)).toBe("Three left to close the day");
-		expect(closeDayTitle(14)).toBe("14 left to close the day");
+		expect(closeDayTitle(0, 4)).toBe("Day closed");
+		expect(closeDayTitle(1, 4)).toBe("One left to close the day");
+		expect(closeDayTitle(3, 4)).toBe("Three left to close the day");
+		expect(closeDayTitle(14, 20)).toBe("14 left to close the day");
+	});
+
+	it("says there is nothing to close when no habit is due today", () => {
+		expect(closeDayTitle(0, 0)).toBe("Nothing for today");
 	});
 });
 
