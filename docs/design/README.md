@@ -1,4 +1,4 @@
-# Tiny Habits — design
+# Marble Habit Tracker — design
 
 Date: 2026-10-09. Status: approved by the author. Source canvas: https://claude.ai/artifact/5DmPf9vDjD312jYyp1mrB5 — the `canvas/` folder holds the same screens as `.dc.html` files (open `canvas.json` for the layout).
 

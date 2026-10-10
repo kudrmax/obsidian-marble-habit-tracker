@@ -1,9 +1,9 @@
 {
-  "id": "tiny-habits",
-  "name": "Tiny Habits",
-  "version": "0.1.0",
+  "id": "marble-habit-tracker",
+  "name": "Marble Habit Tracker",
+  "version": "1.0.0",
   "minAppVersion": "1.6.6",
-  "description": "Habit tracker built around BJ Fogg's Tiny Habits method. Habits live in Markdown notes.",
+  "description": "A habit tracker where every win drops a marble into a jar. Close the day, watch the marbles merge, tilt your phone to roll them. Habits live in Markdown notes.",
   "author": "kudrmax",
   "authorUrl": "https://github.com/kudrmax",
   "isDesktopOnly": false
