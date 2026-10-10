@@ -404,3 +404,7 @@ button.th-style-tile.is-selected { border-color: var(--interactive-accent); }
 .th-archived-text { font-size: var(--th-small-size); color: var(--th-muted); }
 .th-habit-panel .th-history-row { grid-template-columns: 52px 16px minmax(0, 1fr); padding: var(--size-2-2) 0 0; border-bottom: none; font-size: inherit; color: inherit; }
 .th-habit-panel .th-history-date { color: var(--text-muted); font-size: inherit; padding-top: 0; }
+
+/* Fingers need bigger circles than a mouse: on phones the mark and the three answers grow together. */
+.is-mobile .tiny-habits { --th-mark: 40px; }
+.is-mobile .th-mark svg, .is-mobile .th-answer-circle svg { width: 18px; height: 18px; }
