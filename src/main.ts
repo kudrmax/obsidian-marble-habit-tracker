@@ -30,7 +30,7 @@ export default class MarbleHabitTrackerPlugin extends Plugin implements Settings
 			newHabit: () => new HabitFormModal(this.app, service).open(),
 		};
 		this.newHabit = ui.newHabit;
-		const notes = this.addChild(new HabitNotes(this.app, ui, (leaf) => void leaf.setViewState({ type: HABITS_VIEW, active: true })));
+		const notes = this.addChild(new HabitNotes(this.app, ui));
 		this.notes = notes;
 
 		this.registerView(HABITS_VIEW, (leaf) => new TodayView(leaf, ui));

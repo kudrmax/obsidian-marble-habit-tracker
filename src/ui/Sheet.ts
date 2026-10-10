@@ -1,7 +1,6 @@
 import { App, Modal, Notice } from "obsidian";
 import { HabitColor } from "../domain/HabitColor";
 import { colorClass } from "./colors";
-import { iconButton } from "./components";
 
 export abstract class Sheet extends Modal {
 	private save: HTMLButtonElement | null = null;
@@ -26,11 +25,12 @@ export abstract class Sheet extends Modal {
 
 	override onOpen(): void {
 		this.modalEl.addClass("th-sheet", "tiny-habits", "th-habit", colorClass(this.tint));
-		const header = this.contentEl.createDiv("th-sheet-header");
-		iconButton(header, { icon: "x", label: "Cancel", onClick: () => this.close() });
-		header.createDiv({ cls: "th-sheet-title", text: this.heading });
-		this.save = iconButton(header, { icon: "check", label: "Save", primary: true, onClick: () => void this.trySubmit() });
+		this.setTitle(this.heading);
 		this.fill(this.contentEl.createDiv("th-sheet-body"));
+		const buttons = this.contentEl.createDiv("modal-button-container");
+		buttons.createEl("button", { text: "Cancel" }).addEventListener("click", () => this.close());
+		this.save = buttons.createEl("button", { cls: "mod-cta", text: "Save" });
+		this.save.addEventListener("click", () => void this.trySubmit());
 		this.refreshReady();
 	}
 

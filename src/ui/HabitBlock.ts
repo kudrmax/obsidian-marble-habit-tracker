@@ -4,7 +4,6 @@ import { LocalDate } from "../domain/LocalDate";
 import { computeStats } from "../domain/Stats";
 import { calendarStart, calendarWeeks } from "./calendar";
 import { colorClass } from "./colors";
-import { icon } from "./components";
 import { EditSheet, EditTarget } from "./EditSheet";
 import { RECIPE_LABELS, dayMonth, describeChange, monthShort, recipeDays } from "./format";
 import { UiContext } from "./UiContext";
@@ -19,7 +18,6 @@ export class HabitBlock {
 		private readonly app: App,
 		private readonly ui: UiContext,
 		private path: string,
-		private readonly onBack: () => void,
 	) {
 		this.el = createDiv({ cls: ["tiny-habits", "th-screen", "th-note-block"] });
 		this.el.setAttribute("contenteditable", "false");
@@ -40,10 +38,6 @@ export class HabitBlock {
 		page.empty();
 		page.className = "tiny-habits th-screen th-note-block";
 		const entry = this.ui.repository.get(this.path);
-		const back = page.createEl("button", { cls: ["th-link", "th-back"] });
-		icon(back, "back");
-		back.appendText("Habits");
-		back.addEventListener("click", () => this.onBack());
 		if (!entry || entry.kind === "broken") {
 			page.createDiv({ cls: "th-quiet", text: entry ? `Can't read this habit: ${entry.problem}` : "Habit not found" });
 			return;

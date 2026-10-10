@@ -192,28 +192,10 @@ button.th-answer-more.is-selected { border-color: var(--th-habit); background: v
 button.th-answer-done { border: none; background: var(--th-habit); color: #ffffff; }
 
 /* Fields */
-.th-field { display: block; padding: 10px 0 14px; }
+.th-field { display: block; padding: 6px 0 10px; }
+.th-field .th-label { margin-bottom: 6px; font-size: var(--font-ui-small); color: var(--text-muted); }
 .th-field input,
-.th-field textarea {
-	width: 100%;
-	margin-top: 4px;
-	box-sizing: border-box;
-	padding: 6px 0 8px;
-	border: none;
-	border-bottom: var(--th-line-width) solid var(--th-line);
-	border-radius: 0;
-	box-shadow: none;
-	background: transparent;
-	color: var(--th-text);
-	font-family: inherit;
-	font-size: var(--th-text-size);
-	resize: none;
-}
-.th-field input:focus,
-.th-field textarea:focus { border-bottom-color: var(--th-muted); box-shadow: none; }
-.th-field-large input,
-.th-field-large textarea { font-size: 20px; font-weight: 500; }
-.th-field-hero textarea { font-size: 24px; font-weight: 500; line-height: 1.35; letter-spacing: -0.01em; }
+.th-field textarea { width: 100%; box-sizing: border-box; font-size: var(--font-ui-medium); resize: none; }
 input.th-inline-input {
 	flex: 1 1 auto;
 	min-width: 0;
@@ -381,11 +363,7 @@ button.th-done-row {
 .th-quiet { font-size: var(--th-small-size); color: var(--th-faint); padding: 8px 0; }
 
 /* Sheets: Edit and New habit */
-.modal.th-sheet { width: min(480px, 100vw); padding: 0; }
-body .modal.th-sheet > .modal-close-button { display: none !important; }
-.th-sheet-header { display: grid; grid-template-columns: var(--th-button) minmax(0, 1fr) var(--th-button); align-items: center; gap: 8px; padding: 12px 12px 4px; }
-.th-sheet-title { text-align: center; font-size: 16px; font-weight: 600; color: var(--th-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.th-sheet-body { padding: 16px var(--th-gutter) 28px; }
+.th-sheet-body { padding: 4px 0 8px; }
 .th-sheet-group { padding: 14px 0 6px; }
 
 .th-style-picker { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 0 0 16px; }

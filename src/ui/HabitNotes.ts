@@ -23,7 +23,6 @@ export class HabitNotes extends Component {
 	constructor(
 		private readonly app: App,
 		private readonly ui: UiContext,
-		private readonly openToday: (leaf: WorkspaceLeaf) => void,
 	) {
 		super();
 	}
@@ -77,9 +76,8 @@ export class HabitNotes extends Component {
 			placed = undefined;
 		}
 		if (!placed) {
-			const back = () => this.openToday(leaf);
-			const source = new HabitBlock(this.app, this.ui, path, back);
-			const reading = new HabitBlock(this.app, this.ui, path, back);
+			const source = new HabitBlock(this.app, this.ui, path);
+			const reading = new HabitBlock(this.app, this.ui, path);
 			const observer = new MutationObserver(() => this.attach(view, source, reading));
 			observer.observe(view.contentEl, { childList: true, subtree: true });
 			placed = { view, source, reading, observer };
