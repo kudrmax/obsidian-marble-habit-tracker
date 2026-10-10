@@ -8,6 +8,7 @@ import { JAR_DIAMETER, JAR_MATERIALS, JarMaterial, assetSvg } from "./jar/JarAss
 export interface SettingsHost {
 	settings: HabitSettings;
 	saveSettings(): Promise<void>;
+	newHabit(): void;
 }
 
 const MATERIAL_NAMES: Record<JarMaterial, string> = { grain: "Grain", aura: "Aura", halftone: "Halftone" };
@@ -41,6 +42,10 @@ export class SettingsTab extends PluginSettingTab {
 	override display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
+		new Setting(containerEl)
+			.setName("New habit")
+			.setDesc("Write a new habit as a recipe. Also in the command palette: “New habit”.")
+			.addButton((button) => button.setButtonText("New habit").setCta().onClick(() => this.host.newHabit()));
 		this.marbles(containerEl);
 		this.today(containerEl);
 		this.notToday(containerEl);

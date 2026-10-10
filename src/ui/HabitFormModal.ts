@@ -35,8 +35,8 @@ export class HabitFormModal extends Sheet {
 			});
 		const first = field(FIELD_LABELS.anchor, "something I already do every day", true, (value) => (this.anchor = value));
 		field(FIELD_LABELS.tiny, "the tiniest version", true, (value) => (this.tiny = value));
-		field(`${FIELD_LABELS.full} · optional`, "the full version", false, (value) => (this.full = value));
-		field(`${FIELD_LABELS.celebration} · optional`, "a word or gesture, like “Yes!”", false, (value) => (this.celebration = value));
+		field(`${FIELD_LABELS.full} · optional`, "the bigger version", false, (value) => (this.full = value));
+		field(`${FIELD_LABELS.celebration} · optional`, "a word or a gesture, like “Yes!”", false, (value) => (this.celebration = value));
 		field("Call it", "Read", false, (value) => (this.name = value));
 
 		const days = body.createDiv("th-sheet-group");

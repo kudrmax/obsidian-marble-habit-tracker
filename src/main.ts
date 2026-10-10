@@ -9,8 +9,9 @@ import { HABITS_VIEW, TodayView } from "./ui/TodayView";
 import { SettingsHost, SettingsTab } from "./ui/SettingsTab";
 import { UiContext } from "./ui/UiContext";
 
-export default class TinyHabitsPlugin extends Plugin implements SettingsHost {
+export default class MarbleHabitTrackerPlugin extends Plugin implements SettingsHost {
 	override settings: HabitSettings = loadSettings(null);
+	newHabit: () => void = () => undefined;
 
 	override async onload(): Promise<void> {
 		this.settings = loadSettings(await this.loadData());
@@ -23,6 +24,7 @@ export default class TinyHabitsPlugin extends Plugin implements SettingsHost {
 			openHabit: (path, leaf) => void this.openHabit(path, leaf),
 			newHabit: () => new HabitFormModal(this.app, service).open(),
 		};
+		this.newHabit = ui.newHabit;
 
 		this.registerView(HABITS_VIEW, (leaf) => new TodayView(leaf, ui));
 		this.registerView(HABIT_VIEW, (leaf) => new HabitScreenView(leaf, ui));

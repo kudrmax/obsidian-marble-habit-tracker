@@ -13,11 +13,12 @@ export const PART_LABELS: Record<Part, string> = {
 	schedule: "Days",
 };
 
+/** Field labels in the edit and new-habit sheets, worded like the recipe sentence on the habit screen. */
 export const FIELD_LABELS: Record<TextPart, string> = {
 	anchor: "After I",
 	tiny: "I will",
-	full: "If I feel like more",
-	celebration: "And celebrate with",
+	full: "On a good day",
+	celebration: "And celebrate",
 };
 
 /** The recipe reads as one sentence: "after I … I will … on a good day … and celebrate … every …". */

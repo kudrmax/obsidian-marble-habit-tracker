@@ -382,7 +382,7 @@ button.th-done-row {
 
 /* Sheets: Edit and New habit */
 .modal.th-sheet { width: min(480px, 100vw); padding: 0; }
-.modal.th-sheet .modal-close-button { display: none; }
+body .modal.th-sheet > .modal-close-button { display: none !important; }
 .th-sheet-header { display: grid; grid-template-columns: var(--th-button) minmax(0, 1fr) var(--th-button); align-items: center; gap: 8px; padding: 12px 12px 4px; }
 .th-sheet-title { text-align: center; font-size: 16px; font-weight: 600; color: var(--th-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .th-sheet-body { padding: 16px var(--th-gutter) 28px; }
