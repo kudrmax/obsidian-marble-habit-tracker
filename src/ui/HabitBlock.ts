@@ -23,6 +23,8 @@ const openHistory = new Set<string>();
 /** The habit's own panel in its note, next to Properties: recipe, progress and history, above the note's text. */
 export class HabitBlock {
 	readonly el: HTMLElement;
+	/** A redraw was asked for while a value was being typed; it runs when editing ends. */
+	private stale = false;
 
 	constructor(
 		private readonly app: App,
@@ -38,12 +40,23 @@ export class HabitBlock {
 		return this.path;
 	}
 
+	/** A recipe value is being typed: redrawing now would throw the unsaved text away. */
+	private isEditing(): boolean {
+		const active = document.activeElement;
+		return active instanceof HTMLElement && active.isContentEditable && this.el.contains(active);
+	}
+
 	moveTo(path: string): void {
 		this.path = path;
 		this.render();
 	}
 
 	render(): void {
+		if (this.isEditing()) {
+			this.stale = true;
+			return;
+		}
+		this.stale = false;
 		const panel = this.el;
 		panel.empty();
 		panel.className = "metadata-container th-habit-panel";
@@ -109,8 +122,8 @@ export class HabitBlock {
 		const input = parent.createDiv({ cls: "metadata-input-longtext", text: value, attr: { contenteditable: "true", spellcheck: "false", placeholder: "Empty" } });
 		const save = () => {
 			const next = (input.textContent ?? "").trim();
-			if (next === value) return;
-			void this.run(() => this.ui.service.replaceText(this.path, part, next)).then(() => this.render());
+			if (next !== value) void this.run(() => this.ui.service.replaceText(this.path, part, next)).then(() => this.render());
+			else if (this.stale) this.render();
 		};
 		input.addEventListener("keydown", (event) => {
 			if (event.key === "Enter") {
