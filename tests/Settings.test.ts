@@ -16,6 +16,7 @@ describe("loadSettings", () => {
 			material: "grain",
 			marbleSizes: { small: 24, medium: 44, big: 68 },
 			merge: { smallPerMedium: 7, mediumPerBig: 4 },
+			dayStartHour: 5,
 			hideDone: true,
 			showWins: true,
 			celebrationLine: true,
@@ -40,6 +41,7 @@ describe("loadSettings", () => {
 				material: "halftone",
 				marbleSizes: { small: 20, medium: 48, big: 80 },
 				merge: { smallPerMedium: 5, mediumPerBig: 3 },
+				dayStartHour: 3,
 				hideDone: false,
 				showWins: false,
 				celebrationLine: false,
@@ -59,6 +61,7 @@ describe("loadSettings", () => {
 			material: "halftone",
 			marbleSizes: { small: 20, medium: 48, big: 80 },
 			merge: { smallPerMedium: 5, mediumPerBig: 3 },
+			dayStartHour: 3,
 			hideDone: false,
 			showWins: false,
 			celebrationLine: false,
@@ -66,6 +69,12 @@ describe("loadSettings", () => {
 			tilt: false,
 			haptics: false,
 		});
+	});
+
+	it("replaces a day start hour outside midnight to noon with the default", () => {
+		expect(loadSettings({ dayStartHour: 13 }).dayStartHour).toBe(5);
+		expect(loadSettings({ dayStartHour: -1 }).dayStartHour).toBe(5);
+		expect(loadSettings({ dayStartHour: 0 }).dayStartHour).toBe(0);
 	});
 
 	it("replaces marble sizes out of range or not whole with defaults", () => {

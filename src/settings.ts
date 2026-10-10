@@ -16,6 +16,8 @@ export interface HabitSettings {
 	material: JarMaterial;
 	marbleSizes: MarbleSizes;
 	merge: MergeRule;
+	/** The hour a new day starts; marks made past midnight but before it count for the day before. */
+	dayStartHour: number;
 	hideDone: boolean;
 	showWins: boolean;
 	celebrationLine: boolean;
@@ -36,6 +38,7 @@ export const DEFAULT_SETTINGS: HabitSettings = {
 	material: "grain",
 	marbleSizes: DEFAULT_MARBLE_SIZES,
 	merge: DEFAULT_MERGE_RULE,
+	dayStartHour: 5,
 	hideDone: true,
 	showWins: true,
 	celebrationLine: true,
@@ -44,6 +47,7 @@ export const DEFAULT_SETTINGS: HabitSettings = {
 	haptics: true,
 };
 
+export const MAX_DAY_START = 12;
 const MIN_MERGE = 2;
 const MAX_MERGE = 30;
 
@@ -65,6 +69,7 @@ export function loadSettings(data: unknown): HabitSettings {
 		material: isJarMaterial(raw.material) ? raw.material : DEFAULT_SETTINGS.material,
 		marbleSizes: loadMarbleSizes(raw.marbleSizes),
 		merge: loadMerge(raw.merge, (raw as Record<string, unknown>).mergeSize),
+		dayStartHour: integer(raw.dayStartHour, 0, MAX_DAY_START, DEFAULT_SETTINGS.dayStartHour),
 		hideDone: flag(raw.hideDone, DEFAULT_SETTINGS.hideDone),
 		showWins: flag(raw.showWins, DEFAULT_SETTINGS.showWins),
 		celebrationLine: flag(raw.celebrationLine, DEFAULT_SETTINGS.celebrationLine),

@@ -1,6 +1,6 @@
 import { Plugin, TFile, WorkspaceLeaf } from "obsidian";
 import { HabitService } from "./application/HabitService";
-import { systemClock } from "./domain/Clock";
+import { DayStartClock } from "./domain/Clock";
 import { FrontmatterHabitRepository } from "./infrastructure/FrontmatterHabitRepository";
 import { HabitSettings, loadSettings } from "./settings";
 import { DayWatcher } from "./ui/DayWatcher";
@@ -26,7 +26,7 @@ export default class MarbleHabitTrackerPlugin extends Plugin implements Settings
 	override async onload(): Promise<void> {
 		this.settings = loadSettings(await this.loadData());
 		const repository = new FrontmatterHabitRepository(this.app, () => this.settings, () => this.settings.properties);
-		const service = new HabitService(repository, systemClock);
+		const service = new HabitService(repository, new DayStartClock(() => this.settings.dayStartHour));
 		const ui: UiContext = {
 			service,
 			repository,

@@ -1,7 +1,7 @@
 import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
 import { JarSize } from "../domain/Jar";
 import { PropertyNames } from "../infrastructure/HabitCodec";
-import { DEFAULT_SETTINGS, HabitSettings, parseReasons } from "../settings";
+import { DEFAULT_SETTINGS, HabitSettings, MAX_DAY_START, parseReasons } from "../settings";
 import { partTitle } from "./format";
 import { Hsl, parseColor } from "./jar/color";
 import { DEFAULT_MARBLE_SIZES, JAR_MATERIALS, JarMaterial, assetSvg } from "./jar/JarAssets";
@@ -122,6 +122,14 @@ export class SettingsTab extends PluginSettingTab {
 	private today(containerEl: HTMLElement): void {
 		const settings = this.host.settings;
 		new Setting(containerEl).setName("Today").setHeading();
+		const hour = (value: number) => `${String(value).padStart(2, "0")}:00`;
+		new Setting(containerEl)
+			.setName("New day starts at")
+			.setDesc(`For late nights: habits marked after midnight but before this hour count for the day before. Default ${hour(DEFAULT_SETTINGS.dayStartHour)}.`)
+			.addDropdown((dropdown) => {
+				for (let value = 0; value <= MAX_DAY_START; value++) dropdown.addOption(String(value), hour(value));
+				dropdown.setValue(String(settings.dayStartHour)).onChange((value) => void this.save((next) => (next.dayStartHour = Number(value))));
+			});
 		new Setting(containerEl)
 			.setName("Hide done habits")
 			.setDesc("Done habits fold into one “N done” line you can open.")
