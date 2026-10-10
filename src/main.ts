@@ -38,7 +38,6 @@ export default class MarbleHabitTrackerPlugin extends Plugin implements Settings
 		this.addRibbonIcon("sprout", "Habits", () => void this.openGrid());
 		this.addCommand({ id: "open", name: "Open habits", callback: () => void this.openGrid() });
 		this.addCommand({ id: "new", name: "New habit", callback: () => ui.newHabit() });
-		this.addCommand({ id: "replay-jar", name: "Replay the marbles", callback: () => this.todayViews().forEach((view) => view.replayJar()) });
 		this.addCommand({
 			id: "archive-habit",
 			name: "Archive this habit",

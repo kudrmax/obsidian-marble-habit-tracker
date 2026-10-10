@@ -98,14 +98,6 @@ export class JarCanvas {
 		if (!this.physics.isSettled()) this.wake();
 	}
 
-	replay(): void {
-		for (const body of this.physics.bodies()) this.physics.remove(body.id);
-		const items = [...this.drawn.values()];
-		this.drawn.clear();
-		this.filled = false;
-		this.sync(items, new Map());
-	}
-
 	/** Returns the groups whose origin was used, so the caller can forget them. */
 	sync(items: readonly JarItem[], origins: ReadonlyMap<string, Point>): Set<string> {
 		const next = new Map(items.map((item) => [item.key, item]));

@@ -127,10 +127,6 @@ export class TodayView extends ItemView {
 		this.render();
 	}
 
-	replayJar(): void {
-		this.jar?.replay();
-	}
-
 	private render(): void {
 		if (!this.columnEl) return;
 		const column = this.columnEl;
