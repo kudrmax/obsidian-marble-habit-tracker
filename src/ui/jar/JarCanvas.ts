@@ -1,6 +1,7 @@
 import { JarSize } from "../../domain/Jar";
 import { AssetSpec, JAR_DIAMETER, JarMaterial, assetKey, assetSvg } from "./JarAssets";
 import { Hsl, hsl } from "./color";
+import { FixedStep } from "./FixedStep";
 import { Box, JarPhysics, Point } from "./JarPhysics";
 
 export interface JarItem {
@@ -63,6 +64,7 @@ export class JarCanvas {
 	private width = 0;
 	private height = 0;
 	private frame = 0;
+	private readonly clock = new FixedStep();
 	private filled = false;
 	private ghost = 0;
 
@@ -244,18 +246,21 @@ export class JarCanvas {
 
 	private wake(): void {
 		if (this.frame) return;
-		this.frame = window.requestAnimationFrame(() => this.tick());
+		this.frame = window.requestAnimationFrame((time) => this.tick(time));
 	}
 
-	private tick(): void {
+	private tick(time: number): void {
 		this.frame = 0;
 		if (this.width === 0 || this.height === 0) return;
-		const impact = this.physics.step();
+		const steps = this.clock.next(time);
+		let impact = 0;
+		for (let step = 0; step < steps; step++) impact = Math.max(impact, this.physics.step());
 		if (impact > 0) this.options.onImpact?.(impact);
-		this.draw();
+		if (steps > 0 || this.born.size > 0) this.draw();
 		const now = performance.now();
 		for (const [key, start] of this.born) if (now - start > BORN_MS) this.born.delete(key);
 		if (!this.physics.isSettled() || this.born.size > 0) this.wake();
+		else this.clock.reset();
 	}
 
 	private draw(): void {
