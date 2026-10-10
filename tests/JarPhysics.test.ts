@@ -206,4 +206,13 @@ describe("JarPhysics", () => {
 		physics.step();
 		expect(physics.get("a")?.landed).toBe(false);
 	});
+
+
+	it("steps a full jar quickly", () => {
+		const physics = new JarPhysics(390, 760);
+		for (let index = 0; index < 250; index++) physics.add({ id: `b${index}`, x: 12 + (index * 37) % 366, y: 748 - Math.floor(index / 15) * 24, r: 12 });
+		const started = performance.now();
+		for (let frame = 0; frame < 120; frame++) physics.step();
+		expect((performance.now() - started) / 120).toBeLessThan(4);
+	});
 });

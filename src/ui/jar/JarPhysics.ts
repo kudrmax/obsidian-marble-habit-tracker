@@ -51,6 +51,11 @@ export class JarPhysics {
 	private gravity: Point = EARTH;
 	private obstacles: readonly Box[] = [];
 	private ledges: readonly Box[] = [];
+	/** Obstacles and ledges together, for landed bodies; rebuilt when either changes, not per body per frame. */
+	private solids: readonly Box[] = [];
+	/** Reused every step so the hot loop allocates nothing. */
+	private readonly free: Body[] = [];
+	private before = new Float64Array(64);
 	private quietFrames = 0;
 
 	constructor(
@@ -66,12 +71,14 @@ export class JarPhysics {
 
 	setObstacles(obstacles: readonly Box[]): void {
 		this.obstacles = obstacles;
+		this.solids = [...obstacles, ...this.ledges];
 		this.quietFrames = 0;
 	}
 
 	/** Boxes that falling bodies pass through and landed bodies bounce off. */
 	setLedges(ledges: readonly Box[]): void {
 		this.ledges = ledges;
+		this.solids = [...this.obstacles, ...ledges];
 		this.quietFrames = 0;
 	}
 
@@ -135,8 +142,12 @@ export class JarPhysics {
 			body.x += vx;
 			body.y += vy;
 		}
-		const free = [...this.items.values()].filter((body) => !this.targets.has(body.id));
-		const before = free.map((body) => Math.hypot(body.x - body.px, body.y - body.py));
+		const free = this.free;
+		free.length = 0;
+		for (const body of this.items.values()) if (!this.targets.has(body.id)) free.push(body);
+		if (this.before.length < free.length) this.before = new Float64Array(free.length * 2);
+		const before = this.before;
+		for (let i = 0; i < free.length; i++) before[i] = Math.hypot(free[i].x - free[i].px, free[i].y - free[i].py);
 		for (let pass = 0; pass < PASSES; pass++) {
 			for (let i = 0; i < free.length; i++) {
 				for (let j = i + 1; j < free.length; j++) this.separate(free[i], free[j]);
@@ -149,18 +160,19 @@ export class JarPhysics {
 		for (const body of free) if (!body.landed && !body.passing) body.landed = this.lands(body, free);
 		let fastest = 0;
 		let hardest = 0;
-		free.forEach((body, index) => {
+		for (let i = 0; i < free.length; i++) {
+			const body = free[i];
 			const speed = Math.hypot(body.x - body.px, body.y - body.py);
 			fastest = Math.max(fastest, speed);
-			hardest = Math.max(hardest, before[index] - speed);
-		});
+			hardest = Math.max(hardest, before[i] - speed);
+		}
 		this.quietFrames = fastest < REST_SPEED ? this.quietFrames + 1 : 0;
 		return hardest;
 	}
 
 	private solidFor(body: Body): readonly Box[] {
-		if (body.passing) return [];
-		return body.landed ? [...this.obstacles, ...this.ledges] : this.obstacles;
+		if (body.passing) return NONE;
+		return body.landed ? this.solids : this.obstacles;
 	}
 
 	private lands(body: Body, free: readonly Body[]): boolean {
@@ -203,6 +215,8 @@ export class JarPhysics {
 		if (body.y < body.r) body.y = body.r;
 	}
 }
+
+const NONE: readonly Box[] = [];
 
 function overlaps(a: Body, b: Body): boolean {
 	return Math.hypot(b.x - a.x, b.y - a.y) < a.r + b.r;
