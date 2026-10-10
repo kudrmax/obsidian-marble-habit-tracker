@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "asset-study",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8765", "--bind", "127.0.0.1", "--directory", "/private/tmp/claude-501/-Users-mdmkudryashov-projects-obsidian-my-own-plugins-obsidian-marble-habit-tracker/62f3be83-bb1e-4952-891a-141286b9f84a/scratchpad/study"],
+      "port": 8765
+    }
+  ]
+}

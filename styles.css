@@ -189,11 +189,11 @@ button.th-answer:hover { background: transparent; }
 .th-answer-circle svg { width: 14px; height: 14px; }
 button.th-answer:nth-child(2) { animation-delay: 60ms; }
 button.th-answer:nth-child(3) { animation-delay: 120ms; }
-.th-answer-miss .th-answer-circle { border: 1.5px solid var(--th-line); color: var(--th-muted); }
-.th-answer-miss.is-selected .th-answer-circle { border-color: var(--th-faint); background: var(--th-faint); color: var(--th-bg); }
-.th-answer-more .th-answer-circle { border: 1.5px solid color-mix(in srgb, var(--th-habit) 50%, transparent); color: var(--th-habit); }
-.th-answer-more.is-selected .th-answer-circle { border-color: var(--th-habit); background: var(--th-habit); color: #ffffff; }
-.th-answer-done .th-answer-circle { background: var(--th-habit); color: #ffffff; }
+.th-answer-skip .th-answer-circle { border: 1.5px solid var(--th-line); color: var(--th-muted); }
+.th-answer-skip.is-selected .th-answer-circle { border-color: var(--th-faint); background: var(--th-faint); color: var(--th-bg); }
+.th-answer-full .th-answer-circle { border: 1.5px solid color-mix(in srgb, var(--th-habit) 50%, transparent); color: var(--th-habit); }
+.th-answer-full.is-selected .th-answer-circle { border-color: var(--th-habit); background: var(--th-habit); color: #ffffff; }
+.th-answer-tiny .th-answer-circle { background: var(--th-habit); color: #ffffff; }
 
 /* Obsidian 1.14 draws buttons as squircles; every circle here stays a circle. */
 .tiny-habits button, .tiny-habits .th-mark, .th-answer-circle, .th-sheet button.th-day, .th-sheet button.th-swatch { corner-shape: round; }

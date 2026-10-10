@@ -33,7 +33,7 @@ const RING_RADIUS = 50;
 const RING_GAP = 9;
 const FALLBACK_COLOR: Hsl = { h: 258, s: 88, l: 66 };
 
-type Answer = "miss" | "more" | "done";
+type Answer = "skip" | "full" | "tiny";
 
 export class TodayView extends ItemView {
 	private scrollEl!: HTMLElement;
@@ -260,16 +260,16 @@ export class TodayView extends ItemView {
 	}
 
 	private subtitle(path: string, habit: Habit, mark: DayMark | undefined): string {
-		if (this.asking === path) return "not today — why?";
+		if (this.asking === path) return "skipped — why?";
 		if (!mark) return anchorLine(habit);
-		if (mark.kind === "missed") return `not today · ${mark.reason.toLowerCase()}`;
-		return mark.kind === "full" ? `did more · ${habit.text("full").current() ?? ""}`.replace(/ · $/, "") : "done";
+		if (mark.kind === "missed") return `skipped · ${mark.reason.toLowerCase()}`;
+		return mark.kind === "full" ? `full · ${habit.text("full").current() ?? ""}`.replace(/ · $/, "") : "tiny";
 	}
 
 	private renderMark(parent: HTMLElement, path: string, mark: DayMark | undefined): void {
-		const hint = mark ? "Click to undo · hold or right-click to change" : "Click when done · hold or right-click for more";
+		const hint = mark ? "Click to undo · hold or right-click to change" : "Click for tiny · hold or right-click for full or skipped";
 		const button = parent.createEl("button", { cls: "th-mark-button", attr: { title: hint } });
-		button.createSpan({ cls: "th-sr-only", text: mark ? "Undo — hold to change" : "Done — hold for more" });
+		button.createSpan({ cls: "th-sr-only", text: mark ? "Undo — hold to change" : "Tiny — hold for full or skipped" });
 		const circle = button.createSpan("th-mark");
 		if (isDone(mark)) {
 			circle.addClass("is-done");
@@ -312,9 +312,9 @@ export class TodayView extends ItemView {
 			icon(button.createSpan("th-answer-circle"), iconName);
 			button.addEventListener("click", (event) => void this.choose(path, answer, mark, event));
 		};
-		option("miss", "Not today", "x", mark?.kind === "missed");
-		option("more", "Did more", "spark", mark?.kind === "full");
-		option("done", "Done", "check", mark?.kind === "tiny");
+		option("skip", "Skipped", "x", mark?.kind === "missed");
+		option("full", "Full", "spark", mark?.kind === "full");
+		option("tiny", "Tiny", "check", mark?.kind === "tiny");
 	}
 
 	private renderReasons(row: HTMLElement, path: string): void {
@@ -373,9 +373,9 @@ export class TodayView extends ItemView {
 	}
 
 	private async choose(path: string, answer: Answer, current: DayMark | undefined, event: MouseEvent): Promise<void> {
-		const same = (answer === "miss" && current?.kind === "missed") || (answer === "more" && current?.kind === "full") || (answer === "done" && current?.kind === "tiny");
+		const same = (answer === "skip" && current?.kind === "missed") || (answer === "full" && current?.kind === "full") || (answer === "tiny" && current?.kind === "tiny");
 		if (same) return this.answer(path, undefined);
-		if (answer === "miss") {
+		if (answer === "skip") {
 			this.menu = null;
 			this.asking = path;
 			this.other = null;
@@ -383,7 +383,7 @@ export class TodayView extends ItemView {
 			this.render();
 			return;
 		}
-		return this.answer(path, answer === "more" ? FULL : TINY, event);
+		return this.answer(path, answer === "full" ? FULL : TINY, event);
 	}
 
 	private async answer(path: string, mark: DayMark | undefined, event?: MouseEvent): Promise<void> {

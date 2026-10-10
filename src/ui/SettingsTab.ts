@@ -24,9 +24,9 @@ const PROPERTY_LABELS: Record<keyof PropertyNames, string> = {
 	full: partTitle("full"),
 	celebration: partTitle("celebration"),
 	schedule: partTitle("schedule"),
-	doneTiny: "Done days",
-	doneFull: "Did-more days",
-	missed: "Not-today days",
+	doneTiny: "Tiny days",
+	doneFull: "Full days",
+	missed: "Skipped days",
 	color: "Color",
 	order: "Order",
 	archived: "Archived",
@@ -111,7 +111,7 @@ export class SettingsTab extends PluginSettingTab {
 
 	private notToday(containerEl: HTMLElement): void {
 		const settings = this.host.settings;
-		new Setting(containerEl).setName("Not today").setHeading();
+		new Setting(containerEl).setName("Skipped").setHeading();
 		new Setting(containerEl)
 			.setName("Reasons")
 			.setDesc("Offered when you skip a habit, one per line. “Other…” is always there for anything else.")
@@ -128,7 +128,7 @@ export class SettingsTab extends PluginSettingTab {
 			.addText((text) => text.setValue(settings.shrinkReason).onChange((value) => void this.save((next) => (next.shrinkReason = value.trim()))));
 		new Setting(containerEl)
 			.setName("Suggest a redesign")
-			.setDesc("Also suggest a tinier habit after this many “not today” in a row.")
+			.setDesc("Also suggest a tinier habit after this many skips in a row.")
 			.addText((text) => {
 				text.inputEl.type = "number";
 				text.setValue(String(settings.redesignThreshold)).onChange((value) => {
