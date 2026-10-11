@@ -9,10 +9,6 @@ export const TEXT_PARTS = ["anchor", "tiny", "full", "celebration"] as const;
 export type TextPart = (typeof TEXT_PARTS)[number];
 export type Part = TextPart | "schedule";
 
-const REQUIRED_TEXT: ReadonlyArray<[TextPart, string]> = [
-	["anchor", "Anchor is missing"],
-	["tiny", "Tiny habit is missing"],
-];
 const FORBIDDEN_NAME_CHARS = /[\\/:*?"<>|#^[\]]/;
 
 export const sameSchedule = (a: Schedule, b: Schedule): boolean => a.equals(b);
@@ -31,8 +27,8 @@ export interface HabitState {
 
 export interface NewHabit {
 	readonly name: string;
-	readonly anchor: string;
-	readonly tiny: string;
+	readonly anchor?: string;
+	readonly tiny?: string;
 	readonly full?: string;
 	readonly celebration?: string;
 	readonly color?: HabitColor;
@@ -62,7 +58,7 @@ export class Habit {
 		if (!name) throw new DomainError("Give the habit a name");
 		if (FORBIDDEN_NAME_CHARS.test(name)) throw new DomainError('A name can\'t contain \\ / : * ? " < > | # ^ [ ]');
 		if (state.schedule.isEmpty) throw new DomainError("Schedule is missing");
-		for (const [part, message] of REQUIRED_TEXT) if (state.text[part].isEmpty) throw new DomainError(message);
+		if (state.text.tiny.isEmpty && state.text.full.isEmpty) throw new DomainError("Write a tiny or a full version of the habit");
 		for (const [part, component] of Object.entries(state.text)) {
 			if (component.versions.some((version) => !version.value.trim())) throw new DomainError(`${part} has an empty value`);
 		}
@@ -91,6 +87,20 @@ export class Habit {
 
 	get name(): string {
 		return this.state.name;
+	}
+
+	/** Whether the habit has a tiny version; without one, doing it means doing the full version. */
+	get hasTiny(): boolean {
+		return !this.state.text.tiny.isEmpty;
+	}
+
+	get hasFull(): boolean {
+		return !this.state.text.full.isEmpty;
+	}
+
+	/** What the habit is called in a list: its tiny version, or the full one when there is no tiny version. */
+	get headline(): string {
+		return this.state.text.tiny.current() ?? this.state.text.full.current() ?? this.state.name;
 	}
 
 	get section(): string | undefined {

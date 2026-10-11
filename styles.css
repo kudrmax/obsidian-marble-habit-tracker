@@ -433,3 +433,8 @@ button.th-style-tile.is-selected { border-color: var(--interactive-accent); }
 .is-dragging-row .th-section-new { display: block; }
 .th-section-new.is-target { border-color: var(--interactive-accent); color: var(--text-accent); background: var(--background-modifier-hover); }
 .th-section-name { width: 100%; }
+
+/* A row of mutually exclusive choices, like Obsidian's own segmented controls. */
+.th-segmented { display: inline-flex; gap: 2px; padding: 2px; border-radius: var(--radius-m); background: var(--background-modifier-form-field, var(--background-secondary)); }
+.th-segmented button { height: auto; padding: 6px 14px; border: none; box-shadow: none; background: transparent; color: var(--text-muted); font-size: var(--font-ui-small); }
+.th-segmented button.is-selected { background: var(--interactive-normal); color: var(--text-normal); box-shadow: var(--input-shadow); }

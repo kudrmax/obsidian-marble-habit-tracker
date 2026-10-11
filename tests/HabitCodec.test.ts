@@ -83,7 +83,7 @@ describe("decodeHabit", () => {
 
 	it.each([
 		["no properties", undefined, "no habit properties"],
-		["no anchor", { anchor: undefined }, "Anchor is missing"],
+		["neither tiny nor full", { tiny: undefined, full: undefined }, "tiny or a full"],
 		["anchor not a list", { anchor: "Кружка" }, "anchor"],
 		["bad date", { done_tiny: ["2026-13-01"] }, "done_tiny"],
 		["two marks on one day", { done_full: ["2026-10-08"] }, "2026-10-08"],

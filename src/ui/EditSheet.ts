@@ -4,7 +4,7 @@ import { Habit, TextPart } from "../domain/Habit";
 import { HabitColor } from "../domain/HabitColor";
 import { Weekday } from "../domain/LocalDate";
 import { colorCircles, textField, weekdayCircles } from "./components";
-import { partTitle } from "./format";
+import { RecipeLabels } from "./format";
 import { Sheet } from "./Sheet";
 
 export type EditTarget = TextPart | "schedule" | "color";
@@ -20,6 +20,7 @@ export class EditSheet extends Sheet {
 		private readonly path: string,
 		habit: Habit,
 		private readonly target: EditTarget,
+		private readonly labels: RecipeLabels,
 	) {
 		super(app, habit.name, habit.color);
 		this.text = target === "schedule" || target === "color" ? "" : (habit.text(target).current() ?? "");
@@ -30,7 +31,7 @@ export class EditSheet extends Sheet {
 	protected override fill(body: HTMLElement): void {
 		const { target } = this;
 		if (target === "schedule") {
-			body.createDiv({ cls: "th-label", text: partTitle("schedule") });
+			body.createDiv({ cls: "th-label", text: this.labels.title("schedule") });
 			weekdayCircles(body, this.days, (days) => {
 				this.days = days;
 				this.refreshReady();
@@ -46,7 +47,7 @@ export class EditSheet extends Sheet {
 			return;
 		}
 		const input = textField(body, {
-			label: partTitle(target),
+			label: this.labels.title(target),
 			value: this.text,
 			hero: true,
 			onInput: (value) => {

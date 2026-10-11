@@ -2,7 +2,7 @@ import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
 import { JarSize } from "../domain/Jar";
 import { PropertyNames } from "../infrastructure/HabitCodec";
 import { DEFAULT_SETTINGS, HabitSettings, MAX_DAY_START, parseReasons } from "../settings";
-import { partTitle } from "./format";
+import { DEFAULT_LABELS, LabelSet, RecipeLabels } from "./format";
 import { Hsl, parseColor } from "./jar/color";
 import { DEFAULT_MARBLE_SIZES, JAR_MATERIALS, JarMaterial, assetSvg } from "./jar/JarAssets";
 import { CornerCalibration } from "./CornerCalibration";
@@ -23,12 +23,14 @@ const PREVIEW: ReadonlyArray<{ color: string; size: JarSize; full: boolean }> = 
 	{ color: "--color-green", size: "medium", full: false },
 	{ color: "--color-orange", size: "small", full: true },
 ];
-const PROPERTY_LABELS: Record<keyof PropertyNames, string> = {
-	anchor: partTitle("anchor"),
-	tiny: partTitle("tiny"),
-	full: partTitle("full"),
-	celebration: partTitle("celebration"),
-	schedule: partTitle("schedule"),
+const LABEL_PARTS: ReadonlyArray<{ part: keyof LabelSet; name: string }> = [
+	{ part: "anchor", name: "Anchor" },
+	{ part: "tiny", name: "Tiny version" },
+	{ part: "full", name: "Full version" },
+	{ part: "celebration", name: "Celebration" },
+	{ part: "schedule", name: "Days" },
+];
+const PROPERTY_NAMES: Record<Exclude<keyof PropertyNames, keyof LabelSet>, string> = {
 	doneTiny: "Tiny days",
 	doneFull: "Full days",
 	missed: "Skipped days",
@@ -57,6 +59,7 @@ export class SettingsTab extends PluginSettingTab {
 		this.marbles(containerEl);
 		this.today(containerEl);
 		this.skipped(containerEl);
+		this.labels(containerEl);
 		this.properties(containerEl);
 	}
 
@@ -216,14 +219,35 @@ export class SettingsTab extends PluginSettingTab {
 			.addToggle((toggle) => toggle.setValue(settings.habitBlock).onChange((value) => void this.save((next) => (next.habitBlock = value))));
 	}
 
+	private labels(containerEl: HTMLElement): void {
+		const settings = this.host.settings;
+		new Setting(containerEl)
+			.setName("Field labels")
+			.setDesc("What each part of a habit is called on Today, in the habit panel and in forms. The recipe reads as one sentence: “after I … I will … on a good day … and celebrate … every …”.")
+			.setHeading();
+		for (const { part, name } of LABEL_PARTS) {
+			new Setting(containerEl).setName(name).addText((text) =>
+				text
+					.setPlaceholder(DEFAULT_LABELS[part])
+					.setValue(settings.labels[part])
+					.onChange((value) => void this.save((next) => (next.labels = { ...next.labels, [part]: value.trim() || DEFAULT_LABELS[part] }))),
+			);
+		}
+	}
+
 	private properties(containerEl: HTMLElement): void {
 		const settings = this.host.settings;
 		new Setting(containerEl)
 			.setName("Note properties")
 			.setDesc("Where each part of a habit is stored in its note. Renaming here doesn't rename properties in notes you already have.")
 			.setHeading();
-		for (const key of Object.keys(PROPERTY_LABELS) as Array<keyof PropertyNames>) {
-			new Setting(containerEl).setName(PROPERTY_LABELS[key]).addText((text) =>
+		const labels = new RecipeLabels(settings.labels);
+		const names: Record<keyof PropertyNames, string> = {
+			...(Object.fromEntries(LABEL_PARTS.map(({ part }) => [part, labels.title(part)])) as Record<keyof LabelSet, string>),
+			...PROPERTY_NAMES,
+		};
+		for (const key of Object.keys(names) as Array<keyof PropertyNames>) {
+			new Setting(containerEl).setName(names[key]).addText((text) =>
 				text
 					.setPlaceholder(DEFAULT_SETTINGS.properties[key])
 					.setValue(settings.properties[key])

@@ -10,6 +10,7 @@ import { HABIT_VIEW, HabitScreenView } from "./ui/HabitScreenView";
 import { HABITS_VIEW, TodayView } from "./ui/TodayView";
 import { SettingsHost, SettingsTab } from "./ui/SettingsTab";
 import { DeviceSettings } from "./ui/DeviceSettings";
+import { RecipeLabels } from "./ui/format";
 import { UiContext } from "./ui/UiContext";
 
 const DAY_CHECK_MS = 60_000;
@@ -32,8 +33,9 @@ export default class MarbleHabitTrackerPlugin extends Plugin implements Settings
 			repository,
 			settings: () => this.settings,
 			screenCorners: () => this.device.screenCorners,
+			labels: () => new RecipeLabels(this.settings.labels),
 			openHabit: (path, leaf) => void this.openHabit(path, leaf),
-			newHabit: () => new HabitFormModal(this.app, service).open(),
+			newHabit: () => new HabitFormModal(this.app, service, new RecipeLabels(this.settings.labels)).open(),
 		};
 		this.newHabit = ui.newHabit;
 		this.listPaths = () => repository.list().map((entry) => entry.path);

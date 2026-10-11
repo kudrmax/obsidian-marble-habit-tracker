@@ -9,7 +9,6 @@ import { chip, icon, iconButton } from "./components";
 import { DayWatcher } from "./DayWatcher";
 import { EditSheet } from "./EditSheet";
 import { Haptics } from "./Haptics";
-import { anchorLine } from "./format";
 import { Hsl, parseColor } from "./jar/color";
 import { JarCanvas, JarItem } from "./jar/JarCanvas";
 import { KeyboardWatch } from "./KeyboardWatch";
@@ -328,13 +327,14 @@ export class TodayView extends ItemView {
 		const main = row.createDiv("th-row-main");
 
 		const text = main.createDiv("th-row-text");
-		text.createDiv({ cls: "th-row-title", text: habit.text("tiny").current() ?? habit.name });
-		text.createDiv({ cls: "th-row-sub", text: this.subtitle(path, habit, mark) });
+		text.createDiv({ cls: "th-row-title", text: habit.headline });
+		const subtitle = this.subtitle(path, habit, mark);
+		if (subtitle) text.createDiv({ cls: "th-row-sub", text: subtitle });
 		text.addEventListener("click", () => this.ui.openHabit(path, this.leaf));
 
-		if (this.menu === path) this.renderAnswers(main, path, mark);
+		if (this.menu === path) this.renderAnswers(main, path, habit, mark);
 		else {
-			this.renderMark(main, path, mark);
+			this.renderMark(main, path, habit, mark);
 		}
 		if (this.asking === path) this.renderReasons(row, path);
 		if (this.shrink === path && mark?.kind === "missed") this.renderShrink(row, path, habit);
@@ -342,15 +342,20 @@ export class TodayView extends ItemView {
 
 	private subtitle(path: string, habit: Habit, mark: DayMark | undefined): string {
 		if (this.asking === path) return "skipped — why?";
-		if (!mark) return anchorLine(habit);
+		if (!mark) return this.ui.labels().anchorLine(habit);
 		if (mark.kind === "missed") return `skipped · ${mark.reason.toLowerCase()}`;
-		return mark.kind === "full" ? `full · ${habit.text("full").current() ?? ""}`.replace(/ · $/, "") : "tiny";
+		if (mark.kind === "tiny") return "tiny";
+		return habit.hasTiny ? `full · ${habit.text("full").current() ?? ""}`.replace(/ · $/, "") : "done";
 	}
 
-	private renderMark(parent: HTMLElement, path: string, mark: DayMark | undefined): void {
-		const hint = mark ? "Click to undo · hold or right-click to change" : "Click for tiny · hold or right-click for full or skipped";
+	private renderMark(parent: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
+		const hint = mark
+			? "Click to undo · hold or right-click to change"
+			: habit.hasTiny
+				? "Click for tiny · hold or right-click for full or skipped"
+				: "Click for done · hold or right-click for skipped";
 		const button = parent.createEl("button", { cls: "th-mark-button", attr: { title: hint } });
-		button.createSpan({ cls: "th-sr-only", text: mark ? "Undo — hold to change" : "Tiny — hold for full or skipped" });
+		button.createSpan({ cls: "th-sr-only", text: mark ? "Undo — hold to change" : habit.hasTiny ? "Tiny — hold for full or skipped" : "Done — hold for skipped" });
 		const circle = button.createSpan("th-mark");
 		if (isDone(mark)) {
 			circle.addClass("is-done");
@@ -380,11 +385,12 @@ export class TodayView extends ItemView {
 				this.held = false;
 				return;
 			}
-			void this.answer(path, mark ? undefined : TINY, event);
+			void this.answer(path, mark ? undefined : habit.hasTiny ? TINY : FULL, event);
 		});
 	}
 
-	private renderAnswers(parent: HTMLElement, path: string, mark: DayMark | undefined): void {
+	/** Skipped, full and — when the habit has a tiny version — tiny. */
+	private renderAnswers(parent: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
 		const answers = parent.createDiv("th-answers");
 		const option = (answer: Answer, label: string, iconName: "x" | "spark" | "check", selected: boolean) => {
 			const button = answers.createEl("button", { cls: ["th-answer", `th-answer-${answer}`], attr: { title: label } });
@@ -395,7 +401,7 @@ export class TodayView extends ItemView {
 		};
 		option("skip", "Skipped", "x", mark?.kind === "missed");
 		option("full", "Full", "spark", mark?.kind === "full");
-		option("tiny", "Tiny", "check", mark?.kind === "tiny");
+		if (habit.hasTiny) option("tiny", "Tiny", "check", mark?.kind === "tiny");
 	}
 
 	private renderReasons(row: HTMLElement, path: string): void {
@@ -436,7 +442,7 @@ export class TodayView extends ItemView {
 		const link = extra.createEl("button", { cls: "th-link" });
 		icon(link, "shrink");
 		link.appendText("Make it even tinier");
-		link.addEventListener("click", () => new EditSheet(this.app, this.ui.service, path, habit, "tiny").open());
+		link.addEventListener("click", () => new EditSheet(this.app, this.ui.service, path, habit, "tiny", this.ui.labels()).open());
 	}
 
 	private showMenu(path: string): void {

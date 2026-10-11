@@ -5,7 +5,7 @@ import { computeStats } from "../domain/Stats";
 import { calendarStart, calendarWeeks } from "./calendar";
 import { colorClass } from "./colors";
 import { EditSheet } from "./EditSheet";
-import { RECIPE_LABELS, dayMonth, describeChange, monthShort, recipeDays } from "./format";
+import { dayMonth, monthShort, recipeDays } from "./format";
 import { UiContext } from "./UiContext";
 
 const RECIPE_ICONS: Record<TextPart | "schedule", string> = {
@@ -111,11 +111,12 @@ export class HabitBlock {
 
 	private renderRecipe(rows: HTMLElement, habit: Habit): void {
 		const text = (part: TextPart) => habit.text(part).current();
+		const labels = this.ui.labels();
 		for (const part of ["anchor", "tiny", "full", "celebration"] as const) {
-			this.editable(this.property(rows, RECIPE_ICONS[part], RECIPE_LABELS[part]), text(part) ?? "", (next) => this.ui.service.replaceText(this.path, part, next));
+			this.editable(this.property(rows, RECIPE_ICONS[part], labels.of(part)), text(part) ?? "", (next) => this.ui.service.replaceText(this.path, part, next));
 		}
-		const days = this.property(rows, RECIPE_ICONS.schedule, RECIPE_LABELS.schedule).createDiv({ cls: "metadata-input-longtext th-habit-days", text: recipeDays(habit.currentSchedule) });
-		days.addEventListener("click", () => new EditSheet(this.app, this.ui.service, this.path, habit, "schedule").open());
+		const days = this.property(rows, RECIPE_ICONS.schedule, labels.of("schedule")).createDiv({ cls: "metadata-input-longtext th-habit-days", text: recipeDays(habit.currentSchedule) });
+		days.addEventListener("click", () => new EditSheet(this.app, this.ui.service, this.path, habit, "schedule", labels).open());
 		this.editable(this.property(rows, SECTION_ICON, "section"), habit.section ?? "", (next) => this.ui.service.setSection(this.path, next));
 	}
 
@@ -209,7 +210,7 @@ export class HabitBlock {
 			if (note) body.createSpan({ cls: "th-history-note", text: note });
 		};
 		for (const miss of misses) row(miss.date, "missed", miss.reason);
-		for (const change of changes) row(change.date, "change", describeChange(change), change.because);
+		for (const change of changes) row(change.date, "change", this.ui.labels().describeChange(change), change.because);
 	}
 
 	private async run(action: () => Promise<unknown>): Promise<void> {

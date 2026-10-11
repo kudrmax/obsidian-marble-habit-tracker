@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Schedule } from "../src/domain/Schedule";
-import { anchorLine, dayMonth, describeChange, longDate, recipeDays } from "../src/ui/format";
+import { RecipeLabels, dayMonth, longDate, recipeDays } from "../src/ui/format";
 import { d } from "./support/dates";
 import { habitNote } from "./support/habits";
 
@@ -15,8 +15,18 @@ describe("format", () => {
 		expect(longDate(d("2026-10-09"))).toBe("Fri, Oct 9");
 	});
 
+	const labels = new RecipeLabels();
+	const anchorLine = (habit: ReturnType<typeof habitNote>) => labels.anchorLine(habit);
+	const describeChange = (change: Parameters<RecipeLabels["describeChange"]>[0]) => labels.describeChange(change);
+
 	it("shows the anchor as the start of the recipe", () => {
 		expect(anchorLine(habitNote("Workout"))).toBe("after I put my mug in the sink");
+	});
+
+	it("names the parts with the labels from settings", () => {
+		const custom = new RecipeLabels({ anchor: "после того как", tiny: "я", full: "в хороший день", celebration: "и порадуюсь", schedule: "каждый" });
+		expect(custom.anchorLine(habitNote("Workout"))).toBe("после того как put my mug in the sink");
+		expect(custom.title("tiny")).toBe("Я");
 	});
 
 	it("describes a recipe change by its new value", () => {

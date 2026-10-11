@@ -24,13 +24,23 @@ describe("Habit", () => {
 		expect(habit.order).toBeUndefined();
 	});
 
-	it("requires a name, an anchor and a tiny behavior", () => {
+	it("requires a name, days and a tiny or a full version", () => {
 		const input = { name: "Зарядка", anchor: "Кофе", tiny: "1", days: WEEKDAYS };
 		expect(() => Habit.create({ ...input, name: " " }, created)).toThrow(DomainError);
 		expect(() => Habit.create({ ...input, name: "a/b" }, created)).toThrow(DomainError);
-		expect(() => Habit.create({ ...input, anchor: " " }, created)).toThrow("Anchor");
-		expect(() => Habit.create({ ...input, tiny: "" }, created)).toThrow("Tiny habit");
+		expect(() => Habit.create({ ...input, tiny: "", full: " " }, created)).toThrow("tiny or a full");
 		expect(() => Habit.create({ ...input, days: [] }, created)).toThrow(DomainError);
+	});
+
+	it("can go without an anchor or without a tiny version", () => {
+		const full = Habit.create({ name: "Зал", full: "Тренировка", days: WEEKDAYS }, created);
+		expect(full.text("anchor").isEmpty).toBe(true);
+		expect(full.hasTiny).toBe(false);
+		expect(full.hasFull).toBe(true);
+		expect(full.headline).toBe("Тренировка");
+		const tiny = Habit.create({ name: "Чтение", tiny: "1 страница", days: WEEKDAYS }, created);
+		expect(tiny.hasTiny).toBe(true);
+		expect(tiny.headline).toBe("1 страница");
 	});
 
 	it("sets and clears marks without changing the original", () => {
