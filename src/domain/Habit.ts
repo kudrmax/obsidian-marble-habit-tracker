@@ -150,8 +150,8 @@ export class Habit {
 	}
 
 	get createdOn(): LocalDate {
-		const firsts = [this.state.schedule.versions, this.state.text.anchor.versions, this.state.text.tiny.versions].map(
-			(versions) => versions[versions.length - 1].since,
+		const firsts = [this.state.schedule.versions, ...TEXT_PARTS.map((part) => this.state.text[part].versions)].flatMap((versions) =>
+			versions.length ? [versions[versions.length - 1].since] : [],
 		);
 		return firsts.reduce((earliest, date) => (date.isBefore(earliest) ? date : earliest));
 	}
@@ -195,8 +195,7 @@ export class Habit {
 	 */
 	clearText(part: TextPart, today: LocalDate): Habit {
 		if (this.current(part) === undefined) return this;
-		const cleared = this.state.text[part].replace(REMOVED, today);
-		const habit = this.withText(part, cleared.versions.every((version) => version.value === REMOVED) ? Component.empty<string>() : cleared);
+		const habit = this.withText(part, this.state.text[part].replace(REMOVED, today));
 		if (!habit.hasTiny && !habit.hasFull) throw new DomainError(NEEDS_A_VERSION);
 		return habit;
 	}

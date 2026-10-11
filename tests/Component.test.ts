@@ -21,9 +21,14 @@ describe("Component", () => {
 		expect(next.versions[1]).toEqual({ value: "Выпью кофе", since: d("2026-09-01") });
 	});
 
-	it("overwrites a version replaced on the day it started", () => {
-		const next = coffee.replace("Поставлю кружку", d("2026-09-01"), "передумал");
-		expect(next.versions).toEqual([{ value: "Поставлю кружку", since: d("2026-09-01") }]);
+	it("keeps every change made on one day, newest first", () => {
+		const next = coffee.replace("Поставлю кружку", d("2026-09-01"), "передумал").replace("Помою кружку", d("2026-09-01"));
+		expect(next.versions).toEqual([
+			{ value: "Помою кружку", since: d("2026-09-01") },
+			{ value: "Поставлю кружку", since: d("2026-09-01") },
+			{ value: "Выпью кофе", since: d("2026-09-01"), replacedBecause: "передумал" },
+		]);
+		expect(next.at(d("2026-09-01"))).toBe("Помою кружку");
 	});
 
 	it("ignores a replacement with the same value", () => {
@@ -58,13 +63,11 @@ describe("Component", () => {
 		expect(() => empty.correct("x")).toThrow(DomainError);
 	});
 
-	it("rejects versions that are not strictly newest first", () => {
-		expect(() =>
-			Component.of([
-				{ value: "a", since: d("2026-09-01") },
-				{ value: "b", since: d("2026-09-01") },
-			]),
-		).toThrow("same since date");
+	it("rejects versions that are not newest first", () => {
+		expect(Component.of([
+			{ value: "a", since: d("2026-09-01") },
+			{ value: "b", since: d("2026-09-01") },
+		]).current()).toBe("a");
 		expect(() =>
 			Component.of([
 				{ value: "a", since: d("2026-09-01") },

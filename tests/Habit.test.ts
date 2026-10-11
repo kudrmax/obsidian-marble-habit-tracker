@@ -43,14 +43,22 @@ describe("Habit", () => {
 		expect(habit.clearText("anchor", today).current("anchor")).toBeUndefined();
 	});
 
-	it("forgets a part removed on the day it was written", () => {
+	it("keeps a part removed on the day it was written in the history", () => {
 		const habit = Habit.create({ name: "Чтение", tiny: "1 страница", full: "Глава", days: WEEKDAYS }, today);
-		expect(habit.clearText("full", today).text("full").isEmpty).toBe(true);
+		const cleared = habit.clearText("full", today);
+		expect(cleared.hasFull).toBe(false);
+		expect(cleared.changes()).toEqual([expect.objectContaining({ part: "full", from: "Глава", to: "" })]);
 	});
 
 	it("keeps a tiny or a full version", () => {
 		const habit = Habit.create({ name: "Чтение", tiny: "1 страница", full: "Глава", days: WEEKDAYS }, created);
 		expect(() => habit.clearText("tiny", today).clearText("full", today)).toThrow("tiny or a full");
+	});
+
+	it("knows when a habit without an anchor or a tiny version started", () => {
+		const habit = Habit.create({ name: "Зал", full: "Тренировка", days: WEEKDAYS }, created);
+		expect(habit.createdOn).toEqual(created);
+		expect(habit.isScheduled(today)).toBe(true);
 	});
 
 	it("can go without an anchor or without a tiny version", () => {

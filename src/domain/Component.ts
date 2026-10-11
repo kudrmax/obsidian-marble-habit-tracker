@@ -9,6 +9,7 @@ export interface Version<T> {
 
 type Same<T> = (a: T, b: T) => boolean;
 
+/** A value's history, newest version first. Every change is kept, several changes on one day too, in the order made. */
 export class Component<T> {
 	private constructor(
 		private readonly list: readonly Version<T>[],
@@ -19,7 +20,6 @@ export class Component<T> {
 		for (let index = 1; index < versions.length; index++) {
 			const newer = versions[index - 1].since;
 			const older = versions[index].since;
-			if (newer.equals(older)) throw new DomainError("Two versions have the same since date");
 			if (newer.isBefore(older)) throw new DomainError("Versions must go from newest to oldest");
 		}
 		return new Component([...versions], same);
@@ -54,7 +54,6 @@ export class Component<T> {
 		if (!latest) return new Component([{ value, since: today }], this.same);
 		if (this.same(latest.value, value)) return this;
 		if (today.isBefore(latest.since)) throw new DomainError("Can't replace a version that starts in the future — use Fix instead");
-		if (today.equals(latest.since)) return new Component([{ ...latest, value }, ...older], this.same);
 		const reason = because?.trim();
 		const retired: Version<T> = reason ? { ...latest, replacedBecause: reason } : latest;
 		return new Component([{ value, since: today }, retired, ...older], this.same);

@@ -101,6 +101,14 @@ describe("decodeHabit", () => {
 		expect(frontmatter.off_trigger).toBeUndefined();
 	});
 
+	it("keeps several versions from one day in their order", () => {
+		const habit = decodeHabit("Зарядка", example({ tiny: [{ value: "b", since: "2026-10-01" }, { value: "a", since: "2026-10-01" }, { value: "old", since: "2026-09-01" }] }));
+		expect(habit.current("tiny")).toBe("b");
+		const frontmatter = example();
+		encodeHabit(habit, frontmatter);
+		expect((frontmatter.tiny as { value: string }[]).map((version) => version.value)).toEqual(["b", "a", "old"]);
+	});
+
 	it("reads archived", () => {
 		expect(decodeHabit("Зарядка", example({ archived: true })).archived).toBe(true);
 	});
@@ -114,16 +122,6 @@ describe("decodeHabit", () => {
 		["missed without reason", { missed: [{ date: "2026-10-07" }] }, "reason"],
 		["unknown weekday", { schedule: [{ value: ["funday"], since: "2026-09-01" }] }, "funday"],
 		["empty schedule", { schedule: [{ value: [], since: "2026-09-01" }] }, "at least one day"],
-		[
-			"two versions on one day",
-			{
-				tiny: [
-					{ value: "a", since: "2026-09-01" },
-					{ value: "b", since: "2026-09-01" },
-				],
-			},
-			"same since date",
-		],
 		["order not a number", { order: "first" }, "order"],
 	])("reports %s", (_label, patch, message) => {
 		const frontmatter = patch === undefined ? undefined : example(patch as Frontmatter);
