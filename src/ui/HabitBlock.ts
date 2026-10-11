@@ -118,7 +118,7 @@ export class HabitBlock {
 		const days = this.property(rows, RECIPE_ICONS.schedule, labels.of("schedule")).createDiv({ cls: "metadata-input-longtext th-habit-days", text: recipeDays(habit.currentSchedule) });
 		days.addEventListener("click", () => new EditSheet(this.app, this.ui.service, this.path, habit, "schedule", labels).open());
 		this.editable(this.property(rows, SECTION_ICON, "section"), habit.section ?? "", (next) => this.ui.service.setSection(this.path, next));
-		const anytime = this.property(rows, "clock", "not at trigger").createEl("input", { cls: "metadata-input-checkbox", type: "checkbox", attr: { title: "Can also be done without the anchor" } });
+		const anytime = this.property(rows, "unlink", "not at trigger").createEl("input", { cls: "metadata-input-checkbox", type: "checkbox", attr: { title: "Can also be done without the anchor" } });
 		anytime.checked = habit.anytime;
 		anytime.addEventListener("change", () => void this.run(() => this.ui.service.setAnytime(this.path, anytime.checked)));
 	}

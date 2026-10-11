@@ -415,7 +415,7 @@ export class TodayView extends ItemView {
 		const extra = row.createDiv("th-row-extra th-off-trigger-line");
 		const chip = extra.createEl("button", { cls: "th-chip th-off-trigger", attr: { "aria-pressed": String(this.offTrigger) } });
 		chip.toggleClass("is-on", this.offTrigger);
-		icon(chip.createSpan("th-off-trigger-icon"), "clock");
+		icon(chip.createSpan("th-off-trigger-icon"), "unlink");
 		chip.createSpan({ text: "Not at trigger" });
 		chip.addEventListener("click", () => {
 			this.offTrigger = !this.offTrigger;
