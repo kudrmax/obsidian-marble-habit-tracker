@@ -87,6 +87,20 @@ describe("decodeHabit", () => {
 		expect(read.text("full").versions.length).toBe(habit.text("full").versions.length);
 	});
 
+	it("reads and writes days done not at trigger and the anytime switch", () => {
+		const habit = decodeHabit("Зарядка", example({ anytime: true, off_trigger: ["2026-10-09", "2026-10-07"] }));
+		expect(habit.anytime).toBe(true);
+		expect(habit.markOn(d("2026-10-09"))).toEqual({ kind: "full", offTrigger: true });
+		expect(habit.markOn(d("2026-10-07"))?.kind).toBe("missed");
+		const frontmatter = example();
+		encodeHabit(habit, frontmatter);
+		expect(frontmatter.anytime).toBe(true);
+		expect(frontmatter.off_trigger).toEqual(["2026-10-09"]);
+		encodeHabit(habit.withAnytime(false).withMark(d("2026-10-09"), FULL, d("2026-10-10")), frontmatter);
+		expect(frontmatter.anytime).toBeUndefined();
+		expect(frontmatter.off_trigger).toBeUndefined();
+	});
+
 	it("reads archived", () => {
 		expect(decodeHabit("Зарядка", example({ archived: true })).archived).toBe(true);
 	});

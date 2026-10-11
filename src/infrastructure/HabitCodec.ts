@@ -1,5 +1,5 @@
 import { Component, Version } from "../domain/Component";
-import { DayMark, FULL, TINY, missed } from "../domain/DayMark";
+import { DayMark, FULL, TINY, done, isOffTrigger, missed } from "../domain/DayMark";
 import { DomainError } from "../domain/DomainError";
 import { Habit, TEXT_PARTS, TextPart, sameSchedule } from "../domain/Habit";
 import { HabitColor, isHabitColor } from "../domain/HabitColor";
@@ -16,6 +16,7 @@ export interface PropertyNames {
 	readonly section: string;
 	readonly color: string;
 	readonly archived: string;
+	readonly anytime: string;
 	readonly schedule: string;
 	readonly anchor: string;
 	readonly tiny: string;
@@ -24,6 +25,7 @@ export interface PropertyNames {
 	readonly doneTiny: string;
 	readonly doneFull: string;
 	readonly missed: string;
+	readonly offTrigger: string;
 }
 
 export const DEFAULT_PROPERTY_NAMES: PropertyNames = {
@@ -31,6 +33,7 @@ export const DEFAULT_PROPERTY_NAMES: PropertyNames = {
 	section: "section",
 	color: "color",
 	archived: "archived",
+	anytime: "anytime",
 	schedule: "schedule",
 	anchor: "anchor",
 	tiny: "tiny",
@@ -39,6 +42,7 @@ export const DEFAULT_PROPERTY_NAMES: PropertyNames = {
 	doneTiny: "done_tiny",
 	doneFull: "done_full",
 	missed: "missed",
+	offTrigger: "off_trigger",
 };
 
 export function decodeHabit(name: string, frontmatter: Frontmatter | null | undefined, keys: PropertyNames = DEFAULT_PROPERTY_NAMES): Habit {
@@ -54,6 +58,7 @@ export function decodeHabit(name: string, frontmatter: Frontmatter | null | unde
 			section: readSection(frontmatter[keys.section]),
 			color: readColor(frontmatter[keys.color], keys.color),
 			archived: frontmatter[keys.archived] === true,
+			anytime: frontmatter[keys.anytime] === true,
 			schedule: readVersions(frontmatter, keys.schedule, readSchedule, sameSchedule),
 			text,
 			marks: readMarks(frontmatter, keys),
@@ -80,6 +85,8 @@ export function encodeHabit(habit: Habit, frontmatter: Frontmatter, keys: Proper
 		nonEmpty(marks.flatMap(([date, mark]) => (mark.kind === "missed" ? [{ date: date.toString(), reason: mark.reason }] : []))),
 	);
 	put(frontmatter, keys.archived, habit.archived ? true : undefined);
+	put(frontmatter, keys.anytime, habit.anytime ? true : undefined);
+	put(frontmatter, keys.offTrigger, nonEmpty(marks.filter(([, mark]) => isOffTrigger(mark)).map(([date]) => date.toString())));
 }
 
 function put(frontmatter: Frontmatter, key: string, value: unknown): void {
@@ -184,6 +191,11 @@ function readMarks(frontmatter: Frontmatter, keys: PropertyNames): Map<string, D
 	for (const item of list(frontmatter, keys.missed)) {
 		if (!isRecord(item)) throw new HabitDecodeError(`${keys.missed}: expected entries with date and reason`);
 		add(readDate(item.date, keys.missed), missed(typeof item.reason === "string" ? item.reason : ""), keys.missed);
+	}
+	for (const value of list(frontmatter, keys.offTrigger)) {
+		const id = readDate(value, keys.offTrigger).toString();
+		const mark = marks.get(id);
+		if (mark && mark.kind !== "missed") marks.set(id, done(mark.kind, true));
 	}
 	return marks;
 }

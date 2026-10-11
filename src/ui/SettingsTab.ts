@@ -34,6 +34,8 @@ const PROPERTY_NAMES: Record<Exclude<keyof PropertyNames, keyof LabelSet>, strin
 	doneTiny: "Tiny days",
 	doneFull: "Full days",
 	missed: "Skipped days",
+	offTrigger: "Days not at trigger",
+	anytime: "Can be done without the anchor",
 	color: "Color",
 	order: "Order",
 	section: "Section",

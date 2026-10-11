@@ -28,6 +28,8 @@ export interface HabitState {
 	readonly section?: string;
 	readonly color?: HabitColor;
 	readonly archived: boolean;
+	/** Whether the habit may also be done without its anchor, which is then marked as not at trigger. */
+	readonly anytime?: boolean;
 	readonly schedule: Component<Schedule>;
 	readonly text: Readonly<Record<TextPart, Component<string>>>;
 	readonly marks: ReadonlyMap<string, DayMark>;
@@ -40,6 +42,7 @@ export interface NewHabit {
 	readonly full?: string;
 	readonly celebration?: string;
 	readonly color?: HabitColor;
+	readonly anytime?: boolean;
 	readonly days: readonly Weekday[];
 }
 
@@ -79,6 +82,7 @@ export class Habit {
 			name: input.name,
 			color: input.color,
 			archived: false,
+			anytime: input.anytime === true,
 			schedule: Component.start(new Schedule(input.days), today, sameSchedule),
 			text: {
 				anchor: start(input.anchor),
@@ -127,6 +131,14 @@ export class Habit {
 
 	get archived(): boolean {
 		return this.state.archived;
+	}
+
+	get anytime(): boolean {
+		return this.state.anytime === true;
+	}
+
+	withAnytime(anytime: boolean): Habit {
+		return new Habit({ ...this.state, anytime });
 	}
 
 	get schedule(): Component<Schedule> {

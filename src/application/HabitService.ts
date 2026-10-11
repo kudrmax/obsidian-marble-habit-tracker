@@ -57,6 +57,10 @@ export class HabitService {
 		}
 	}
 
+	async setAnytime(path: string, anytime: boolean): Promise<Habit> {
+		return this.repository.update(path, (habit) => habit.withAnytime(anytime));
+	}
+
 	async setSection(path: string, section: string | undefined): Promise<Habit> {
 		return this.repository.update(path, (habit) => habit.withSection(section));
 	}

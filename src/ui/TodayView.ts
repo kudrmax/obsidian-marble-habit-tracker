@@ -1,6 +1,6 @@
 import { ItemView, Notice, WorkspaceLeaf, setIcon } from "obsidian";
 import { HabitEntry } from "../application/ports";
-import { DayMark, FULL, TINY, isDone, missed } from "../domain/DayMark";
+import { DayMark, FULL, TINY, done, isDone, isOffTrigger, missed } from "../domain/DayMark";
 import { Habit } from "../domain/Habit";
 import { HabitColor } from "../domain/HabitColor";
 import { buildJar } from "../domain/Jar";
@@ -48,6 +48,8 @@ export class TodayView extends ItemView {
 	/** A redraw was asked for while a row was being dragged; it runs on drop. */
 	private stale = false;
 	private menu: string | null = null;
+	/** In the open menu, the next tiny or full answer is marked as done without the anchor. */
+	private offTrigger = false;
 	private asking: string | null = null;
 	private other: string | null = null;
 	private otherText = "";
@@ -336,6 +338,7 @@ export class TodayView extends ItemView {
 		else {
 			this.renderMark(main, path, habit, mark);
 		}
+		if (this.menu === path && canGoOffTrigger(habit)) this.renderOffTrigger(row);
 		if (this.asking === path) this.renderReasons(row, path);
 		if (this.shrink === path && mark?.kind === "missed") this.renderShrink(row, path, habit);
 	}
@@ -344,8 +347,8 @@ export class TodayView extends ItemView {
 		if (this.asking === path) return "skipped — why?";
 		if (!mark) return this.ui.labels().anchorLine(habit);
 		if (mark.kind === "missed") return `skipped · ${mark.reason.toLowerCase()}`;
-		if (mark.kind === "tiny") return "tiny";
-		return habit.hasTiny ? `full · ${habit.current("full") ?? ""}`.replace(/ · $/, "") : "done";
+		const what = mark.kind === "tiny" ? "tiny" : habit.hasTiny ? `full · ${habit.current("full") ?? ""}`.replace(/ · $/, "") : "done";
+		return isOffTrigger(mark) ? `${what} · not at trigger` : what;
 	}
 
 	private renderMark(parent: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
@@ -399,9 +402,25 @@ export class TodayView extends ItemView {
 			icon(button.createSpan("th-answer-circle"), iconName);
 			button.addEventListener("click", (event) => void this.choose(path, answer, mark, event));
 		};
+		const offTrigger = this.offTrigger && canGoOffTrigger(habit);
+		answers.toggleClass("is-off-trigger", offTrigger);
+		const chosen = (kind: "full" | "tiny") => mark?.kind === kind && isOffTrigger(mark) === offTrigger;
 		option("skip", "Skipped", "x", mark?.kind === "missed");
-		option("full", "Full", "spark", mark?.kind === "full");
-		if (habit.hasTiny) option("tiny", "Tiny", "check", mark?.kind === "tiny");
+		option("full", "Full", "spark", chosen("full"));
+		if (habit.hasTiny) option("tiny", "Tiny", "check", chosen("tiny"));
+	}
+
+	/** A switch under the row while its menu is open: the tiny or full answer picked next counts as done without the anchor. */
+	private renderOffTrigger(row: HTMLElement): void {
+		const extra = row.createDiv("th-row-extra th-off-trigger-line");
+		const chip = extra.createEl("button", { cls: "th-chip th-off-trigger", attr: { "aria-pressed": String(this.offTrigger) } });
+		chip.toggleClass("is-on", this.offTrigger);
+		icon(chip.createSpan("th-off-trigger-icon"), "shuffle");
+		chip.createSpan({ text: "Not at trigger" });
+		chip.addEventListener("click", () => {
+			this.offTrigger = !this.offTrigger;
+			this.render();
+		});
 	}
 
 	private renderReasons(row: HTMLElement, path: string): void {
@@ -448,19 +467,23 @@ export class TodayView extends ItemView {
 	private showMenu(path: string): void {
 		if (this.menu === path) return;
 		this.menu = path;
+		const entry = this.ui.repository.get(path);
+		this.offTrigger = entry?.kind === "ok" && isOffTrigger(entry.habit.markOn(this.ui.service.today()));
 		this.render();
 	}
 
 	private closeMenuOutside(event: MouseEvent): void {
 		if (!this.menu) return;
 		const target = event.target as HTMLElement | null;
-		if (target?.closest(".th-answers, .th-mark-button")) return;
+		if (target?.closest(".th-answers, .th-mark-button, .th-off-trigger")) return;
 		this.menu = null;
 		this.render();
 	}
 
 	private async choose(path: string, answer: Answer, current: DayMark | undefined, event: MouseEvent): Promise<void> {
-		const same = (answer === "skip" && current?.kind === "missed") || (answer === "full" && current?.kind === "full") || (answer === "tiny" && current?.kind === "tiny");
+		const entry = this.ui.repository.get(path);
+		const offTrigger = this.offTrigger && entry?.kind === "ok" && canGoOffTrigger(entry.habit);
+		const same = (answer === "skip" && current?.kind === "missed") || (answer !== "skip" && current?.kind === answer && isOffTrigger(current) === offTrigger);
 		if (same) return this.answer(path, undefined);
 		if (answer === "skip") {
 			this.menu = null;
@@ -470,7 +493,7 @@ export class TodayView extends ItemView {
 			this.render();
 			return;
 		}
-		return this.answer(path, answer === "full" ? FULL : TINY, event);
+		return this.answer(path, done(answer, offTrigger), event);
 	}
 
 	private async answer(path: string, mark: DayMark | undefined, event?: MouseEvent): Promise<void> {
@@ -604,4 +627,9 @@ export class TodayView extends ItemView {
 		probe.remove();
 		return parseColor(value);
 	}
+}
+
+/** "Not at trigger" means something only for a habit that allows it and has an anchor to miss. */
+function canGoOffTrigger(habit: Habit): boolean {
+	return habit.anytime && habit.current("anchor") !== undefined;
 }

@@ -23,6 +23,7 @@ export class HabitFormModal extends Sheet {
 	private name = "";
 	private days: Weekday[] = [...WEEKDAYS];
 	private color: HabitColor | undefined;
+	private anytime = false;
 
 	constructor(
 		app: App,
@@ -50,6 +51,10 @@ export class HabitFormModal extends Sheet {
 		const first = field(`${labels.title("anchor")} · optional`, "something I already do every day", true, (value) => (this.anchor = value));
 		const tiny = field(labels.title("tiny"), "the tiniest version", true, (value) => (this.tiny = value));
 		const full = field(labels.title("full"), "the whole thing", true, (value) => (this.full = value));
+		const anytime = body.createEl("label", { cls: "th-check" });
+		const box = anytime.createEl("input", { type: "checkbox" });
+		anytime.createSpan({ text: "Can also be done without the anchor" });
+		box.addEventListener("change", () => (this.anytime = box.checked));
 		field(`${labels.title("celebration")} · optional`, "a word or a gesture, like “Yes!”", false, (value) => (this.celebration = value));
 		const show = (track: Track) => {
 			this.track = track;
@@ -92,6 +97,7 @@ export class HabitFormModal extends Sheet {
 			celebration: this.celebration,
 			days: this.days,
 			color: this.color,
+			anytime: this.anytime,
 		});
 	}
 }
