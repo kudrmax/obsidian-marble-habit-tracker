@@ -1,4 +1,4 @@
-import { ItemView, Notice, WorkspaceLeaf, setIcon } from "obsidian";
+import { ItemView, Notice, Platform, WorkspaceLeaf, setIcon } from "obsidian";
 import { HabitEntry } from "../application/ports";
 import { DayMark, FULL, TINY, done, isDone, isOffTrigger, missed } from "../domain/DayMark";
 import { Habit } from "../domain/Habit";
@@ -119,6 +119,12 @@ export class TodayView extends ItemView {
 			}),
 		);
 		this.registerDomEvent(root, "click", (event) => this.closeMenuOutside(event));
+		if (!Platform.isMobile) {
+			this.registerDomEvent(root, "pointermove", (event) => {
+				if (event.pointerType === "mouse" && this.cursorPushEnabled()) this.jar?.setPusher({ x: event.clientX, y: event.clientY });
+			});
+			this.registerDomEvent(root, "pointerleave", () => this.jar?.setPusher(null));
+		}
 		this.registerDomEvent(root, "pointerdown", () => {
 			if (this.tiltEnabled()) void this.tilt.askOnTap();
 		});
@@ -148,6 +154,7 @@ export class TodayView extends ItemView {
 
 	refresh(): void {
 		this.jar?.setOptions(this.jarOptions());
+		if (!this.cursorPushEnabled()) this.jar?.setPusher(null);
 		this.applyTilt();
 		this.render();
 	}
@@ -587,6 +594,11 @@ export class TodayView extends ItemView {
 			background: this.resolveVar("--background-primary"),
 			onImpact: (strength: number) => this.haptics.impact(strength),
 		};
+	}
+
+	private cursorPushEnabled(): boolean {
+		const settings = this.ui.settings();
+		return settings.cursorPush && !settings.reduceMotion;
 	}
 
 	private tiltEnabled(): boolean {

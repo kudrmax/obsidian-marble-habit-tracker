@@ -126,6 +126,10 @@ export class SettingsTab extends PluginSettingTab {
 				),
 			);
 		new Setting(containerEl)
+			.setName("Push with the mouse")
+			.setDesc("On a computer, move the mouse through the marbles to push them around.")
+			.addToggle((toggle) => toggle.setValue(settings.cursorPush).onChange((value) => void this.save((next) => (next.cursorPush = value))));
+		new Setting(containerEl)
 			.setName("Vibration")
 			.setDesc("A light tap when you mark a habit, when marbles bump and when they merge.")
 			.addToggle((toggle) => toggle.setValue(settings.haptics).onChange((value) => void this.save((next) => (next.haptics = value))));

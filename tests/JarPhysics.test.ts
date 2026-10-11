@@ -224,6 +224,21 @@ describe("JarPhysics", () => {
 		expect(floor.length).toBe(3);
 	});
 
+	it("lets the mouse's ball push a resting body away and wakes the bodies only when it touches one", () => {
+		const physics = new JarPhysics(400, 300);
+		physics.add({ id: "a", x: 200, y: 288, r: 12 });
+		settle(physics);
+		physics.setPusher({ x: 100, y: 288, r: 18 });
+		expect(physics.isSettled()).toBe(true);
+		physics.setPusher({ x: 190, y: 288, r: 18 });
+		expect(physics.isSettled()).toBe(false);
+		settle(physics);
+		expect(Math.hypot(physics.get("a")!.x - 190, physics.get("a")!.y - 288)).toBeGreaterThanOrEqual(30 - 0.5);
+		physics.setPusher(null);
+		settle(physics);
+		expect(physics.get("a")?.y).toBeCloseTo(288, 0);
+	});
+
 	it("keeps bodies inside the screen's rounded corners", () => {
 		const physics = new JarPhysics(400, 300);
 		physics.setScreen({ left: 0, top: -100, right: 400, bottom: 300, radius: 60 });

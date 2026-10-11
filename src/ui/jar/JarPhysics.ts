@@ -61,6 +61,8 @@ export class JarPhysics {
 	private readonly free: Body[] = [];
 	private before = new Float64Array(64);
 	private quietFrames = 0;
+	/** A solid ball the mouse moves around; bodies it touches are pushed away. */
+	private pusher: { x: number; y: number; r: number } | null = null;
 	/** Drives the sideways nudges; fixed so that a run can be replayed. */
 	private seed = 1;
 
@@ -92,6 +94,17 @@ export class JarPhysics {
 		this.ledges = ledges;
 		this.shapes.clear();
 		this.quietFrames = 0;
+	}
+
+	/** Moves the mouse's ball, or takes it away with null; the bodies wake only when it reaches one of them. */
+	setPusher(pusher: { x: number; y: number; r: number } | null): void {
+		this.pusher = pusher;
+		if (!pusher) return;
+		for (const body of this.items.values()) {
+			if (!this.pushes(body)) continue;
+			this.quietFrames = 0;
+			return;
+		}
 	}
 
 	setGravity(gravity: Point): void {
@@ -167,6 +180,7 @@ export class JarPhysics {
 		if (this.before.length < free.length) this.before = new Float64Array(free.length * 2);
 		const before = this.before;
 		for (let i = 0; i < free.length; i++) before[i] = Math.hypot(free[i].x - free[i].px, free[i].y - free[i].py);
+		if (this.pusher) for (const body of free) this.pushAway(body);
 		for (let pass = 0; pass < PASSES; pass++) {
 			for (let i = 0; i < free.length; i++) {
 				for (let j = i + 1; j < free.length; j++) this.separate(free[i], free[j]);
@@ -187,6 +201,23 @@ export class JarPhysics {
 		}
 		this.quietFrames = fastest < REST_SPEED ? this.quietFrames + 1 : 0;
 		return hardest;
+	}
+
+	private pushes(body: Body): boolean {
+		const pusher = this.pusher;
+		return pusher !== null && !body.passing && Math.hypot(body.x - pusher.x, body.y - pusher.y) < body.r + pusher.r;
+	}
+
+	/** Moves a body out of the mouse's ball; as with every move here, Verlet turns the shift into speed. */
+	private pushAway(body: Body): void {
+		const pusher = this.pusher;
+		if (!pusher || !this.pushes(body)) return;
+		const dx = body.x - pusher.x;
+		const dy = body.y - pusher.y;
+		const distance = Math.hypot(dx, dy);
+		const min = body.r + pusher.r;
+		body.x = pusher.x + (distance ? dx / distance : 0) * min;
+		body.y = pusher.y + (distance ? dy / distance : -1) * min;
 	}
 
 	/** A tiny sideways offset to either side, so a stack balanced dead centre topples the way a real one would. */

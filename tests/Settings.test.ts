@@ -24,6 +24,7 @@ describe("loadSettings", () => {
 			celebrationLine: true,
 			reduceMotion: false,
 			tilt: true,
+			cursorPush: true,
 			haptics: true,
 		});
 		expect(loadSettings(undefined)).toEqual(DEFAULT_SETTINGS);
@@ -51,6 +52,7 @@ describe("loadSettings", () => {
 				celebrationLine: false,
 				reduceMotion: true,
 				tilt: false,
+				cursorPush: false,
 				haptics: false,
 			}),
 		).toEqual({
@@ -73,6 +75,7 @@ describe("loadSettings", () => {
 			celebrationLine: false,
 			reduceMotion: true,
 			tilt: false,
+			cursorPush: false,
 			haptics: false,
 		});
 	});

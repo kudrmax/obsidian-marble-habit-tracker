@@ -34,6 +34,8 @@ const HOLD_MS = 260;
 const KICK = 8;
 const RAIN_GAP = 18;
 const QUIET_STEPS = 1500;
+/** The size of the invisible ball the mouse pushes marbles with. */
+const PUSHER_R = 18;
 
 /**
  * Marble sprites drawn once from their SVG into a bitmap. Drawing a bitmap each frame is cheap; drawing an SVG image
@@ -155,6 +157,12 @@ export class JarCanvas {
 		this.pendingObstacles = null;
 		this.pendingLedges = null;
 		this.measure();
+	}
+
+	/** The mouse at this screen point pushes the marbles it touches; null when it has left. */
+	setPusher(at: Point | null): void {
+		this.physics.setPusher(at ? { ...this.local(at), r: PUSHER_R } : null);
+		if (!this.physics.isSettled()) this.wake();
 	}
 
 	setGravity(gravity: Point): void {
