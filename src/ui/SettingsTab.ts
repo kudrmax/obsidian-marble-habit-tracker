@@ -1,7 +1,7 @@
 import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
 import { JarSize } from "../domain/Jar";
 import { PropertyNames } from "../infrastructure/HabitCodec";
-import { DEFAULT_SETTINGS, HabitSettings, MAX_DAY_START, parseReasons } from "../settings";
+import { DEFAULT_SETTINGS, HabitSettings, MAX_DAY_START, MAX_SPEED, MIN_SPEED, parseReasons } from "../settings";
 import { DEFAULT_LABELS, LabelSet, RecipeLabels } from "./format";
 import { Hsl, parseColor } from "./jar/color";
 import { DEFAULT_MARBLE_SIZES, JAR_MATERIALS, JarMaterial, assetSvg } from "./jar/JarAssets";
@@ -81,10 +81,20 @@ export class SettingsTab extends PluginSettingTab {
 			.setDesc(`Small ${sizes.small}, medium ${sizes.medium}, big ${sizes.big} px. Pick them on a jar of falling marbles.`)
 			.addButton((button) =>
 				button.setButtonText("Adjust").onClick(() =>
-					new MarbleSizesModal(this.app, sizes, settings.material, (next) => {
+					new MarbleSizesModal(this.app, sizes, settings.material, settings.speed / 100, (next) => {
 						void this.save((changed) => (changed.marbleSizes = next)).then(() => this.display());
 					}).open(),
 				),
+			);
+		new Setting(containerEl)
+			.setName("Speed")
+			.setDesc(`How fast marbles fall, roll and merge. ${DEFAULT_SETTINGS.speed}% is the original speed.`)
+			.addSlider((slider) =>
+				slider
+					.setLimits(MIN_SPEED, MAX_SPEED, 10)
+					.setDynamicTooltip()
+					.setValue(settings.speed)
+					.onChange((value) => void this.save((next) => (next.speed = value))),
 			);
 		const merge = (name: string, desc: string, key: keyof HabitSettings["merge"]) =>
 			new Setting(containerEl)

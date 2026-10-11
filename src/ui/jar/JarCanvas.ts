@@ -18,6 +18,8 @@ export interface JarOptions {
 	readonly background: Hsl;
 	readonly reduceMotion: boolean;
 	readonly sizes: MarbleSizes;
+	/** How fast the marbles' time runs: 1 is the speed they were tuned at, 2 twice as fast. */
+	readonly speed: number;
 	/** The radius of the screen's rounded corners; marbles roll along them. */
 	readonly screenCorners: number;
 	onMerge?(item: JarItem): void;
@@ -226,14 +228,14 @@ export class JarCanvas {
 			};
 			if (this.options.reduceMotion) return finish(center);
 			this.physics.attract(ids, center);
-			this.later(MERGE_MS, () => finish(center));
+			this.later(MERGE_MS / this.options.speed, () => finish(center));
 		};
 		if (!origin || this.options.reduceMotion) return gather();
 		const ghost: JarItem = { ...item, key: `ghost:${this.ghost++}`, size: "small", full: item.full };
 		this.launch(ghost, this.local(origin));
 		ids.push(ghost.key);
 		this.inFlight.add(ghost.key);
-		this.later(DROP_MS, gather);
+		this.later(DROP_MS / this.options.speed, gather);
 	}
 
 	/** Pops out of the tapped button, hangs there for a beat, then hops off and falls through the pile. */
@@ -243,7 +245,7 @@ export class JarCanvas {
 		this.physics.add({ id: item.key, x: at.x, y: at.y, r: this.radius(item), passing: true });
 		this.physics.attract([item.key], at);
 		this.born.set(item.key, performance.now());
-		this.later(HOLD_MS, () => this.physics.release([item.key], KICK));
+		this.later(HOLD_MS / this.options.speed, () => this.physics.release([item.key], KICK));
 		this.wake();
 	}
 
@@ -329,7 +331,7 @@ export class JarCanvas {
 	private tick(time: number): void {
 		this.frame = 0;
 		if (this.width === 0 || this.height === 0) return;
-		const steps = this.clock.next(time);
+		const steps = this.clock.next(time, this.options.speed);
 		let impact = 0;
 		for (let step = 0; step < steps; step++) impact = Math.max(impact, this.physics.step());
 		if (impact > 0) this.options.onImpact?.(impact);

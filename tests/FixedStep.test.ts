@@ -20,6 +20,16 @@ describe("FixedStep", () => {
 		expect(sum(stepsOver(144, 1))).toBeCloseTo(120, -1);
 	});
 
+	it("runs faster or slower at another rate", () => {
+		const at = (rate: number) => {
+			const clock = new FixedStep();
+			return Array.from({ length: 120 }, (_, index) => clock.next(index * STEP_MS, rate)).reduce((total, steps) => total + steps, 0);
+		};
+		expect(at(2)).toBeCloseTo(240, -1);
+		expect(at(0.5)).toBeCloseTo(60, -1);
+		expect(at(1.5)).toBeCloseTo(180, -1);
+	});
+
 	it("catches up at most eight steps after a pause", () => {
 		const clock = new FixedStep();
 		clock.next(0);

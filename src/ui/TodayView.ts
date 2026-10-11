@@ -582,6 +582,7 @@ export class TodayView extends ItemView {
 			material: settings.material,
 			reduceMotion: settings.reduceMotion,
 			sizes: settings.marbleSizes,
+			speed: settings.speed / 100,
 			screenCorners: this.ui.screenCorners(),
 			background: this.resolveVar("--background-primary"),
 			onImpact: (strength: number) => this.haptics.impact(strength),

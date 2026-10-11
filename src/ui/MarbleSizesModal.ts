@@ -21,6 +21,7 @@ export class MarbleSizesModal extends Modal {
 		app: App,
 		private sizes: MarbleSizes,
 		private readonly material: JarMaterial,
+		private readonly speed: number,
 		private readonly onSave: (sizes: MarbleSizes) => void,
 	) {
 		super(app);
@@ -93,6 +94,7 @@ export class MarbleSizesModal extends Modal {
 			background: this.resolve("var(--background-primary)"),
 			reduceMotion: false,
 			sizes: this.sizes,
+			speed: this.speed,
 			screenCorners: 0,
 		};
 	}

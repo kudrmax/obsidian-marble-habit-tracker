@@ -18,6 +18,8 @@ export interface HabitSettings {
 	shrinkReason: string;
 	material: JarMaterial;
 	marbleSizes: MarbleSizes;
+	/** How fast marbles move, in percent of the speed they were tuned at. */
+	speed: number;
 	merge: MergeRule;
 	/** The hour a new day starts; marks made past midnight but before it count for the day before. */
 	dayStartHour: number;
@@ -41,6 +43,7 @@ export const DEFAULT_SETTINGS: HabitSettings = {
 	shrinkReason: "Felt too big",
 	material: "grain",
 	marbleSizes: DEFAULT_MARBLE_SIZES,
+	speed: 100,
 	merge: DEFAULT_MERGE_RULE,
 	dayStartHour: 5,
 	hideDone: true,
@@ -52,6 +55,8 @@ export const DEFAULT_SETTINGS: HabitSettings = {
 };
 
 export const MAX_DAY_START = 12;
+export const MIN_SPEED = 50;
+export const MAX_SPEED = 200;
 const MIN_MERGE = 2;
 const MAX_MERGE = 30;
 
@@ -73,6 +78,7 @@ export function loadSettings(data: unknown): HabitSettings {
 		shrinkReason: typeof raw.shrinkReason === "string" ? raw.shrinkReason.trim() : DEFAULT_SETTINGS.shrinkReason,
 		material: isJarMaterial(raw.material) ? raw.material : DEFAULT_SETTINGS.material,
 		marbleSizes: loadMarbleSizes(raw.marbleSizes),
+		speed: integer(raw.speed, MIN_SPEED, MAX_SPEED, DEFAULT_SETTINGS.speed),
 		merge: loadMerge(raw.merge, (raw as Record<string, unknown>).mergeSize),
 		dayStartHour: integer(raw.dayStartHour, 0, MAX_DAY_START, DEFAULT_SETTINGS.dayStartHour),
 		hideDone: flag(raw.hideDone, DEFAULT_SETTINGS.hideDone),
