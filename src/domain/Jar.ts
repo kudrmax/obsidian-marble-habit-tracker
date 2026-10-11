@@ -43,7 +43,7 @@ function piecesOf(days: readonly DoneDay[], today: LocalDate, rule: MergeRule): 
 	const pieces: JarPiece[] = [];
 	const block = (from: number, length: number, size: JarSize) => {
 		const last = days[from + length - 1];
-		pieces.push({ id: `${size}:${days[from].date}`, size, full: false, today: last.date.equals(today) });
+		pieces.push({ id: `${size}:${days[from].date.toString()}`, size, full: false, today: last.date.equals(today) });
 	};
 	const bigs = Math.floor(days.length / bigSize);
 	for (let index = 0; index < bigs; index++) block(index * bigSize, bigSize, "big");
@@ -51,7 +51,7 @@ function piecesOf(days: readonly DoneDay[], today: LocalDate, rule: MergeRule): 
 	const mediums = Math.floor(rest / mergeSize);
 	for (let index = 0; index < mediums; index++) block(bigs * bigSize + index * mergeSize, mergeSize, "medium");
 	for (const day of days.slice(bigs * bigSize + mediums * mergeSize)) {
-		pieces.push({ id: `small:${day.date}`, size: "small", full: day.full, today: day.date.equals(today) });
+		pieces.push({ id: `small:${day.date.toString()}`, size: "small", full: day.full, today: day.date.equals(today) });
 	}
 	return pieces;
 }

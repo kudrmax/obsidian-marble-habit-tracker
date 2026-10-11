@@ -35,7 +35,7 @@ export interface HabitSettings {
 
 export const DEFAULT_SETTINGS: HabitSettings = {
 	source: "tag",
-	tag: "habit",
+	tag: "marble-habit",
 	folder: "Habits",
 	habitBlock: true,
 	properties: DEFAULT_PROPERTY_NAMES,
@@ -141,7 +141,7 @@ function loadReasons(value: unknown): string[] {
 
 function loadProperties(value: unknown): PropertyNames {
 	const raw = (typeof value === "object" && value !== null ? value : {}) as Record<string, unknown>;
-	const entries = Object.entries(DEFAULT_PROPERTY_NAMES).map(([key, fallback]) => {
+	const entries = Object.entries<string>({ ...DEFAULT_PROPERTY_NAMES }).map(([key, fallback]): [string, string] => {
 		const name = raw[key];
 		return [key, typeof name === "string" && name.trim() ? name.trim() : fallback];
 	});

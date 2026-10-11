@@ -57,7 +57,7 @@ class SpriteCache {
 		const image = new Image();
 		image.onload = () => {
 			if (generation !== this.generation) return;
-			const bitmap = document.createElement("canvas");
+			const bitmap = createEl("canvas");
 			bitmap.width = pixels;
 			bitmap.height = pixels;
 			bitmap.getContext("2d")?.drawImage(image, 0, 0, pixels, pixels);

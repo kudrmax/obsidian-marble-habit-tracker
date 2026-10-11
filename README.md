@@ -12,7 +12,7 @@ A habit tracker for [Obsidian](https://obsidian.md) where every win drops a marb
 
 1. Install [BRAT](https://github.com/TfTHacker/obsidian42-brat) from Community plugins.
 2. BRAT → *Add beta plugin* → `kudrmax/obsidian-marble-habit-tracker`.
-3. Tag a note `#habit` (or pick a folder in the settings) and it becomes a habit.
+3. Tag a note `#marble-habit` (or pick a folder in the settings) and it becomes a habit.
 4. Enable **Marble Habit Tracker** and open it from the ribbon or the *Open habits* command.
 
 ## Development

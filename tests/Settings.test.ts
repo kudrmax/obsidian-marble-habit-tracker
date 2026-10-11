@@ -6,7 +6,7 @@ describe("loadSettings", () => {
 	it("uses defaults for missing data", () => {
 		expect(loadSettings(null)).toEqual({
 			source: "tag",
-			tag: "habit",
+			tag: "marble-habit",
 			folder: "Habits",
 			habitBlock: true,
 			properties: DEFAULT_PROPERTY_NAMES,

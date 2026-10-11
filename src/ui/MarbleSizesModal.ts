@@ -43,7 +43,9 @@ export class MarbleSizesModal extends Modal {
 					.setDynamicTooltip()
 					.setValue(this.sizes[size])
 					.onChange((value) => this.resize({ ...this.sizes, [size]: value }));
-				set = (value) => slider.setValue(value);
+				set = (value) => {
+					slider.setValue(value);
+				};
 			});
 			return set;
 		});
@@ -103,8 +105,8 @@ export class MarbleSizesModal extends Modal {
 
 	private resolve(color: string): Hsl {
 		const probe = this.contentEl.createSpan();
-		probe.style.color = color;
-		probe.style.display = "none";
+		probe.addClass("th-probe");
+		probe.setCssProps({ color });
 		const value = getComputedStyle(probe).color;
 		probe.remove();
 		return parseColor(value) ?? { h: 0, s: 0, l: 50 };

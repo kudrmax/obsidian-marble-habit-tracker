@@ -15,7 +15,7 @@ export class SectionNameModal extends Modal {
 	override onOpen(): void {
 		this.modalEl.addClass("tiny-habits");
 		this.setTitle("New section");
-		const input = this.contentEl.createEl("input", { type: "text", attr: { placeholder: "Morning, During the day, Evening…" } });
+		const input = this.contentEl.createEl("input", { type: "text", attr: { placeholder: "Morning, during the day, evening…" } });
 		input.addClass("th-section-name");
 		const buttons = this.contentEl.createDiv("modal-button-container");
 		buttons.createEl("button", { text: "Cancel" }).addEventListener("click", () => this.close());

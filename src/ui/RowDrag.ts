@@ -205,11 +205,11 @@ export class RowDrag {
 		dragging.zone?.element.removeClass("is-target");
 		for (const element of dragging.block) {
 			element.removeClass("is-dragging");
-			element.style.transform = "";
+			element.setCssProps({ transform: "" });
 		}
 		for (const slot of dragging.others) {
 			slot.removeClass("is-shifting");
-			slot.style.transform = "";
+			slot.setCssProps({ transform: "" });
 		}
 	}
 

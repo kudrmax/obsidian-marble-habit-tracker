@@ -109,6 +109,14 @@ describe("decodeHabit", () => {
 		expect((frontmatter.tiny as { value: string }[]).map((version) => version.value)).toEqual(["b", "a", "old"]);
 	});
 
+	it("reads and writes a skipped day without a reason", () => {
+		const habit = decodeHabit("Зарядка", example({ missed: [{ date: "2026-10-07" }] }));
+		expect(habit.markOn(d("2026-10-07"))).toEqual({ kind: "missed" });
+		const frontmatter: Frontmatter = {};
+		encodeHabit(habit, frontmatter);
+		expect(frontmatter.missed).toEqual([{ date: "2026-10-07" }]);
+	});
+
 	it("reads archived", () => {
 		expect(decodeHabit("Зарядка", example({ archived: true })).archived).toBe(true);
 	});
@@ -119,7 +127,7 @@ describe("decodeHabit", () => {
 		["anchor not a list", { anchor: "Кружка" }, "anchor"],
 		["bad date", { done_tiny: ["2026-13-01"] }, "done_tiny"],
 		["two marks on one day", { done_full: ["2026-10-08"] }, "2026-10-08"],
-		["missed without reason", { missed: [{ date: "2026-10-07" }] }, "reason"],
+		["missed without a date", { missed: [{ reason: "Forgot" }] }, "missed"],
 		["unknown weekday", { schedule: [{ value: ["funday"], since: "2026-09-01" }] }, "funday"],
 		["empty schedule", { schedule: [{ value: [], since: "2026-09-01" }] }, "at least one day"],
 		["order not a number", { order: "first" }, "order"],

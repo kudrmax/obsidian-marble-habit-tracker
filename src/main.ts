@@ -6,7 +6,6 @@ import { HabitSettings, loadSettings } from "./settings";
 import { DayWatcher } from "./ui/DayWatcher";
 import { HabitFormModal } from "./ui/HabitFormModal";
 import { HabitNotes } from "./ui/HabitNotes";
-import { HABIT_VIEW, HabitScreenView } from "./ui/HabitScreenView";
 import { HABITS_VIEW, TodayView } from "./ui/TodayView";
 import { SettingsHost, SettingsTab } from "./ui/SettingsTab";
 import { DeviceSettings } from "./ui/DeviceSettings";
@@ -16,7 +15,7 @@ import { UiContext } from "./ui/UiContext";
 const DAY_CHECK_MS = 60_000;
 
 export default class MarbleHabitTrackerPlugin extends Plugin implements SettingsHost {
-	override settings: HabitSettings = loadSettings(null);
+	config: HabitSettings = loadSettings(null);
 	newHabit: () => void = () => undefined;
 	readonly device = new DeviceSettings(() => this.refreshViews());
 	private notes: HabitNotes | null = null;
@@ -25,26 +24,25 @@ export default class MarbleHabitTrackerPlugin extends Plugin implements Settings
 	private listPaths: () => string[] = () => [];
 
 	override async onload(): Promise<void> {
-		this.settings = loadSettings(await this.loadData());
-		const repository = new FrontmatterHabitRepository(this.app, () => this.settings, () => this.settings.properties);
-		const service = new HabitService(repository, new DayStartClock(() => this.settings.dayStartHour));
+		this.config = loadSettings(await this.loadData());
+		const repository = new FrontmatterHabitRepository(this.app, () => this.config, () => this.config.properties);
+		const service = new HabitService(repository, new DayStartClock(() => this.config.dayStartHour));
 		const ui: UiContext = {
 			service,
 			repository,
-			settings: () => this.settings,
+			settings: () => this.config,
 			screenCorners: () => this.device.screenCorners,
-			labels: () => new RecipeLabels(this.settings.labels),
+			labels: () => new RecipeLabels(this.config.labels),
 			openHabit: (path, leaf) => void this.openHabit(path, leaf),
-			newHabit: () => new HabitFormModal(this.app, service, new RecipeLabels(this.settings.labels)).open(),
+			newHabit: () => new HabitFormModal(this.app, service, new RecipeLabels(this.config.labels)).open(),
 		};
-		this.newHabit = ui.newHabit;
+		this.newHabit = () => ui.newHabit();
 		this.listPaths = () => repository.list().map((entry) => entry.path);
 		this.habitPaths = new Set(this.listPaths());
 		const notes = this.addChild(new HabitNotes(this.app, ui));
 		this.notes = notes;
 
 		this.registerView(HABITS_VIEW, (leaf) => new TodayView(leaf, ui));
-		this.registerView(HABIT_VIEW, (leaf) => new HabitScreenView(leaf));
 		this.addRibbonIcon("sprout", "Habits", () => void this.openGrid());
 		this.addCommand({ id: "open", name: "Open habits", callback: () => void this.openGrid() });
 		this.addCommand({ id: "new", name: "New habit", callback: () => ui.newHabit() });
@@ -62,7 +60,7 @@ export default class MarbleHabitTrackerPlugin extends Plugin implements Settings
 			id: "toggle-habit-block",
 			name: "Show or hide the habit block in habit notes",
 			callback: () => {
-				this.settings.habitBlock = !this.settings.habitBlock;
+				this.config.habitBlock = !this.config.habitBlock;
 				void this.saveSettings();
 			},
 		});
@@ -79,7 +77,7 @@ export default class MarbleHabitTrackerPlugin extends Plugin implements Settings
 	}
 
 	async saveSettings(): Promise<void> {
-		await this.saveData(this.settings);
+		await this.saveData(this.config);
 		this.refreshViews();
 	}
 

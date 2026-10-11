@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import { FULL, TINY, isDone, missed } from "../src/domain/DayMark";
 
 describe("DayMark", () => {
-	it("requires a reason for a missed day", () => {
+	it("keeps the reason of a skipped day, when there is one", () => {
 		expect(missed("  проспал ")).toEqual({ kind: "missed", reason: "проспал" });
-		expect(() => missed("   ")).toThrow("reason");
+		expect(missed("   ")).toEqual({ kind: "missed" });
+		expect(missed()).toEqual({ kind: "missed" });
 	});
 
 	it("treats tiny and full as done", () => {

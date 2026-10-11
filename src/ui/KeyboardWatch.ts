@@ -41,8 +41,8 @@ export class KeyboardWatch {
 
 	private typing(): boolean {
 		const active = document.activeElement;
-		if (!(active instanceof HTMLElement) || this.area.contains(active)) return false;
-		return active.isContentEditable || active instanceof HTMLTextAreaElement || (active instanceof HTMLInputElement && !NOT_TYPED.has(active.type));
+		if (!active?.instanceOf(HTMLElement) || this.area.contains(active)) return false;
+		return active.isContentEditable || active.instanceOf(HTMLTextAreaElement) || (active.instanceOf(HTMLInputElement) && !NOT_TYPED.has(active.type));
 	}
 }
 

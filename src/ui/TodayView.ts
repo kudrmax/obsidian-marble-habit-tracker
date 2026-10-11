@@ -1,6 +1,6 @@
 import { ItemView, Notice, Platform, WorkspaceLeaf, setIcon } from "obsidian";
 import { HabitEntry } from "../application/ports";
-import { DayMark, FULL, TINY, done, isDone, isOffTrigger, missed } from "../domain/DayMark";
+import { DayMark, FULL, SKIPPED, TINY, done, isDone, isOffTrigger, missed } from "../domain/DayMark";
 import { Habit } from "../domain/Habit";
 import { HabitColor } from "../domain/HabitColor";
 import { buildJar } from "../domain/Jar";
@@ -248,7 +248,7 @@ export class TodayView extends ItemView {
 		return header;
 	}
 
-	/** "3 done" (tap to show or hide them) and the total wins, under today's progress. */
+	/** "3 done" (tap to show or hide them), the total wins and a new-habit button, under today's progress. */
 	private renderMeta(header: HTMLElement, done: readonly HabitEntry[], all: readonly HabitEntry[]): void {
 		const settings = this.ui.settings();
 		const meta = header.createDiv("th-meta");
@@ -266,6 +266,9 @@ export class TodayView extends ItemView {
 			} else toggle.disabled = true;
 		}
 		if (settings.showWins) meta.createSpan({ cls: "th-wins", text: winsLabel(totalWins(all)) });
+		const add = meta.createEl("button", { cls: "th-meta-add", attr: { "aria-label": "New habit", title: "New habit" } });
+		icon(add, "plus");
+		add.addEventListener("click", () => this.ui.newHabit());
 	}
 
 	private renderRing(column: HTMLElement, habits: readonly Habit[], justClosed: boolean): HTMLElement {
@@ -303,8 +306,8 @@ export class TodayView extends ItemView {
 
 	private renderEmpty(column: HTMLElement): void {
 		const empty = column.createDiv("th-empty");
-		empty.createEl("h1", { cls: "th-title", text: "Start with one tiny habit" });
-		iconButton(empty, { icon: "plus", label: "Create a tiny habit", primary: true, large: true, onClick: () => this.ui.newHabit() });
+		empty.createEl("h1", { cls: "th-title", text: "Add your first habit" });
+		iconButton(empty, { icon: "plus", label: "New habit", primary: true, large: true, onClick: () => this.ui.newHabit() });
 	}
 
 	private renderSection(column: HTMLElement, section: string): void {
@@ -337,7 +340,7 @@ export class TodayView extends ItemView {
 
 		const text = main.createDiv("th-row-text");
 		text.createDiv({ cls: "th-row-title", text: habit.headline });
-		const subtitle = this.subtitle(path, habit);
+		const subtitle = this.ui.labels().anchorLine(habit);
 		if (subtitle) text.createDiv({ cls: "th-row-sub", text: subtitle });
 		text.addEventListener("click", () => this.ui.openHabit(path, this.leaf));
 
@@ -353,11 +356,7 @@ export class TodayView extends ItemView {
 		if (this.shrink === path && mark?.kind === "missed") this.renderShrink(row, path, habit);
 	}
 
-	/** The anchor, as before the habit was answered; an answered row only turns grey. */
-	private subtitle(path: string, habit: Habit): string {
-		if (this.asking === path) return "skipped — why?";
-		return this.ui.labels().anchorLine(habit);
-	}
+
 
 
 	private renderMark(parent: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
@@ -433,7 +432,7 @@ export class TodayView extends ItemView {
 
 	private renderReasons(row: HTMLElement, path: string): void {
 		const extra = row.createDiv("th-row-extra");
-		extra.createDiv({ cls: "th-label", text: "What got in the way?" });
+		extra.createDiv({ cls: "th-label", text: "What got in the way? · optional" });
 		const chips = extra.createDiv("th-chips");
 		for (const reason of this.ui.settings().missReasons) chip(chips, reason, () => void this.answer(path, missed(reason)));
 		const other = chip(chips, "Other…", () => {
@@ -480,11 +479,15 @@ export class TodayView extends ItemView {
 		this.render();
 	}
 
+	/** A click elsewhere closes the answer menu, and the optional reasons of a skip. */
 	private closeMenuOutside(event: MouseEvent): void {
-		if (!this.menu) return;
+		if (!this.menu && !this.asking) return;
 		const target = event.target as HTMLElement | null;
-		if (target?.closest(".th-answers, .th-mark-button, .th-off-trigger")) return;
+		if (target?.closest(".th-answers, .th-mark-button, .th-off-trigger, .th-row-extra")) return;
 		this.menu = null;
+		this.asking = null;
+		this.other = null;
+		this.otherText = "";
 		this.render();
 	}
 
@@ -494,10 +497,8 @@ export class TodayView extends ItemView {
 		const same = (answer === "skip" && current?.kind === "missed") || (answer !== "skip" && current?.kind === answer && isOffTrigger(current) === offTrigger);
 		if (same) return this.answer(path, undefined);
 		if (answer === "skip") {
-			this.menu = null;
+			await this.answer(path, SKIPPED);
 			this.asking = path;
-			this.other = null;
-			this.otherText = "";
 			this.render();
 			return;
 		}
@@ -635,8 +636,8 @@ export class TodayView extends ItemView {
 
 	private probe(classes: string[], color: string): Hsl | null {
 		const probe = this.contentEl.createSpan({ cls: classes });
-		probe.style.color = color;
-		probe.style.display = "none";
+		probe.addClass("th-probe");
+		probe.setCssProps({ color });
 		const value = getComputedStyle(probe).color;
 		probe.remove();
 		return parseColor(value);

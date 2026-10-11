@@ -1,10 +1,8 @@
-import { DomainError } from "./DomainError";
-
-/** `offTrigger`: done, but not right after the anchor. */
+/** `offTrigger`: done, but not right after the anchor. A skipped day may say why. */
 export type DayMark =
 	| { readonly kind: "tiny"; readonly offTrigger?: true }
 	| { readonly kind: "full"; readonly offTrigger?: true }
-	| { readonly kind: "missed"; readonly reason: string };
+	| { readonly kind: "missed"; readonly reason?: string };
 
 export const TINY: DayMark = { kind: "tiny" };
 export const FULL: DayMark = { kind: "full" };
@@ -17,10 +15,11 @@ export function isOffTrigger(mark?: DayMark): boolean {
 	return mark?.kind !== "missed" && mark?.offTrigger === true;
 }
 
-export function missed(reason: string): DayMark {
-	const text = reason.trim();
-	if (!text) throw new DomainError("Write down a reason");
-	return { kind: "missed", reason: text };
+export const SKIPPED: DayMark = { kind: "missed" };
+
+export function missed(reason?: string): DayMark {
+	const text = reason?.trim();
+	return text ? { kind: "missed", reason: text } : SKIPPED;
 }
 
 export function isDone(mark?: DayMark): boolean {

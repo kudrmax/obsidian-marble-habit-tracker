@@ -4,6 +4,10 @@ import { HabitBlock } from "./HabitBlock";
 import { UiContext } from "./UiContext";
 
 const NOTE_CLASS = "th-habit-note";
+/** A property the habit block already shows, hidden from the note's Properties panel. */
+const OWN_PROPERTY = "th-own-property";
+/** A Properties panel with nothing but the habit's own properties, hidden whole. */
+const ONLY_OWN = "th-only-own";
 
 interface Placed {
 	readonly view: MarkdownView;
@@ -18,7 +22,6 @@ interface Placed {
  */
 export class HabitNotes extends Component {
 	private readonly placed = new Map<WorkspaceLeaf, Placed>();
-	private readonly style = document.head.createEl("style", { attr: { id: "marble-habit-tracker-properties" } });
 
 	constructor(
 		private readonly app: App,
@@ -39,16 +42,15 @@ export class HabitNotes extends Component {
 
 	override onunload(): void {
 		for (const leaf of [...this.placed.keys()]) this.release(leaf);
-		this.style.remove();
 	}
 
 	/** Re-draws every habit block and re-applies the hidden properties, after data or settings change. */
 	refresh(): void {
-		this.style.textContent = this.hiddenProperties();
 		this.sync();
 		for (const placed of this.placed.values()) {
 			placed.source.render();
 			placed.reading.render();
+			this.hideOwnProperties(placed.view);
 		}
 	}
 
@@ -98,6 +100,16 @@ export class HabitNotes extends Component {
 		if (sizer && content && source.el.nextElementSibling !== content) sizer.insertBefore(source.el, content);
 		const header = view.contentEl.querySelector<HTMLElement>(".markdown-reading-view .markdown-preview-sizer > .mod-header");
 		if (header && reading.el.parentElement !== header) header.appendChild(reading.el);
+		this.hideOwnProperties(view);
+	}
+
+	private hideOwnProperties(view: MarkdownView): void {
+		const own = new Set(Object.values<string>({ ...this.ui.settings().properties }).map((key) => key.toLowerCase()));
+		for (const container of view.contentEl.querySelectorAll<HTMLElement>(".metadata-container:not(.th-habit-panel)")) {
+			const properties = [...container.querySelectorAll<HTMLElement>(".metadata-property")];
+			for (const property of properties) property.toggleClass(OWN_PROPERTY, own.has((property.dataset.propertyKey ?? "").toLowerCase()));
+			container.toggleClass(ONLY_OWN, properties.every((property) => property.hasClass(OWN_PROPERTY)));
+		}
 	}
 
 	private release(leaf: WorkspaceLeaf): void {
@@ -140,16 +152,5 @@ export class HabitNotes extends Component {
 	isArchived(path: string): boolean {
 		const entry = this.ui.repository.get(path);
 		return entry?.kind === "ok" && entry.habit.archived;
-	}
-
-	private hiddenProperties(): string {
-		const keys = Object.values(this.ui.settings().properties).map((key) => CSS.escape(key.toLowerCase()));
-		const row = (key: string) => `[data-property-key="${key}"]`;
-		const ours = keys.map(row).join(", ");
-		const notOurs = keys.map((key) => `:not(${row(key)})`).join("");
-		return [
-			`.${NOTE_CLASS} .metadata-property:is(${ours}) { display: none; }`,
-			`.${NOTE_CLASS} .metadata-container:not(.th-habit-panel):not(:has(.metadata-property${notOurs})) { display: none; }`,
-		].join("\n");
 	}
 }

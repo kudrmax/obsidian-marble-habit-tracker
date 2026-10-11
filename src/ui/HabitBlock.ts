@@ -226,7 +226,7 @@ export class HabitBlock {
 			const body = item.createSpan({ cls: "th-history-text", text });
 			if (note) body.createSpan({ cls: "th-history-note", text: note });
 		};
-		for (const miss of misses) row(miss.date, "missed", miss.reason);
+		for (const miss of misses) row(miss.date, "missed", miss.reason ?? "Skipped");
 		for (const change of changes) row(change.date, "change", this.ui.labels().describeChange(change), change.because);
 	}
 

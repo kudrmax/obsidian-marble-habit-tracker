@@ -2,7 +2,7 @@ import { App, TFile, TFolder, getAllTags, normalizePath } from "obsidian";
 import { HabitEntry, HabitRepository } from "../application/ports";
 import { DomainError } from "../domain/DomainError";
 import { Habit } from "../domain/Habit";
-import { HabitDecodeError, PropertyNames, decodeHabit, encodeHabit } from "./HabitCodec";
+import { Frontmatter, HabitDecodeError, PropertyNames, decodeHabit, encodeHabit } from "./HabitCodec";
 
 /** Which notes are habits: every note carrying a tag, or every note in a folder. New habits go to the folder either way. */
 export interface HabitScope {
@@ -43,7 +43,7 @@ export class FrontmatterHabitRepository implements HabitRepository {
 		const file = this.app.vault.getAbstractFileByPath(path);
 		if (!(file instanceof TFile)) throw new DomainError("Habit not found");
 		let updated: Habit | undefined;
-		await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+		await this.app.fileManager.processFrontMatter(file, (frontmatter: Frontmatter) => {
 			updated = change(this.decodeFresh(file, frontmatter));
 			encodeHabit(updated, frontmatter, this.keys());
 		});
@@ -57,7 +57,7 @@ export class FrontmatterHabitRepository implements HabitRepository {
 		if (this.app.vault.getAbstractFileByPath(path)) throw new DomainError(`Habit "${habit.name}" already exists`);
 		if (!this.app.vault.getAbstractFileByPath(folder)) await this.app.vault.createFolder(folder);
 		const file = await this.app.vault.create(path, "");
-		await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+		await this.app.fileManager.processFrontMatter(file, (frontmatter: Frontmatter) => {
 			encodeHabit(habit, frontmatter, this.keys());
 			if (this.scope().source === "tag") frontmatter.tags = [this.tagName()];
 		});
@@ -72,7 +72,7 @@ export class FrontmatterHabitRepository implements HabitRepository {
 		return this.scope().tag.replace(/^#/, "").trim();
 	}
 
-	/** The tag itself or any tag nested under it, like #habit/health. */
+	/** The tag itself or any tag nested under it, like #marble-habit/health. */
 	private hasTag(file: TFile): boolean {
 		const wanted = `#${this.tagName()}`.toLowerCase();
 		const cache = this.app.metadataCache.getFileCache(file);

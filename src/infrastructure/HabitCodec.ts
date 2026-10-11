@@ -82,7 +82,7 @@ export function encodeHabit(habit: Habit, frontmatter: Frontmatter, keys: Proper
 	put(
 		frontmatter,
 		keys.missed,
-		nonEmpty(marks.flatMap(([date, mark]) => (mark.kind === "missed" ? [{ date: date.toString(), reason: mark.reason }] : []))),
+		nonEmpty(marks.flatMap(([date, mark]) => (mark.kind === "missed" ? [{ date: date.toString(), ...(mark.reason ? { reason: mark.reason } : {}) }] : []))),
 	);
 	put(frontmatter, keys.archived, habit.archived ? true : undefined);
 	put(frontmatter, keys.anytime, habit.anytime ? true : undefined);
@@ -120,7 +120,11 @@ function list(frontmatter: Frontmatter, key: string): unknown[] {
 function readOrder(value: unknown, key: string): number | undefined {
 	if (value === undefined || value === null) return undefined;
 	if (typeof value === "number" && Number.isFinite(value)) return value;
-	throw new HabitDecodeError(`${key}: expected a number, got "${String(value)}"`);
+	throw new HabitDecodeError(`${key}: expected a number, got ${shown(value)}`);
+}
+
+function shown(value: unknown): string {
+	return JSON.stringify(value) ?? "nothing";
 }
 
 function readSection(value: unknown): string | undefined {
@@ -131,7 +135,7 @@ function readSection(value: unknown): string | undefined {
 function readColor(value: unknown, key: string): HabitColor | undefined {
 	if (value === undefined || value === null || value === "") return undefined;
 	if (isHabitColor(value)) return value;
-	throw new HabitDecodeError(`${key}: unknown color "${String(value)}"`);
+	throw new HabitDecodeError(`${key}: unknown color ${shown(value)}`);
 }
 
 function readDate(value: unknown, where: string): LocalDate {
@@ -189,8 +193,8 @@ function readMarks(frontmatter: Frontmatter, keys: PropertyNames): Map<string, D
 	for (const value of list(frontmatter, keys.doneTiny)) add(readDate(value, keys.doneTiny), TINY, keys.doneTiny);
 	for (const value of list(frontmatter, keys.doneFull)) add(readDate(value, keys.doneFull), FULL, keys.doneFull);
 	for (const item of list(frontmatter, keys.missed)) {
-		if (!isRecord(item)) throw new HabitDecodeError(`${keys.missed}: expected entries with date and reason`);
-		add(readDate(item.date, keys.missed), missed(typeof item.reason === "string" ? item.reason : ""), keys.missed);
+		if (!isRecord(item)) throw new HabitDecodeError(`${keys.missed}: expected entries with a date`);
+		add(readDate(item.date, keys.missed), missed(typeof item.reason === "string" ? item.reason : undefined), keys.missed);
 	}
 	for (const value of list(frontmatter, keys.offTrigger)) {
 		const id = readDate(value, keys.offTrigger).toString();

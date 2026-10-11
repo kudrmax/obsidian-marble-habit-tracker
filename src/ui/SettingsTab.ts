@@ -11,7 +11,7 @@ import { MarbleSizesModal } from "./MarbleSizesModal";
 import { FolderSuggest, TagSuggest } from "./suggest";
 
 export interface SettingsHost {
-	settings: HabitSettings;
+	config: HabitSettings;
 	saveSettings(): Promise<void>;
 	newHabit(): void;
 	readonly device: DeviceSettings;
@@ -58,20 +58,20 @@ export class SettingsTab extends PluginSettingTab {
 			.setDesc("Write a new habit as a recipe. Also in the command palette: “New habit”.")
 			.addButton((button) => button.setButtonText("New habit").setCta().onClick(() => this.host.newHabit()));
 		this.habits(containerEl);
-		this.marbles(containerEl);
 		this.today(containerEl);
 		this.skipped(containerEl);
+		this.marbles(containerEl);
 		this.labels(containerEl);
 		this.properties(containerEl);
 	}
 
 	private async save(change: (settings: HabitSettings) => void): Promise<void> {
-		change(this.host.settings);
+		change(this.host.config);
 		await this.host.saveSettings();
 	}
 
 	private marbles(containerEl: HTMLElement): void {
-		const settings = this.host.settings;
+		const settings = this.host.config;
 		new Setting(containerEl).setName("Marbles").setHeading();
 		new Setting(containerEl).setName("Style").setDesc("How your marbles look.");
 		this.stylePicker(containerEl);
@@ -140,7 +140,7 @@ export class SettingsTab extends PluginSettingTab {
 	}
 
 	private today(containerEl: HTMLElement): void {
-		const settings = this.host.settings;
+		const settings = this.host.config;
 		new Setting(containerEl).setName("Today").setHeading();
 		const hour = (value: number) => `${String(value).padStart(2, "0")}:00`;
 		new Setting(containerEl)
@@ -167,7 +167,7 @@ export class SettingsTab extends PluginSettingTab {
 	}
 
 	private skipped(containerEl: HTMLElement): void {
-		const settings = this.host.settings;
+		const settings = this.host.config;
 		new Setting(containerEl).setName("Skipped").setHeading();
 		new Setting(containerEl)
 			.setName("Reasons")
@@ -196,7 +196,7 @@ export class SettingsTab extends PluginSettingTab {
 	}
 
 	private habits(containerEl: HTMLElement): void {
-		const settings = this.host.settings;
+		const settings = this.host.config;
 		new Setting(containerEl).setName("Habits").setHeading();
 		new Setting(containerEl)
 			.setName("Find habits by")
@@ -236,7 +236,7 @@ export class SettingsTab extends PluginSettingTab {
 	}
 
 	private labels(containerEl: HTMLElement): void {
-		const settings = this.host.settings;
+		const settings = this.host.config;
 		new Setting(containerEl)
 			.setName("Field labels")
 			.setDesc("What each part of a habit is called on Today, in the habit panel and in forms. The recipe reads as one sentence: “after I … I will … on a good day … and celebrate … every …”.")
@@ -252,7 +252,7 @@ export class SettingsTab extends PluginSettingTab {
 	}
 
 	private properties(containerEl: HTMLElement): void {
-		const settings = this.host.settings;
+		const settings = this.host.config;
 		new Setting(containerEl)
 			.setName("Note properties")
 			.setDesc("Where each part of a habit is stored in its note. Renaming here doesn't rename properties in notes you already have.")
@@ -291,15 +291,15 @@ export class SettingsTab extends PluginSettingTab {
 				void this.save((next) => (next.material = material));
 				tiles.forEach((other, index) => other.toggleClass("is-selected", JAR_MATERIALS[index] === material));
 			});
-			tile.toggleClass("is-selected", this.host.settings.material === material);
+			tile.toggleClass("is-selected", this.host.config.material === material);
 			return tile;
 		});
 	}
 
 	private resolve(variable: string): Hsl | null {
 		const probe = this.containerEl.createSpan();
-		probe.style.color = `var(${variable})`;
-		probe.style.display = "none";
+		probe.addClass("th-probe");
+		probe.setCssProps({ color: `var(${variable})` });
 		const value = getComputedStyle(probe).color;
 		probe.remove();
 		return parseColor(value);
