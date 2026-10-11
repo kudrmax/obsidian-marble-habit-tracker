@@ -214,6 +214,16 @@ describe("JarPhysics", () => {
 		expect(physics.get("small")?.x).toBeCloseTo(200, 0);
 	});
 
+	it("doesn't balance marbles dropped one by one on the same spot into a tower", () => {
+		const physics = new JarPhysics(400, 300);
+		for (const id of ["a", "b", "c"]) {
+			physics.add({ id, x: 200, y: 100, r: 12 });
+			settle(physics);
+		}
+		const floor = physics.bodies().filter((body) => body.y > 287);
+		expect(floor.length).toBe(3);
+	});
+
 	it("keeps bodies inside the screen's rounded corners", () => {
 		const physics = new JarPhysics(400, 300);
 		physics.setScreen({ left: 0, top: -100, right: 400, bottom: 300, radius: 60 });

@@ -43,6 +43,9 @@ const REST_SPEED = 0.05;
 const REST_FRAMES = 30;
 const GRAVITY_EPSILON = 0.01;
 const CONTACT = 1;
+/** Bodies closer than this to straight above one another get pushed a hair apart sideways, as nothing in the world is perfectly aligned. */
+const ALIGNED = 0.01;
+const NUDGE = 0.2;
 
 export class JarPhysics {
 	private readonly items = new Map<string, Body>();
@@ -58,6 +61,8 @@ export class JarPhysics {
 	private readonly free: Body[] = [];
 	private before = new Float64Array(64);
 	private quietFrames = 0;
+	/** Drives the sideways nudges; fixed so that a run can be replayed. */
+	private seed = 1;
 
 	constructor(
 		private width: number,
@@ -184,6 +189,12 @@ export class JarPhysics {
 		return hardest;
 	}
 
+	/** A tiny sideways offset to either side, so a stack balanced dead centre topples the way a real one would. */
+	private nudge(): number {
+		this.seed = (this.seed * 16807) % 2147483647;
+		return (this.seed / 2147483647 - 0.5) * 2 * NUDGE;
+	}
+
 	private solidFor(body: Body): readonly Box[] {
 		if (body.passing) return NONE;
 		const shapes = this.shapesFor(body);
@@ -215,7 +226,8 @@ export class JarPhysics {
 
 	private separate(a: Body, b: Body): void {
 		if (a.passing || b.passing) return;
-		const dx = b.x - a.x;
+		let dx = b.x - a.x;
+		if (Math.abs(dx) < ALIGNED && Math.abs(b.y - a.y) < a.r + b.r) dx = this.nudge();
 		const dy = b.y - a.y;
 		const min = a.r + b.r;
 		const distanceSquared = dx * dx + dy * dy;
