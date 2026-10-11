@@ -159,35 +159,49 @@ export class HabitBlock {
 		this.renderGrid(this.property(rows, "layout-grid", "days").createDiv("th-panel-cell"), habit, today);
 	}
 
+	/** Days as circles, a week per column up to today; it reaches back far enough to fill its row, so a new habit still shows a grid. */
 	private renderGrid(cell: HTMLElement, habit: Habit, today: LocalDate): void {
 		const year = cell.createDiv("th-year");
 		const labels = year.createDiv("th-year-labels");
 		["M", "", "W", "", "F", "", ""].forEach((label) => labels.createSpan({ text: label }));
 		const scroller = year.createDiv("th-year-scroll");
 		const weeks = scroller.createDiv("th-year-weeks");
-		calendarWeeks(calendarStart(habit, today), today).forEach((week, index) => {
-			const column = weeks.createDiv("th-year-week");
-			const monthStart = week.find((date) => date?.day === 1) ?? (index === 0 ? week.find((date) => date) : undefined);
-			column.createDiv({ cls: "th-year-month", text: monthStart ? monthShort(monthStart) : "" });
-			for (const date of week) {
-				const cell = column.createDiv("th-year-day");
-				if (!date) {
-					cell.addClass("is-future");
-					continue;
-				}
-				const mark = habit.markOn(date);
-				const state = mark ? mark.kind : date.isBefore(habit.createdOn) ? "before" : habit.isScheduled(date) ? "empty" : "off";
-				cell.addClass(`is-${state}`);
-				cell.toggleClass("is-today", date.equals(today));
-				cell.setAttribute("aria-label", dayMonth(date));
-			}
-		});
-		const toToday = () => {
+		const draw = (from: LocalDate) => {
+			weeks.empty();
+			calendarWeeks(from, today).forEach((week, index) => this.renderWeek(weeks, week, index, habit, today));
 			scroller.scrollLeft = scroller.scrollWidth;
 		};
-		toToday();
-		window.requestAnimationFrame(toToday);
+		const start = calendarStart(habit, today);
+		draw(start);
+		window.requestAnimationFrame(() => {
+			const column = weeks.firstElementChild;
+			if (!(column instanceof HTMLElement) || column.offsetWidth === 0) return;
+			const gap = parseFloat(getComputedStyle(weeks).columnGap) || 0;
+			const fits = Math.floor((scroller.clientWidth + gap) / (column.offsetWidth + gap));
+			const filled = today.addDays(-7 * (fits - 1));
+			if (filled.isBefore(start)) draw(filled);
+			else scroller.scrollLeft = scroller.scrollWidth;
+		});
 	}
+
+	private renderWeek(weeks: HTMLElement, week: Array<LocalDate | undefined>, index: number, habit: Habit, today: LocalDate): void {
+		const column = weeks.createDiv("th-year-week");
+		const monthStart = week.find((date) => date?.day === 1) ?? (index === 0 ? week.find((date) => date) : undefined);
+		column.createDiv({ cls: "th-year-month", text: monthStart ? monthShort(monthStart) : "" });
+		for (const date of week) {
+			const day = column.createDiv("th-year-day");
+			if (!date) {
+				day.addClass("is-future");
+				continue;
+			}
+			const mark = habit.markOn(date);
+			const state = mark ? mark.kind : date.isBefore(habit.createdOn) ? "before" : habit.isScheduled(date) ? "empty" : "off";
+			day.addClass(`is-${state}`);
+			day.toggleClass("is-today", date.equals(today));
+			day.setAttribute("aria-label", dayMonth(date));
+		}
+	}
+
 
 	private renderHistory(rows: HTMLElement, habit: Habit): void {
 		const misses = habit.marks().flatMap(([date, mark]) => (mark.kind === "missed" ? [{ date, reason: mark.reason }] : []));

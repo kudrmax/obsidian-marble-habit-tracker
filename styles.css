@@ -335,14 +335,16 @@ button.th-meta-done[aria-expanded="true"] .th-meta-chevron { transform: rotate(9
 .th-year-weeks { display: inline-flex; gap: 3px; }
 .th-year-week { display: flex; flex-direction: column; gap: 3px; width: var(--th-dot); }
 .th-year-month { height: var(--th-dot); font-size: 10px; line-height: var(--th-dot); color: var(--th-faint); white-space: nowrap; overflow: visible; }
-.th-year-day { box-sizing: border-box; width: var(--th-dot); height: var(--th-dot); border-radius: 50%; background: var(--th-surface); }
-.th-year-day.is-tiny { background: var(--th-habit); }
-.th-year-day.is-full { background: radial-gradient(circle, #ffffff 0 2px, var(--th-habit) 2.5px); }
-.th-year-day.is-missed { background: transparent; border: 1.5px solid var(--th-faint); }
-.th-year-day.is-off,
+.th-year-day { box-sizing: border-box; width: var(--th-dot); height: var(--th-dot); border-radius: 50%; corner-shape: round; border: 1.5px solid var(--th-line); background: transparent; }
+.th-year-day.is-tiny { border-color: var(--th-habit); background: var(--th-habit); }
+.th-year-day.is-full { border-color: var(--th-habit); background: radial-gradient(circle, #ffffff 0 18%, var(--th-habit) 24%); }
+.th-year-day.is-missed { border-color: transparent; background: var(--th-line); }
+.th-year-day.is-off { border-color: transparent; background: radial-gradient(circle, var(--th-line) 0 22%, transparent 28%); }
 .th-year-day.is-before,
-.th-year-day.is-future { background: transparent; }
-.th-year-day.is-today { outline: 1.5px solid var(--th-text); outline-offset: 2px; }
+.th-year-day.is-future { opacity: 0.4; }
+.th-year-day.is-today { box-shadow: inset 0 0 0 1.5px var(--th-text); }
+.th-year-day.is-today.is-tiny,
+.th-year-day.is-today.is-full { box-shadow: inset 0 0 0 1.5px var(--th-habit), inset 0 0 0 3px var(--background-primary); }
 
 .th-history-row { display: grid; grid-template-columns: 58px 18px minmax(0, 1fr); align-items: start; padding: 11px 0; border-bottom: var(--th-line-width) solid var(--th-line); font-size: 15px; }
 .th-history-date { padding-top: 1px; font-size: var(--th-small-size); color: var(--th-faint); }
