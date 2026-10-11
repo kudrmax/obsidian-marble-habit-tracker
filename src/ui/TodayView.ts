@@ -334,11 +334,14 @@ export class TodayView extends ItemView {
 		if (subtitle) text.createDiv({ cls: "th-row-sub", text: subtitle });
 		text.addEventListener("click", () => this.ui.openHabit(path, this.leaf));
 
-		if (this.menu === path) this.renderAnswers(main, path, habit, mark);
+		if (this.menu === path && canGoOffTrigger(habit)) {
+			const stack = main.createDiv("th-answer-stack");
+			this.renderAnswers(stack, path, habit, mark);
+			this.renderOffTrigger(stack);
+		} else if (this.menu === path) this.renderAnswers(main, path, habit, mark);
 		else {
 			this.renderMark(main, path, habit, mark);
 		}
-		if (this.menu === path && canGoOffTrigger(habit)) this.renderOffTrigger(row);
 		if (this.asking === path) this.renderReasons(row, path);
 		if (this.shrink === path && mark?.kind === "missed") this.renderShrink(row, path, habit);
 	}
@@ -410,10 +413,9 @@ export class TodayView extends ItemView {
 		if (habit.hasTiny) option("tiny", "Tiny", "check", chosen("tiny"));
 	}
 
-	/** A switch under the row while its menu is open: the tiny or full answer picked next counts as done without the anchor. */
-	private renderOffTrigger(row: HTMLElement): void {
-		const extra = row.createDiv("th-row-extra th-off-trigger-line");
-		const chip = extra.createEl("button", { cls: "th-chip th-off-trigger", attr: { "aria-pressed": String(this.offTrigger) } });
+	/** A switch under the answer circles: the tiny or full answer picked next counts as done without the anchor. */
+	private renderOffTrigger(parent: HTMLElement): void {
+		const chip = parent.createEl("button", { cls: "th-chip th-off-trigger", attr: { "aria-pressed": String(this.offTrigger) } });
 		chip.toggleClass("is-on", this.offTrigger);
 		icon(chip.createSpan("th-off-trigger-icon"), "unlink");
 		chip.createSpan({ text: "Not at trigger" });
