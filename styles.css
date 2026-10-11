@@ -440,7 +440,7 @@ button.th-style-tile.is-selected { border-color: var(--interactive-accent); }
 .th-segmented button.is-selected { background: var(--interactive-normal); color: var(--text-normal); box-shadow: var(--input-shadow); }
 
 /* Not at trigger: a switch under an open menu; while it's on, the tiny and full circles turn dashed. */
-.th-off-trigger-line { padding: 0 0 10px; }
+.th-off-trigger-line { display: flex; justify-content: flex-end; margin-right: -4px; padding: 0 0 10px; }
 button.th-chip.th-off-trigger { display: inline-flex; align-items: center; gap: 6px; height: 30px; font-size: var(--th-small-size); color: var(--th-muted); }
 button.th-chip.th-off-trigger.is-on { border-color: var(--th-habit); background: color-mix(in srgb, var(--th-habit) 14%, transparent); color: var(--th-text); }
 .th-off-trigger-icon { display: inline-flex; }

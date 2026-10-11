@@ -7,7 +7,7 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 const SPARK_PATH = "M0 -10 C1.2 -2.6 2.6 -1.2 10 0 C2.6 1.2 1.2 2.6 0 10 C-1.2 2.6 -2.6 1.2 -10 0 C-2.6 -1.2 -1.2 -2.6 0 -10 Z";
 const WEEKDAY_LETTERS: Record<Weekday, string> = { mon: "M", tue: "T", wed: "W", thu: "T", fri: "F", sat: "S", sun: "S" };
 
-export type IconName = "check" | "x" | "plus" | "spark" | "shrink" | "back" | "shuffle";
+export type IconName = "check" | "x" | "plus" | "spark" | "shrink" | "back" | "clock";
 
 const LUCIDE: Partial<Record<IconName, string>> = { shrink: "minimize-2", back: "chevron-left" };
 
