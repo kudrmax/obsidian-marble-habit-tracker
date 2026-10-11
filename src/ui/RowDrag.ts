@@ -1,6 +1,8 @@
 const LIFT_MS = 400;
 /** How far a finger may wander before the hold counts as a scroll instead of a lift. */
 const SLOP = 8;
+/** How far a pressed mouse moves before it picks the row up; a mouse lifts at once, as drag and drop does on a computer. */
+const MOUSE_SLOP = 4;
 const SLOT = "[data-slot]";
 const ZONE = "[data-zone]";
 const ROW_HANDLE = ".th-row-text";
@@ -35,13 +37,14 @@ interface Dragging {
 /**
  * Reordering on Today. The column holds slots in screen order: habit rows (`data-slot="row"`) and section headers
  * (`"header"`), plus a new-section zone (`data-zone`) that shows while a row is dragged (the column gets
- * `is-dragging-row`). Hold a row's text or a header, then drag; a header carries the rows under it and lands only
- * between sections. While dragging the page doesn't scroll, and the tap that ends a drag
- * doesn't open anything. `onDrop` gets null when the slot went back where it was.
+ * `is-dragging-row`). Drag a row's text or a header; a header carries the rows under it and lands only between
+ * sections. A mouse picks the slot up as soon as it moves; a finger holds first, so a swipe still scrolls. While
+ * dragging the page doesn't scroll, and the tap that ends a drag doesn't open anything. `onDrop` gets null when the
+ * slot went back where it was.
  */
 export class RowDrag {
 	private timer = 0;
-	private pressed: { element: HTMLElement; kind: DragKind; x: number; y: number } | null = null;
+	private pressed: { element: HTMLElement; kind: DragKind; x: number; y: number; mouse: boolean } | null = null;
 	private dragging: Dragging | null = null;
 	private swallowClick = false;
 
@@ -84,9 +87,10 @@ export class RowDrag {
 		const header = target?.closest<HTMLElement>('[data-slot="header"]');
 		const element = row ?? header;
 		if (!element) return;
-		this.pressed = { element, kind: row ? "row" : "header", x: event.clientX, y: event.clientY };
+		const mouse = event.pointerType === "mouse";
+		this.pressed = { element, kind: row ? "row" : "header", x: event.clientX, y: event.clientY, mouse };
 		window.clearTimeout(this.timer);
-		this.timer = window.setTimeout(() => this.lift(), LIFT_MS);
+		if (!mouse) this.timer = window.setTimeout(() => this.lift(), LIFT_MS);
 	};
 
 	private lift(): void {
@@ -155,7 +159,13 @@ export class RowDrag {
 
 	private readonly pointerMove = (event: PointerEvent) => {
 		if (this.dragging) return this.move(event.clientY);
-		if (this.pressed && Math.hypot(event.clientX - this.pressed.x, event.clientY - this.pressed.y) > SLOP) this.release();
+		const pressed = this.pressed;
+		if (!pressed) return;
+		const moved = Math.hypot(event.clientX - pressed.x, event.clientY - pressed.y);
+		if (pressed.mouse && moved > MOUSE_SLOP) {
+			this.lift();
+			this.move(event.clientY);
+		} else if (!pressed.mouse && moved > SLOP) this.release();
 	};
 
 	private readonly touchMove = (event: TouchEvent) => {

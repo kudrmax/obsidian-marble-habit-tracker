@@ -12,8 +12,8 @@ import { Haptics } from "./Haptics";
 import { Hsl, parseColor } from "./jar/color";
 import { JarCanvas, JarItem } from "./jar/JarCanvas";
 import { KeyboardWatch } from "./KeyboardWatch";
-import { EARTH, Point } from "./jar/JarPhysics";
-import { TiltSensor } from "./jar/TiltSensor";
+import { Point } from "./jar/JarPhysics";
+import { IN_HAND, TiltSensor } from "./jar/TiltSensor";
 import { Placement, arrange, groupBySection, visibleEntries } from "./order";
 import { Drop, RowDrag } from "./RowDrag";
 import { SectionNameModal } from "./SectionNameModal";
@@ -337,7 +337,7 @@ export class TodayView extends ItemView {
 
 		const text = main.createDiv("th-row-text");
 		text.createDiv({ cls: "th-row-title", text: habit.headline });
-		const subtitle = this.subtitle(path, habit, mark);
+		const subtitle = this.subtitle(path, habit);
 		if (subtitle) text.createDiv({ cls: "th-row-sub", text: subtitle });
 		text.addEventListener("click", () => this.ui.openHabit(path, this.leaf));
 
@@ -353,13 +353,12 @@ export class TodayView extends ItemView {
 		if (this.shrink === path && mark?.kind === "missed") this.renderShrink(row, path, habit);
 	}
 
-	private subtitle(path: string, habit: Habit, mark: DayMark | undefined): string {
+	/** The anchor, as before the habit was answered; an answered row only turns grey. */
+	private subtitle(path: string, habit: Habit): string {
 		if (this.asking === path) return "skipped — why?";
-		if (!mark) return this.ui.labels().anchorLine(habit);
-		if (mark.kind === "missed") return `skipped · ${mark.reason.toLowerCase()}`;
-		const what = mark.kind === "tiny" ? "tiny" : habit.hasTiny ? `full · ${habit.current("full") ?? ""}`.replace(/ · $/, "") : "done";
-		return isOffTrigger(mark) ? `${what} · not at trigger` : what;
+		return this.ui.labels().anchorLine(habit);
 	}
+
 
 	private renderMark(parent: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
 		const hint = mark
@@ -608,9 +607,9 @@ export class TodayView extends ItemView {
 
 	/** The motion sensor runs only while Today is actually on screen: not in a background tab, not with the app hidden. */
 	private applyTilt(): void {
-		if (!this.tiltEnabled()) {
+		if (!this.tiltEnabled() || !Platform.isMobile) {
 			this.tilt.stop();
-			this.jar?.setGravity(EARTH);
+			this.jar?.setGravity(IN_HAND);
 			return;
 		}
 		if (!this.contentEl.isShown() || document.hidden) {

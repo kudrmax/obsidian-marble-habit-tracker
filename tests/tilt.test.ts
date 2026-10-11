@@ -1,11 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { TiltSensor, tiltGravity } from "../src/ui/jar/TiltSensor";
+import { IN_HAND, TiltSensor, tiltGravity } from "../src/ui/jar/TiltSensor";
 
 const S = 0.45;
 const close = (point: { x: number; y: number }, x: number, y: number) => {
 	expect(point.x).toBeCloseTo(x, 3);
 	expect(point.y).toBeCloseTo(y, 3);
 };
+
+describe("IN_HAND", () => {
+	it("pulls straight down as hard as a phone held at a reading angle, gentler than upright", () => {
+		expect(IN_HAND.x).toBeCloseTo(0, 5);
+		expect(IN_HAND.y).toBeCloseTo(tiltGravity(40, 0, 0).y, 5);
+		expect(IN_HAND.y).toBeLessThan(tiltGravity(90, 0, 0).y);
+	});
+});
 
 describe("tiltGravity", () => {
 	it("pulls straight down when the phone stands upright", () => {

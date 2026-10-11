@@ -4,6 +4,7 @@ import { JarSize } from "../domain/Jar";
 import { Hsl, parseColor } from "./jar/color";
 import { DEFAULT_MARBLE_SIZES, JarMaterial, MAX_MARBLE, MIN_MARBLE, MarbleSizes } from "./jar/JarAssets";
 import { JarCanvas, JarItem } from "./jar/JarCanvas";
+import { IN_HAND } from "./jar/TiltSensor";
 
 const SAMPLE: ReadonlyArray<{ size: JarSize; count: number }> = [
 	{ size: "small", count: 24 },
@@ -32,6 +33,7 @@ export class MarbleSizesModal extends Modal {
 		this.setTitle("Marble sizes");
 		const stage = this.contentEl.createDiv("th-sizes-stage");
 		this.jar = new JarCanvas(stage, this.options());
+		this.jar.setGravity(IN_HAND);
 		this.pour();
 		const sliders = (["small", "medium", "big"] as const).map((size) => {
 			let set: (value: number) => void = () => undefined;

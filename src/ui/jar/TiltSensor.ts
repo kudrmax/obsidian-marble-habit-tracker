@@ -15,6 +15,15 @@ export function tiltGravity(beta: number, gamma: number, screenAngle: number, st
 	};
 }
 
+/** How a phone is usually held to read it, tilted back from upright. */
+const READING_ANGLE = 40;
+
+/**
+ * Gravity where there's no tilt to follow — a computer, or tilt turned off: as on a phone held at a reading angle, so
+ * marbles fall at the speed they do in the hand rather than as if the phone stood upright.
+ */
+export const IN_HAND: Point = tiltGravity(READING_ANGLE, 0, 0);
+
 export class TiltSensor {
 	private listening = false;
 	private asked = false;
