@@ -29,6 +29,10 @@ describe("format", () => {
 		expect(custom.title("tiny")).toBe("Я");
 	});
 
+	it("describes a removed part", () => {
+		expect(describeChange({ part: "tiny", date: d("2026-10-01"), from: "read a page", to: "" })).toBe("I will → removed");
+	});
+
 	it("describes a recipe change by its new value", () => {
 		expect(describeChange({ part: "tiny", date: d("2026-10-01"), from: "read a page", to: "open the book" })).toBe("I will → open the book");
 		expect(describeChange({ part: "full", date: d("2026-10-01"), to: "15 min workout" })).toBe("on a good day → 15 min workout");

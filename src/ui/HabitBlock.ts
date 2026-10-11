@@ -110,10 +110,10 @@ export class HabitBlock {
 	}
 
 	private renderRecipe(rows: HTMLElement, habit: Habit): void {
-		const text = (part: TextPart) => habit.text(part).current();
+		const text = (part: TextPart) => habit.current(part);
 		const labels = this.ui.labels();
 		for (const part of ["anchor", "tiny", "full", "celebration"] as const) {
-			this.editable(this.property(rows, RECIPE_ICONS[part], labels.of(part)), text(part) ?? "", (next) => this.ui.service.replaceText(this.path, part, next));
+			this.editable(this.property(rows, RECIPE_ICONS[part], labels.of(part)), text(part) ?? "", (next) => (next ? this.ui.service.replaceText(this.path, part, next) : this.ui.service.clearText(this.path, part)));
 		}
 		const days = this.property(rows, RECIPE_ICONS.schedule, labels.of("schedule")).createDiv({ cls: "metadata-input-longtext th-habit-days", text: recipeDays(habit.currentSchedule) });
 		days.addEventListener("click", () => new EditSheet(this.app, this.ui.service, this.path, habit, "schedule", labels).open());

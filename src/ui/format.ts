@@ -32,12 +32,12 @@ export class RecipeLabels {
 
 	/** "after I …", or nothing for a habit with no anchor. */
 	anchorLine(habit: Habit): string {
-		const anchor = habit.text("anchor").current();
+		const anchor = habit.current("anchor");
 		return anchor ? `${this.set.anchor} ${anchor}` : "";
 	}
 
 	describeChange(change: RecipeChange): string {
-		const to = change.to instanceof Schedule ? recipeDays(change.to) : change.to;
+		const to = change.to instanceof Schedule ? recipeDays(change.to) : change.to || "removed";
 		return `${this.set[change.part]} → ${to}`;
 	}
 }

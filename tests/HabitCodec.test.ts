@@ -77,6 +77,16 @@ describe("decodeHabit", () => {
 		expect(() => decodeHabit("Зарядка", example({ color: "magenta" }))).toThrow("magenta");
 	});
 
+	it("keeps a removed part through a save and a read", () => {
+		const habit = decodeHabit("Зарядка", example()).clearText("full", d("2026-10-10"));
+		const frontmatter = example();
+		encodeHabit(habit, frontmatter);
+		const read = decodeHabit("Зарядка", frontmatter);
+		expect(read.hasFull).toBe(false);
+		expect(read.text("full").versions[0]).toMatchObject({ value: "" });
+		expect(read.text("full").versions.length).toBe(habit.text("full").versions.length);
+	});
+
 	it("reads archived", () => {
 		expect(decodeHabit("Зарядка", example({ archived: true })).archived).toBe(true);
 	});

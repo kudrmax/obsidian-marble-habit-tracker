@@ -13,6 +13,14 @@ const FORBIDDEN_NAME_CHARS = /[\\/:*?"<>|#^[\]]/;
 
 export const sameSchedule = (a: Schedule, b: Schedule): boolean => a.equals(b);
 
+/** The value of a version that removes a part from that day on. */
+const REMOVED = "";
+const NEEDS_A_VERSION = "A habit needs a tiny or a full version";
+
+function present(value: string | undefined): string | undefined {
+	return value?.trim() ? value : undefined;
+}
+
 export interface HabitState {
 	readonly name: string;
 	readonly order?: number;
@@ -58,10 +66,7 @@ export class Habit {
 		if (!name) throw new DomainError("Give the habit a name");
 		if (FORBIDDEN_NAME_CHARS.test(name)) throw new DomainError('A name can\'t contain \\ / : * ? " < > | # ^ [ ]');
 		if (state.schedule.isEmpty) throw new DomainError("Schedule is missing");
-		if (state.text.tiny.isEmpty && state.text.full.isEmpty) throw new DomainError("Write a tiny or a full version of the habit");
-		for (const [part, component] of Object.entries(state.text)) {
-			if (component.versions.some((version) => !version.value.trim())) throw new DomainError(`${part} has an empty value`);
-		}
+		if (!present(state.text.tiny.current()) && !present(state.text.full.current())) throw new DomainError(NEEDS_A_VERSION);
 		return new Habit({ ...state, name });
 	}
 
@@ -89,18 +94,23 @@ export class Habit {
 		return this.state.name;
 	}
 
+	/** The part as it is now; a part that was removed reads as missing. */
+	current(part: TextPart): string | undefined {
+		return present(this.state.text[part].current());
+	}
+
 	/** Whether the habit has a tiny version; without one, doing it means doing the full version. */
 	get hasTiny(): boolean {
-		return !this.state.text.tiny.isEmpty;
+		return this.current("tiny") !== undefined;
 	}
 
 	get hasFull(): boolean {
-		return !this.state.text.full.isEmpty;
+		return this.current("full") !== undefined;
 	}
 
 	/** What the habit is called in a list: its tiny version, or the full one when there is no tiny version. */
 	get headline(): string {
-		return this.state.text.tiny.current() ?? this.state.text.full.current() ?? this.state.name;
+		return this.current("tiny") ?? this.current("full") ?? this.state.name;
 	}
 
 	get section(): string | undefined {
@@ -165,6 +175,18 @@ export class Habit {
 
 	replaceText(part: TextPart, value: string, today: LocalDate, because?: string): Habit {
 		return this.withText(part, this.state.text[part].replace(requireText(value), today, because));
+	}
+
+	/**
+	 * Removes a part as of today; its history stays. A habit keeps a tiny or a full version, so removing the last of
+	 * them is refused.
+	 */
+	clearText(part: TextPart, today: LocalDate): Habit {
+		if (this.current(part) === undefined) return this;
+		const cleared = this.state.text[part].replace(REMOVED, today);
+		const habit = this.withText(part, cleared.versions.every((version) => version.value === REMOVED) ? Component.empty<string>() : cleared);
+		if (!habit.hasTiny && !habit.hasFull) throw new DomainError(NEEDS_A_VERSION);
+		return habit;
 	}
 
 	correctText(part: TextPart, value: string): Habit {

@@ -23,7 +23,7 @@ export class EditSheet extends Sheet {
 		private readonly labels: RecipeLabels,
 	) {
 		super(app, habit.name, habit.color);
-		this.text = target === "schedule" || target === "color" ? "" : (habit.text(target).current() ?? "");
+		this.text = target === "schedule" || target === "color" ? "" : (habit.current(target) ?? "");
 		this.days = habit.currentSchedule.weekdays;
 		this.color = habit.color;
 	}

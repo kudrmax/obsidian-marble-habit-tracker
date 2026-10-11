@@ -32,6 +32,27 @@ describe("Habit", () => {
 		expect(() => Habit.create({ ...input, days: [] }, created)).toThrow(DomainError);
 	});
 
+	it("removes a part as of today and keeps its history", () => {
+		const habit = Habit.create({ name: "Чтение", anchor: "Кофе", tiny: "1 страница", full: "Глава", days: WEEKDAYS }, created);
+		const cleared = habit.clearText("tiny", today);
+		expect(cleared.hasTiny).toBe(false);
+		expect(cleared.headline).toBe("Глава");
+		expect(cleared.text("tiny").versions.map((version) => version.value)).toEqual(["", "1 страница"]);
+		expect(cleared.changes()[0]).toMatchObject({ part: "tiny", from: "1 страница", to: "" });
+		expect(cleared.replaceText("tiny", "2 страницы", d("2026-10-10")).current("tiny")).toBe("2 страницы");
+		expect(habit.clearText("anchor", today).current("anchor")).toBeUndefined();
+	});
+
+	it("forgets a part removed on the day it was written", () => {
+		const habit = Habit.create({ name: "Чтение", tiny: "1 страница", full: "Глава", days: WEEKDAYS }, today);
+		expect(habit.clearText("full", today).text("full").isEmpty).toBe(true);
+	});
+
+	it("keeps a tiny or a full version", () => {
+		const habit = Habit.create({ name: "Чтение", tiny: "1 страница", full: "Глава", days: WEEKDAYS }, created);
+		expect(() => habit.clearText("tiny", today).clearText("full", today)).toThrow("tiny or a full");
+	});
+
 	it("can go without an anchor or without a tiny version", () => {
 		const full = Habit.create({ name: "Зал", full: "Тренировка", days: WEEKDAYS }, created);
 		expect(full.text("anchor").isEmpty).toBe(true);

@@ -345,7 +345,7 @@ export class TodayView extends ItemView {
 		if (!mark) return this.ui.labels().anchorLine(habit);
 		if (mark.kind === "missed") return `skipped · ${mark.reason.toLowerCase()}`;
 		if (mark.kind === "tiny") return "tiny";
-		return habit.hasTiny ? `full · ${habit.text("full").current() ?? ""}`.replace(/ · $/, "") : "done";
+		return habit.hasTiny ? `full · ${habit.current("full") ?? ""}`.replace(/ · $/, "") : "done";
 	}
 
 	private renderMark(parent: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
@@ -490,7 +490,7 @@ export class TodayView extends ItemView {
 			if (mark && isDone(mark)) {
 				this.haptics.tap();
 				this.celebrate(path);
-				const phrase = habit.text("celebration").current();
+				const phrase = habit.current("celebration");
 				if (phrase && this.ui.settings().celebrationLine) this.caption(habit, phrase);
 			}
 			else this.stopCelebrating(path);

@@ -26,6 +26,11 @@ export class HabitService {
 		return this.repository.update(path, (habit) => habit.replaceText(part, value, today, because));
 	}
 
+	async clearText(path: string, part: TextPart): Promise<Habit> {
+		const today = this.today();
+		return this.repository.update(path, (habit) => habit.clearText(part, today));
+	}
+
 	async correctText(path: string, part: TextPart, value: string): Promise<Habit> {
 		return this.repository.update(path, (habit) => habit.correctText(part, value));
 	}
