@@ -1,12 +1,14 @@
 import { Box } from "./jar/JarPhysics";
 
 const NAVBAR = ".mobile-navbar";
+/** The desktop status bar in the bottom right corner. */
+const STATUS_BAR = ".status-bar";
 const HEADER_PARTS = ".view-header .view-header-left .view-action, .view-header .view-actions";
 
 /**
- * Tracks the floating parts of Obsidian's phone UI over the element — the navbar below and the
- * header buttons above — keeps --th-bottom-inset equal to how much the navbar covers. The navbar is
- * a shelf for every win; the header buttons only stop wins that already landed, so the jar can fill from the top.
+ * Tracks the floating parts of Obsidian's UI over the element — the phone navbar and the desktop status bar below, the
+ * header buttons above — and keeps --th-bottom-inset equal to how much the navbar covers. The navbar and the status
+ * bar are shelves for every win; the header buttons only stop wins that already landed, so the jar can fill from the top.
  */
 export class ScreenChrome {
 	private readonly resizer = new ResizeObserver(() => this.measure());
@@ -27,10 +29,12 @@ export class ScreenChrome {
 
 	measure(): void {
 		const navbar = document.querySelector<HTMLElement>(NAVBAR);
+		const statusBar = document.querySelector<HTMLElement>(STATUS_BAR);
 		const parts = [...this.header.querySelectorAll<HTMLElement>(HEADER_PARTS)];
-		this.track(navbar ? [navbar, ...parts] : parts);
+		this.track([navbar, statusBar, ...parts].filter((element): element is HTMLElement => element !== null));
 		const shelf = navbar ? this.box(navbar) : null;
-		const shelves = shelf ? [shelf] : [];
+		const bar = statusBar ? this.box(statusBar) : null;
+		const shelves = [shelf, bar].filter((box): box is Box => box !== null);
 		const ledges = parts.flatMap((part) => this.box(part) ?? []);
 		const inset = shelf ? Math.max(0, Math.ceil(this.element.getBoundingClientRect().height - shelf.top)) : 0;
 		const key = JSON.stringify([shelves, ledges, inset]);
@@ -56,7 +60,7 @@ export class ScreenChrome {
 			top: box.top - area.top,
 			right: box.right - area.left,
 			bottom: box.bottom - area.top,
-			radius: Math.min(box.width, box.height) / 2,
+			radius: Math.min(parseFloat(getComputedStyle(target).borderTopLeftRadius) || 0, box.width / 2, box.height / 2),
 		};
 	}
 
