@@ -15,6 +15,11 @@ const GUIDE: ReadonlyArray<{ part: Part; text: string; example: string }> = [
 	{ part: "celebration", text: "A quick “Yes!” right after. That feeling is what makes it stick.", example: "Say “Nice!” and smile" },
 ];
 
+/** The guide's example for a field, which is also its placeholder: the form reads as one habit. */
+function example(part: Part): string {
+	return GUIDE.find((row) => row.part === part)?.example ?? "";
+}
+
 /** A plain habit needs a name, an action and days; the Tiny Habits recipe is an optional part that opens below. */
 export class HabitFormModal extends Sheet {
 	private name = "";
@@ -47,8 +52,8 @@ export class HabitFormModal extends Sheet {
 					this.refreshReady();
 				},
 			});
-		const name = field(body, "Name", "Read", (value) => (this.name = value));
-		field(body, labels.title("full"), "the whole thing", (value) => (this.full = value));
+		const name = field(body, "Name", "Reading", (value) => (this.name = value));
+		field(body, labels.title("full"), example("full"), (value) => (this.full = value));
 
 		const days = body.createDiv("th-sheet-group");
 		days.createDiv({ cls: "th-label", text: labels.title("schedule") });
@@ -79,9 +84,9 @@ export class HabitFormModal extends Sheet {
 			about.createDiv({ text });
 			about.createDiv({ cls: "th-recipe-guide-example", text: example });
 		}
-		field(recipe, labels.title("anchor"), "something I already do every day", (value) => (this.anchor = value));
-		field(recipe, labels.title("tiny"), "the tiniest version", (value) => (this.tiny = value));
-		field(recipe, labels.title("celebration"), "a word or a gesture, like “Yes!”", (value) => (this.celebration = value));
+		field(recipe, labels.title("anchor"), example("anchor"), (value) => (this.anchor = value));
+		field(recipe, labels.title("tiny"), example("tiny"), (value) => (this.tiny = value));
+		field(recipe, labels.title("celebration"), example("celebration"), (value) => (this.celebration = value));
 		if (this.notAtTrigger) {
 			const anytime = recipe.createEl("label", { cls: "th-check" });
 			const box = anytime.createEl("input", { type: "checkbox" });
