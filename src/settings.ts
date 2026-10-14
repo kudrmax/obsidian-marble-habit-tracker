@@ -33,6 +33,8 @@ export interface HabitSettings {
 	cursorPush: boolean;
 	/** Habits may be marked as done without their trigger. */
 	notAtTrigger: boolean;
+	/** The help behind Today's "?" was opened once; until then the button carries a dot. */
+	hintsSeen: boolean;
 	haptics: boolean;
 }
 
@@ -58,6 +60,7 @@ export const DEFAULT_SETTINGS: HabitSettings = {
 	tilt: true,
 	cursorPush: true,
 	notAtTrigger: false,
+	hintsSeen: false,
 	haptics: true,
 };
 
@@ -95,6 +98,7 @@ export function loadSettings(data: unknown): HabitSettings {
 		tilt: flag(raw.tilt, DEFAULT_SETTINGS.tilt),
 		cursorPush: flag(raw.cursorPush, DEFAULT_SETTINGS.cursorPush),
 		notAtTrigger: flag(raw.notAtTrigger, DEFAULT_SETTINGS.notAtTrigger),
+		hintsSeen: flag(raw.hintsSeen, DEFAULT_SETTINGS.hintsSeen),
 		haptics: flag(raw.haptics, DEFAULT_SETTINGS.haptics),
 	};
 }

@@ -271,9 +271,10 @@ button.th-meta-done:disabled { cursor: default; opacity: 1; }
 button.th-meta-done[aria-expanded="true"] .th-meta-chevron { transform: rotate(90deg); }
 .th-wins { margin-left: auto; color: var(--th-faint); font-variant-numeric: tabular-nums; }
 .th-ring-header .th-wins { margin-left: 0; }
-button.th-meta-add { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; margin-right: -6px; border: none; border-radius: var(--radius-s); box-shadow: none; background: transparent; color: var(--th-faint); cursor: pointer; }
-.th-meta:not(:has(.th-wins)) button.th-meta-add { margin-left: auto; }
-.th-ring-header button.th-meta-add { margin: 0; }
+button.th-meta-add { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: none; border-radius: var(--radius-s); box-shadow: none; background: transparent; color: var(--th-faint); cursor: pointer; }
+.th-meta-actions { display: flex; align-items: center; gap: 2px; margin-right: -6px; }
+.th-meta:not(:has(.th-wins)) .th-meta-actions { margin-left: auto; }
+.th-ring-header .th-meta-actions { margin: 0; }
 @media (hover: hover) { button.th-meta-add:hover { background: var(--background-modifier-hover); color: var(--th-text); } }
 button.th-meta-add svg { width: 18px; height: 18px; }
 .th-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
@@ -450,6 +451,11 @@ button.th-disclosure { display: flex; align-items: center; justify-content: flex
 .th-disclosure-icon svg { width: 14px; height: 14px; }
 button.th-disclosure[aria-expanded="true"] .th-disclosure-icon { transform: rotate(90deg); }
 .th-disclosure-note { color: var(--text-faint); font-weight: var(--font-normal); }
+.th-guide { margin-top: 6px; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 12px 16px; font-size: var(--font-ui-small); line-height: 1.4; }
+.th-guide-name { font-weight: var(--font-semibold); color: var(--text-normal); max-width: 9.5em; }
+.th-guide-text { color: var(--text-muted); }
+button.th-meta-help { position: relative; }
+button.th-meta-help.has-dot::after { content: ""; position: absolute; top: 4px; right: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--interactive-accent); }
 .th-recipe-guide { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 10px 14px; margin: 2px 0 10px; padding: 12px 14px; border-radius: var(--radius-m); background: var(--background-secondary); font-size: var(--font-ui-small); line-height: 1.4; }
 .th-recipe-guide-name { font-weight: var(--font-semibold); color: var(--text-normal); }
 .th-recipe-guide-text { color: var(--text-muted); }

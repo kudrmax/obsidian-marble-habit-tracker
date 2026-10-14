@@ -26,6 +26,7 @@ describe("loadSettings", () => {
 			tilt: true,
 			cursorPush: true,
 			notAtTrigger: false,
+			hintsSeen: false,
 			haptics: true,
 		});
 		expect(loadSettings(undefined)).toEqual(DEFAULT_SETTINGS);
@@ -55,6 +56,7 @@ describe("loadSettings", () => {
 				tilt: false,
 				cursorPush: false,
 				notAtTrigger: true,
+				hintsSeen: true,
 				haptics: false,
 			}),
 		).toEqual({
@@ -79,6 +81,7 @@ describe("loadSettings", () => {
 			tilt: false,
 			cursorPush: false,
 			notAtTrigger: true,
+			hintsSeen: true,
 			haptics: false,
 		});
 	});

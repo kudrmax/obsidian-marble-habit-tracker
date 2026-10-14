@@ -11,6 +11,8 @@ import { longDate } from "./format";
 import { DayWatcher } from "./DayWatcher";
 import { EditSheet } from "./EditSheet";
 import { Haptics } from "./Haptics";
+import { helpRows } from "./help";
+import { HelpModal } from "./HelpModal";
 import { Hsl, parseColor } from "./jar/color";
 import { JarCanvas, JarItem } from "./jar/JarCanvas";
 import { KeyboardWatch } from "./KeyboardWatch";
@@ -309,7 +311,15 @@ export class TodayView extends ItemView {
 			} else toggle.disabled = true;
 		}
 		if (settings.showWins) meta.createSpan({ cls: "th-wins", text: winsLabel(totalWins(all)) });
-		const add = meta.createEl("button", { cls: "th-meta-add", attr: { "aria-label": "New habit", title: "New habit" } });
+		const actions = meta.createDiv("th-meta-actions");
+		const help = actions.createEl("button", { cls: "th-meta-add th-meta-help", attr: { "aria-label": "How it works", title: "How it works" } });
+		setIcon(help, "circle-help");
+		help.toggleClass("has-dot", !settings.hintsSeen);
+		help.addEventListener("click", () => {
+			new HelpModal(this.app, helpRows(Platform.isMobile, settings.merge)).open();
+			this.ui.markHintsSeen();
+		});
+		const add = actions.createEl("button", { cls: "th-meta-add", attr: { "aria-label": "New habit", title: "New habit" } });
 		icon(add, "plus");
 		add.addEventListener("click", () => this.ui.newHabit());
 	}

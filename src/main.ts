@@ -34,6 +34,11 @@ export default class MarbleHabitTrackerPlugin extends Plugin implements Settings
 			screenCorners: () => this.device.screenCorners,
 			labels: () => new RecipeLabels(this.config.labels),
 			openHabit: (path, leaf) => void this.openHabit(path, leaf),
+			markHintsSeen: () => {
+				if (this.config.hintsSeen) return;
+				this.config.hintsSeen = true;
+				void this.saveSettings();
+			},
 			newHabit: () => new HabitFormModal(this.app, service, new RecipeLabels(this.config.labels), this.config.notAtTrigger).open(),
 		};
 		this.newHabit = () => ui.newHabit();
