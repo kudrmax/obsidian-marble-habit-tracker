@@ -4,7 +4,7 @@ import { DomainError } from "../domain/DomainError";
 import { Habit } from "../domain/Habit";
 import { Frontmatter, HabitDecodeError, PropertyNames, decodeHabit, encodeHabit } from "./HabitCodec";
 
-/** Which notes are habits: every note carrying a tag, or every note in a folder. New habits go to the folder either way; an empty folder is the vault root. */
+/** Which notes are habits: every note carrying a tag, or every note in a folder. New habits go to the folder either way; "/" is the vault root. */
 export interface HabitScope {
 	readonly source: "tag" | "folder";
 	readonly tag: string;

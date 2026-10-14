@@ -10,6 +10,7 @@ abstract class ListSuggest extends AbstractInputSuggest<string> {
 	) {
 		super(app, input);
 		this.limit = LIMIT;
+		input.addEventListener("focus", () => input.dispatchEvent(new Event("input")));
 	}
 
 	protected abstract options(): string[];
@@ -30,13 +31,20 @@ abstract class ListSuggest extends AbstractInputSuggest<string> {
 	}
 }
 
-/** Suggests the vault's folders while typing a folder path. */
+const ROOT = "/";
+
+/** Suggests the vault's folders, the vault root first, while typing a folder path. */
 export class FolderSuggest extends ListSuggest {
 	protected override options(): string[] {
-		return this.app.vault
+		const folders = this.app.vault
 			.getAllFolders(false)
 			.map((folder) => folder.path)
 			.sort((a, b) => a.localeCompare(b));
+		return [ROOT, ...folders];
+	}
+
+	override renderSuggestion(value: string, el: HTMLElement): void {
+		el.setText(value === ROOT ? "/ (vault root)" : value);
 	}
 }
 

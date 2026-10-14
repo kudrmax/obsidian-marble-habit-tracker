@@ -1,10 +1,19 @@
 import { App, setIcon } from "obsidian";
 import { HabitService } from "../application/HabitService";
+import { Part } from "../domain/Habit";
 import { HabitColor } from "../domain/HabitColor";
 import { WEEKDAYS, Weekday } from "../domain/LocalDate";
 import { colorCircles, textField, weekdayCircles } from "./components";
 import { RecipeLabels } from "./format";
 import { Sheet } from "./Sheet";
+
+/** What each part of a Tiny Habits recipe is for, with an example, shown above the recipe fields. */
+const GUIDE: ReadonlyArray<{ part: Part; text: string; example: string }> = [
+	{ part: "full", text: "The habit itself, done in full.", example: "Read 20 pages" },
+	{ part: "anchor", text: "Something you already do every day. The new habit goes right after it.", example: "After I pour my morning coffee" },
+	{ part: "tiny", text: "A version so small you can't fail. It still counts as a win.", example: "Read one line" },
+	{ part: "celebration", text: "A quick “Yes!” right after. That feeling is what makes it stick.", example: "Say “Nice!” and smile" },
+];
 
 /** A plain habit needs a name, an action and days; the Tiny Habits recipe is an optional part that opens below. */
 export class HabitFormModal extends Sheet {
@@ -63,6 +72,13 @@ export class HabitFormModal extends Sheet {
 		toggle.createSpan({ cls: "th-disclosure-note", text: "optional" });
 		const recipe = body.createDiv("th-form-recipe");
 		recipe.hide();
+		const guide = recipe.createDiv("th-recipe-guide");
+		for (const { part, text, example } of GUIDE) {
+			guide.createDiv({ cls: "th-recipe-guide-name", text: labels.title(part) });
+			const about = guide.createDiv("th-recipe-guide-text");
+			about.createDiv({ text });
+			about.createDiv({ cls: "th-recipe-guide-example", text: example });
+		}
 		field(recipe, labels.title("anchor"), "something I already do every day", (value) => (this.anchor = value));
 		field(recipe, labels.title("tiny"), "the tiniest version", (value) => (this.tiny = value));
 		field(recipe, labels.title("celebration"), "a word or a gesture, like “Yes!”", (value) => (this.celebration = value));

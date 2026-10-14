@@ -8,7 +8,7 @@ export type HabitSource = "tag" | "folder";
 export interface HabitSettings {
 	source: HabitSource;
 	tag: string;
-	/** Where new habits are saved, and in folder mode where habits are found; empty is the vault root. */
+	/** Where new habits are saved, and in folder mode where habits are found; "/" is the vault root. */
 	folder: string;
 	habitBlock: boolean;
 	properties: PropertyNames;
@@ -76,7 +76,7 @@ export function loadSettings(data: unknown): HabitSettings {
 	return {
 		source: loadSource(raw.source, raw.folder),
 		tag: text(raw.tag, DEFAULT_SETTINGS.tag).replace(/^#/, ""),
-		folder: typeof raw.folder === "string" ? raw.folder.trim() : DEFAULT_SETTINGS.folder,
+		folder: text(raw.folder, DEFAULT_SETTINGS.folder),
 		habitBlock: flag(raw.habitBlock, DEFAULT_SETTINGS.habitBlock),
 		properties: loadProperties(raw.properties, data === null || data === undefined ? DEFAULT_PROPERTY_NAMES : LEGACY_PROPERTY_NAMES),
 		labels: loadLabels(raw.labels),
