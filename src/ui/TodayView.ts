@@ -128,12 +128,13 @@ export class TodayView extends ItemView {
 			}),
 		);
 		this.registerDomEvent(root, "click", (event) => this.closeMenuOutside(event));
+		// Obsidian puts each new action before the earlier ones: added last, shown first.
+		this.addAction("plus", "New habit", () => this.ui.newHabit());
 		this.helpAction = this.addAction("circle-help", "How it works", () => {
 			new HelpModal(this.app, helpRows(Platform.isMobile, this.ui.settings().merge)).open();
 			this.ui.markHintsSeen();
 		});
 		this.addAction("list", "All habits", () => this.showAll());
-		this.addAction("plus", "New habit", () => this.ui.newHabit());
 		if (!Platform.isMobile) {
 			this.registerDomEvent(root, "pointermove", (event) => {
 				if (event.pointerType === "mouse" && this.cursorPushEnabled()) this.jar?.setPusher({ x: event.clientX, y: event.clientY });
