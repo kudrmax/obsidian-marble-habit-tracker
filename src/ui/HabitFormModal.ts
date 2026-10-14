@@ -12,7 +12,7 @@ const GUIDE: ReadonlyArray<{ part: Part; text: string; example: string }> = [
 	{ part: "full", text: "The habit itself, done in full.", example: "Read 20 pages" },
 	{ part: "anchor", text: "Something you already do every day. The new habit goes right after it.", example: "After I pour my morning coffee" },
 	{ part: "tiny", text: "A version so small you can't fail. It still counts as a win.", example: "Read one line" },
-	{ part: "celebration", text: "A quick “Yes!” right after. That feeling is what makes it stick.", example: "Say “Nice!” and smile" },
+	{ part: "celebration", text: "A quick “Yes!” right after. That feeling is what makes it stick.", example: "I’m getting smarter!" },
 ];
 
 /** The guide's example for a field, which is also its placeholder: the form reads as one habit. */
