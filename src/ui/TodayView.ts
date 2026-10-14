@@ -2,10 +2,12 @@ import { ItemView, Notice, Platform, WorkspaceLeaf, setIcon } from "obsidian";
 import { HabitEntry } from "../application/ports";
 import { DayMark, FULL, SKIPPED, TINY, done, isDone, isOffTrigger, missed } from "../domain/DayMark";
 import { Habit } from "../domain/Habit";
+import { LocalDate } from "../domain/LocalDate";
 import { HabitColor } from "../domain/HabitColor";
 import { buildJar } from "../domain/Jar";
 import { colorClass } from "./colors";
 import { chip, icon, iconButton } from "./components";
+import { longDate } from "./format";
 import { DayWatcher } from "./DayWatcher";
 import { EditSheet } from "./EditSheet";
 import { Haptics } from "./Haptics";
@@ -55,6 +57,8 @@ export class TodayView extends ItemView {
 	private otherText = "";
 	private shrink: string | null = null;
 	private showDone = false;
+	/** A past day picked with the arrows, to mark what was forgotten; none means today. */
+	private day: LocalDate | null = null;
 	private shownRows = new Set<string>();
 	private renderingRows = new Set<string>();
 	private wasClosed: boolean | null = null;
@@ -175,7 +179,8 @@ export class TodayView extends ItemView {
 			this.renderEmpty(column);
 			return;
 		}
-		const today = this.ui.service.today();
+		const today = this.shownDay();
+		this.renderDayNav(column);
 		const entries = todayEntries(all, today);
 		const habits = entries.flatMap((entry) => (entry.kind === "ok" ? [entry] : []));
 		const answered = habits.filter((entry) => entry.habit.markOn(today) !== undefined).length;
@@ -203,6 +208,44 @@ export class TodayView extends ItemView {
 		for (const entry of entries) if (entry.kind === "broken") this.renderBroken(column, entry);
 		this.renderNewSection(column);
 		this.shownRows = this.renderingRows;
+	}
+
+	/** The day Today shows: today, or a past day picked with the arrows. */
+	private shownDay(): LocalDate {
+		const today = this.ui.service.today();
+		return this.day && this.day.isBefore(today) ? this.day : today;
+	}
+
+	/** ‹ Today › above the title: the arrows step through past days, the date goes back to today. */
+	private renderDayNav(column: HTMLElement): void {
+		const today = this.ui.service.today();
+		const shown = this.shownDay();
+		const isToday = shown.equals(today);
+		const nav = column.createDiv("th-day-nav");
+		const step = (label: string, iconName: string, days: number, disabled: boolean) => {
+			const button = nav.createEl("button", { cls: "th-day-step", attr: { "aria-label": label, title: label } });
+			setIcon(button, iconName);
+			button.disabled = disabled;
+			button.addEventListener("click", () => this.showDay(shown.addDays(days)));
+		};
+		step("Previous day", "chevron-left", -1, false);
+		const date = nav.createEl("button", { cls: "th-day-label", text: isToday ? "Today" : longDate(shown) });
+		date.disabled = isToday;
+		if (!isToday) date.setAttribute("title", "Back to today");
+		date.addEventListener("click", () => this.showDay(today));
+		step("Next day", "chevron-right", 1, isToday);
+	}
+
+	private showDay(day: LocalDate): void {
+		this.day = day.isBefore(this.ui.service.today()) ? day : null;
+		this.menu = null;
+		this.asking = null;
+		this.other = null;
+		this.otherText = "";
+		this.shrink = null;
+		this.showDone = false;
+		this.wasClosed = null;
+		this.render();
 	}
 
 	/** Reads the new order and sections off the screen after a drop and saves them; a row dropped into the new-section zone asks for a name first. */
@@ -272,7 +315,7 @@ export class TodayView extends ItemView {
 	}
 
 	private renderRing(column: HTMLElement, habits: readonly Habit[], justClosed: boolean): HTMLElement {
-		const today = this.ui.service.today();
+		const today = this.shownDay();
 		const done = habits.filter((habit) => isDone(habit.markOn(today))).length;
 		const header = column.createDiv("th-ring-header");
 		header.toggleClass("is-fresh", justClosed);
@@ -327,7 +370,7 @@ export class TodayView extends ItemView {
 	}
 
 	private renderRow(column: HTMLElement, path: string, habit: Habit): void {
-		const today = this.ui.service.today();
+		const today = this.shownDay();
 		const mark = habit.markOn(today);
 		const row = column.createDiv({
 			cls: ["th-row", "th-habit", colorClass(habit.color)],
@@ -474,7 +517,7 @@ export class TodayView extends ItemView {
 		if (this.menu === path) return;
 		this.menu = path;
 		const entry = this.ui.repository.get(path);
-		this.offTrigger = entry?.kind === "ok" && isOffTrigger(entry.habit.markOn(this.ui.service.today()));
+		this.offTrigger = entry?.kind === "ok" && isOffTrigger(entry.habit.markOn(this.shownDay()));
 		this.render();
 	}
 
@@ -512,7 +555,7 @@ export class TodayView extends ItemView {
 			this.origins.set(path, { point: { x: box.left + box.width / 2, y: box.top + box.height / 2 }, at: Date.now() });
 		}
 		try {
-			const habit = await this.ui.service.setMark(path, this.ui.service.today(), mark);
+			const habit = await this.ui.service.setMark(path, this.shownDay(), mark);
 			this.menu = null;
 			this.asking = null;
 			this.other = null;

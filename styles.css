@@ -239,6 +239,14 @@ button.th-swatch.is-on { box-shadow: 0 0 0 3px var(--th-bg), 0 0 0 5px var(--th-
 .is-phone.is-floating-nav .workspace-leaf-content[data-type="tiny-habits-grid"] .th-today,
 .is-phone.auto-full-screen .workspace-leaf-content[data-type="tiny-habits-grid"] .th-today { --th-top-inset: calc(var(--safe-area-inset-top) + var(--view-header-height) + 8px); }
 .th-column { max-width: var(--th-column); margin: 0 auto; padding: calc(8px + var(--th-top-inset, 0px)) var(--th-gutter) calc(var(--th-jar-reserve) + var(--th-bottom-inset, 0px)); box-sizing: border-box; }
+.th-day-nav { display: flex; align-items: center; justify-content: center; gap: 4px; padding-top: 6px; }
+button.th-day-step, button.th-day-label { height: 28px; padding: 0 8px; border: none; border-radius: var(--radius-s); box-shadow: none; background: transparent; color: var(--th-muted); font-size: var(--th-small-size); cursor: pointer; }
+button.th-day-step { width: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+button.th-day-step svg { width: 16px; height: 16px; }
+button.th-day-label { min-width: 96px; font-variant-numeric: tabular-nums; }
+button.th-day-step:disabled { opacity: 0.3; cursor: default; }
+button.th-day-label:disabled { opacity: 1; cursor: default; }
+@media (hover: hover) { button.th-day-step:not(:disabled):hover, button.th-day-label:not(:disabled):hover { background: var(--background-modifier-hover); color: var(--th-text); } }
 .th-today-header { padding: 8px 0 20px; }
 .th-ring-header { display: flex; flex-direction: column; align-items: center; padding: 18px 0 26px; text-align: center; }
 .th-ring-header.is-fresh { animation: th-in 300ms ease; }
