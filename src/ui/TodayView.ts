@@ -7,7 +7,7 @@ import { HabitColor } from "../domain/HabitColor";
 import { buildJar } from "../domain/Jar";
 import { colorClass } from "./colors";
 import { chip, icon, iconButton } from "./components";
-import { longDate, recipeDays } from "./format";
+import { recipeDays } from "./format";
 import { computeStats } from "../domain/Stats";
 import { DayWatcher } from "./DayWatcher";
 import { EditSheet } from "./EditSheet";
@@ -23,7 +23,7 @@ import { Placement, arrange, groupBySection, visibleEntries } from "./order";
 import { Drop, RowDrag } from "./RowDrag";
 import { SectionNameModal } from "./SectionNameModal";
 import { ScreenChrome } from "./ScreenChrome";
-import { closeDayTitle, closedDayLine, totalWins, winsLabel, offersShrink, todayEntries } from "./today";
+import { dayTitle, totalWins, winsLabel, offersShrink, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
 
 export const HABITS_VIEW = "tiny-habits-grid";
@@ -35,9 +35,6 @@ const CAPTION_MS = 2000;
 const DAY_CHECK_MS = 60_000;
 /** Obsidian re-reads a note a moment after it is written, so the tap point has to wait for the new mark. */
 const ORIGIN_TTL_MS = 4000;
-const SVG_NS = "http://www.w3.org/2000/svg";
-const RING_RADIUS = 50;
-const RING_GAP = 9;
 const FALLBACK_COLOR: Hsl = { h: 258, s: 88, l: 66 };
 
 type Answer = "skip" | "full" | "tiny";
@@ -53,6 +50,8 @@ export class TodayView extends ItemView {
 	/** A redraw was asked for while a row was being dragged; it runs on drop. */
 	private stale = false;
 	private menu: string | null = null;
+	/** The "?" in the view's header; it carries a dot until the help was opened once. */
+	private helpAction: HTMLElement | null = null;
 	/** In the open menu, the next tiny or full answer is marked as done without the anchor. */
 	private offTrigger = false;
 	private asking: string | null = null;
@@ -129,6 +128,12 @@ export class TodayView extends ItemView {
 			}),
 		);
 		this.registerDomEvent(root, "click", (event) => this.closeMenuOutside(event));
+		this.helpAction = this.addAction("circle-help", "How it works", () => {
+			new HelpModal(this.app, helpRows(Platform.isMobile, this.ui.settings().merge)).open();
+			this.ui.markHintsSeen();
+		});
+		this.addAction("list", "All habits", () => this.showAll());
+		this.addAction("plus", "New habit", () => this.ui.newHabit());
 		if (!Platform.isMobile) {
 			this.registerDomEvent(root, "pointermove", (event) => {
 				if (event.pointerType === "mouse" && this.cursorPushEnabled()) this.jar?.setPusher({ x: event.clientX, y: event.clientY });
@@ -178,6 +183,7 @@ export class TodayView extends ItemView {
 		this.stale = false;
 		const column = this.columnEl;
 		column.empty();
+		this.helpAction?.toggleClass("th-has-dot", !this.ui.settings().hintsSeen);
 		this.renderingRows = new Set();
 		const all = visibleEntries(this.ui.repository.list());
 		this.syncJar(all);
@@ -190,21 +196,20 @@ export class TodayView extends ItemView {
 			return;
 		}
 		const today = this.shownDay();
-		this.renderDayNav(column);
 		const entries = todayEntries(all, today);
 		const habits = entries.flatMap((entry) => (entry.kind === "ok" ? [entry] : []));
 		const answered = habits.filter((entry) => entry.habit.markOn(today) !== undefined).length;
-
-		const doneHabits = habits.filter((entry) => isDone(entry.habit.markOn(today)));
+		const answeredHabits = habits.filter((entry) => entry.habit.markOn(today) !== undefined);
 		const closed = habits.length > 0 && answered === habits.length;
-		const header = closed
-			? this.renderRing(column, habits.map((entry) => entry.habit), this.wasClosed === false)
-			: this.renderProgress(column, habits.length - answered, habits.length);
-		this.renderMeta(header, doneHabits, all);
+		this.renderHead(column, all, habits.length ? answered / habits.length : null);
+		if (closed && this.wasClosed === false) this.haptics.merge();
 		this.wasClosed = closed;
+		if (habits.length === 0) column.createDiv({ cls: "th-nothing", text: "Nothing for today" });
 
 		const hideDone = this.ui.settings().hideDone;
-		const shown = habits.filter((entry) => !isDone(entry.habit.markOn(today)) || !hideDone || this.showDone || this.menu === entry.path);
+		const folded = (entry: Extract<HabitEntry, { kind: "ok" }>) =>
+			entry.habit.markOn(today) !== undefined && this.menu !== entry.path && this.asking !== entry.path && this.shrink !== entry.path;
+		const shown = habits.filter((entry) => !hideDone || this.showDone || !folded(entry));
 		const sections = groupBySection(
 			all.flatMap((entry) => (entry.kind === "ok" ? [entry] : [])),
 			(entry) => entry.habit.section,
@@ -217,6 +222,7 @@ export class TodayView extends ItemView {
 		}
 		for (const entry of entries) if (entry.kind === "broken") this.renderBroken(column, entry);
 		this.renderNewSection(column);
+		this.renderFoot(column, answeredHabits);
 		this.shownRows = this.renderingRows;
 	}
 
@@ -236,12 +242,12 @@ export class TodayView extends ItemView {
 
 	/** Every habit by section, with its days and wins; archived ones fold away at the bottom. */
 	private renderAll(column: HTMLElement, visible: readonly HabitEntry[]): void {
-		const nav = column.createDiv("th-day-nav th-back-nav");
-		const back = nav.createEl("button", { cls: "th-day-label th-back" });
+		const nav = column.createDiv("th-back-nav");
+		const back = nav.createEl("button", { cls: "th-back" });
 		setIcon(back.createSpan("th-back-icon"), "chevron-left");
 		back.appendText("Today");
 		back.addEventListener("click", () => this.showToday());
-		column.createDiv("th-today-header").createEl("h1", { cls: "th-title", text: "All habits" });
+		column.createDiv("th-head").createEl("h1", { cls: "th-title", text: "All habits" });
 		const habits = visible.flatMap((entry) => (entry.kind === "ok" ? [entry] : []));
 		for (const group of groupBySection(habits, (entry) => entry.habit.section)) {
 			if (group.items.length === 0) continue;
@@ -276,24 +282,48 @@ export class TodayView extends ItemView {
 		return this.day && this.day.isBefore(today) ? this.day : today;
 	}
 
-	/** ‹ Today › above the title: the arrows step through past days, the date goes back to today. */
-	private renderDayNav(column: HTMLElement): void {
+	/** The day as the title, with arrows to step through past days; the wins and the day's progress under it. */
+	private renderHead(column: HTMLElement, all: readonly HabitEntry[], progress: number | null): void {
 		const today = this.ui.service.today();
 		const shown = this.shownDay();
 		const isToday = shown.equals(today);
-		const nav = column.createDiv("th-day-nav");
+		const head = column.createDiv("th-head");
+		const line = head.createDiv("th-head-line");
+		line.createEl("h1", { cls: "th-title", text: dayTitle(shown, today) });
+		if (!isToday) {
+			const back = line.createEl("button", { cls: "th-head-today", text: "Today", attr: { title: "Back to today" } });
+			back.addEventListener("click", () => this.showDay(today));
+		}
 		const step = (label: string, iconName: string, days: number, disabled: boolean) => {
-			const button = nav.createEl("button", { cls: "th-day-step", attr: { "aria-label": label, title: label } });
+			const button = line.createEl("button", { cls: "th-head-step", attr: { "aria-label": label, title: label } });
 			setIcon(button, iconName);
 			button.disabled = disabled;
 			button.addEventListener("click", () => this.showDay(shown.addDays(days)));
 		};
 		step("Previous day", "chevron-left", -1, false);
-		const date = nav.createEl("button", { cls: "th-day-label", text: isToday ? "Today" : longDate(shown) });
-		date.disabled = isToday;
-		if (!isToday) date.setAttribute("title", "Back to today");
-		date.addEventListener("click", () => this.showDay(today));
 		step("Next day", "chevron-right", 1, isToday);
+		if (this.ui.settings().showWins) head.createDiv({ cls: "th-head-sub", text: winsLabel(totalWins(all)) });
+		if (progress !== null) head.createDiv("th-progress").createDiv("th-progress-fill").setCssProps({ width: `${progress * 100}%` });
+	}
+
+	/** Under the list, the answered habits folded into one line: "3 done · 1 skipped". */
+	private renderFoot(column: HTMLElement, answered: readonly Extract<HabitEntry, { kind: "ok" }>[]): void {
+		if (answered.length === 0 || !this.ui.settings().hideDone) return;
+		const day = this.shownDay();
+		const done = answered.filter((entry) => isDone(entry.habit.markOn(day)));
+		const skipped = answered.length - done.length;
+		const toggle = column.createDiv("th-foot").createEl("button", { cls: "th-foot-row th-foot-done", attr: { "aria-expanded": String(this.showDone) } });
+		const dots = toggle.createSpan("th-done-dots");
+		for (const entry of answered) {
+			const color = isDone(entry.habit.markOn(day)) ? ["th-habit", colorClass(entry.habit.color)] : ["is-skipped"];
+			dots.createSpan({ cls: ["th-done-dot", ...color] });
+		}
+		toggle.createSpan({ text: [done.length ? `${done.length} done` : "", skipped ? `${skipped} skipped` : ""].filter(Boolean).join(" · ") });
+		setIcon(toggle.createSpan("th-meta-chevron"), "chevron-right");
+		toggle.addEventListener("click", () => {
+			this.showDone = !this.showDone;
+			this.render();
+		});
 	}
 
 	private showDay(day: LocalDate): void {
@@ -343,80 +373,8 @@ export class TodayView extends ItemView {
 		this.render();
 	}
 
-	private renderProgress(column: HTMLElement, left: number, total: number): HTMLElement {
-		const header = column.createDiv("th-today-header");
-		header.createEl("h1", { cls: "th-title", text: closeDayTitle(left, total) });
-		const share = total ? (total - left) / total : 0;
-		header.createDiv("th-progress").createDiv("th-progress-fill").style.width = `${share * 100}%`;
-		return header;
-	}
 
-	/** "3 done" (tap to show or hide them), the total wins and a new-habit button, under today's progress. */
-	private renderMeta(header: HTMLElement, done: readonly HabitEntry[], all: readonly HabitEntry[]): void {
-		const settings = this.ui.settings();
-		const meta = header.createDiv("th-meta");
-		if (done.length) {
-			const toggle = meta.createEl("button", { cls: "th-meta-done", attr: { "aria-expanded": String(this.showDone || !settings.hideDone) } });
-			const dots = toggle.createSpan("th-done-dots");
-			for (const entry of done) dots.createSpan({ cls: ["th-done-dot", "th-habit", colorClass(entry.kind === "ok" ? entry.habit.color : undefined)] });
-			toggle.createSpan({ text: `${done.length} done` });
-			if (settings.hideDone) {
-				setIcon(toggle.createSpan("th-meta-chevron"), "chevron-right");
-				toggle.addEventListener("click", () => {
-					this.showDone = !this.showDone;
-					this.render();
-				});
-			} else toggle.disabled = true;
-		}
-		if (settings.showWins) meta.createSpan({ cls: "th-wins", text: winsLabel(totalWins(all)) });
-		const actions = meta.createDiv("th-meta-actions");
-		const list = actions.createEl("button", { cls: "th-meta-add", attr: { "aria-label": "All habits", title: "All habits" } });
-		setIcon(list, "list");
-		list.addEventListener("click", () => this.showAll());
-		const help = actions.createEl("button", { cls: "th-meta-add th-meta-help", attr: { "aria-label": "How it works", title: "How it works" } });
-		setIcon(help, "circle-help");
-		help.toggleClass("has-dot", !settings.hintsSeen);
-		help.addEventListener("click", () => {
-			new HelpModal(this.app, helpRows(Platform.isMobile, settings.merge)).open();
-			this.ui.markHintsSeen();
-		});
-		const add = actions.createEl("button", { cls: "th-meta-add", attr: { "aria-label": "New habit", title: "New habit" } });
-		icon(add, "plus");
-		add.addEventListener("click", () => this.ui.newHabit());
-	}
 
-	private renderRing(column: HTMLElement, habits: readonly Habit[], justClosed: boolean): HTMLElement {
-		const today = this.shownDay();
-		const done = habits.filter((habit) => isDone(habit.markOn(today))).length;
-		const header = column.createDiv("th-ring-header");
-		header.toggleClass("is-fresh", justClosed);
-		const ring = header.createDiv("th-ring");
-		const svg = ring.appendChild(document.createElementNS(SVG_NS, "svg"));
-		svg.setAttribute("viewBox", "-60 -60 120 120");
-		svg.setAttribute("aria-hidden", "true");
-		const circumference = 2 * Math.PI * RING_RADIUS;
-		const share = circumference / habits.length;
-		const gap = habits.length > 1 ? RING_GAP : 0;
-		const arc = (classes: string[], length: number, offset: number, index: number) => {
-			const circle = svg.appendChild(document.createElementNS(SVG_NS, "circle"));
-			circle.setAttribute("r", String(RING_RADIUS));
-			circle.setAttribute("class", classes.join(" "));
-			circle.style.setProperty("--th-arc", `${length}`);
-			circle.style.setProperty("--th-rest", `${circumference - length}`);
-			circle.style.strokeDashoffset = `${-offset}`;
-			circle.style.animationDelay = `${index * 90}ms`;
-		};
-		arc(["th-ring-track"], circumference, 0, 0);
-		habits.forEach((habit, index) => {
-			const classes = isDone(habit.markOn(today)) ? ["th-ring-arc", "th-habit", colorClass(habit.color)] : ["th-ring-arc", "is-missed"];
-			arc(classes, share - gap, index * share + gap / 2, index);
-		});
-		ring.createDiv({ cls: "th-ring-count", text: `${done}/${habits.length}` });
-		header.createEl("h1", { cls: "th-title", text: closeDayTitle(0, habits.length) });
-		header.createDiv({ cls: "th-ring-sub", text: closedDayLine(habits.length - done) });
-		if (justClosed) this.haptics.merge();
-		return header;
-	}
 
 	private renderEmpty(column: HTMLElement): void {
 		const empty = column.createDiv("th-empty");

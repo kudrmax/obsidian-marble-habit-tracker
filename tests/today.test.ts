@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HabitEntry } from "../src/application/ports";
 import { TINY, missed } from "../src/domain/DayMark";
-import { closeDayTitle, closedDayLine, totalWins, winsLabel, offersShrink, todayEntries } from "../src/ui/today";
+import { dayTitle, totalWins, winsLabel, offersShrink, todayEntries } from "../src/ui/today";
 import { d } from "./support/dates";
 import { habitNote } from "./support/habits";
 
@@ -19,23 +19,12 @@ describe("totalWins", () => {
 	});
 });
 
-describe("closedDayLine", () => {
-	it("praises a full day and owns up to skips", () => {
-		expect(closedDayLine(0)).toBe("Every habit, done");
-		expect(closedDayLine(1)).toBe("1 skipped honestly · see you tomorrow");
-	});
-});
-
-describe("closeDayTitle", () => {
-	it("counts what is left in words", () => {
-		expect(closeDayTitle(0, 4)).toBe("Day closed");
-		expect(closeDayTitle(1, 4)).toBe("One left to close the day");
-		expect(closeDayTitle(3, 4)).toBe("Three left to close the day");
-		expect(closeDayTitle(14, 20)).toBe("14 left to close the day");
-	});
-
-	it("says there is nothing to close when no habit is due today", () => {
-		expect(closeDayTitle(0, 0)).toBe("Nothing for today");
+describe("dayTitle", () => {
+	it("names today and yesterday, and dates earlier days", () => {
+		const today = d("2026-10-15");
+		expect(dayTitle(today, today)).toBe("Today");
+		expect(dayTitle(d("2026-10-14"), today)).toBe("Yesterday");
+		expect(dayTitle(d("2026-10-12"), today)).toBe("Mon, Oct 12");
 	});
 });
 

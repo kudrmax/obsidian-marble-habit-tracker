@@ -151,8 +151,8 @@ export class SettingsTab extends PluginSettingTab {
 				dropdown.setValue(String(settings.dayStartHour)).onChange((value) => void this.save((next) => (next.dayStartHour = Number(value))));
 			});
 		new Setting(containerEl)
-			.setName("Hide done habits")
-			.setDesc("Done habits fold into one “N done” line you can open.")
+			.setName("Fold answered habits")
+			.setDesc("Done and skipped habits fold into one line under the list, which you can open.")
 			.addToggle((toggle) => toggle.setValue(settings.hideDone).onChange((value) => void this.save((next) => (next.hideDone = value))));
 		new Setting(containerEl)
 			.setName("Celebration line")
