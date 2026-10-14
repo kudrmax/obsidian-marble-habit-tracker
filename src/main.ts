@@ -50,6 +50,7 @@ export default class MarbleHabitTrackerPlugin extends Plugin implements Settings
 		this.registerView(HABITS_VIEW, (leaf) => new TodayView(leaf, ui));
 		this.addRibbonIcon("sprout", "Habits", () => void this.openGrid());
 		this.addCommand({ id: "open", name: "Open habits", callback: () => void this.openGrid() });
+		this.addCommand({ id: "open-all", name: "Open all habits", callback: () => void this.openGrid().then((view) => view?.showAll()) });
 		this.addCommand({ id: "new", name: "New habit", callback: () => ui.newHabit() });
 		this.addCommand({
 			id: "archive-habit",
@@ -105,11 +106,12 @@ export default class MarbleHabitTrackerPlugin extends Plugin implements Settings
 		this.notes?.refresh();
 	}
 
-	private async openGrid(): Promise<void> {
+	private async openGrid(): Promise<TodayView | null> {
 		const [existing] = this.app.workspace.getLeavesOfType(HABITS_VIEW);
 		const leaf = existing ?? this.app.workspace.getLeaf("tab");
 		if (!existing) await leaf.setViewState({ type: HABITS_VIEW, active: true });
 		await this.app.workspace.revealLeaf(leaf);
+		return leaf.view instanceof TodayView ? leaf.view : null;
 	}
 
 	private async openHabit(path: string, from?: WorkspaceLeaf): Promise<void> {

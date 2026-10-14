@@ -7,7 +7,8 @@ import { HabitColor } from "../domain/HabitColor";
 import { buildJar } from "../domain/Jar";
 import { colorClass } from "./colors";
 import { chip, icon, iconButton } from "./components";
-import { longDate } from "./format";
+import { longDate, recipeDays } from "./format";
+import { computeStats } from "../domain/Stats";
 import { DayWatcher } from "./DayWatcher";
 import { EditSheet } from "./EditSheet";
 import { Haptics } from "./Haptics";
@@ -61,6 +62,9 @@ export class TodayView extends ItemView {
 	private showDone = false;
 	/** A past day picked with the arrows, to mark what was forgotten; none means today. */
 	private day: LocalDate | null = null;
+	/** Today's list, or every habit including the ones not due and the archived ones. */
+	private screen: "today" | "all" = "today";
+	private showArchived = false;
 	private shownRows = new Set<string>();
 	private renderingRows = new Set<string>();
 	private wasClosed: boolean | null = null;
@@ -181,6 +185,10 @@ export class TodayView extends ItemView {
 			this.renderEmpty(column);
 			return;
 		}
+		if (this.screen === "all") {
+			this.renderAll(column, all);
+			return;
+		}
 		const today = this.shownDay();
 		this.renderDayNav(column);
 		const entries = todayEntries(all, today);
@@ -210,6 +218,56 @@ export class TodayView extends ItemView {
 		for (const entry of entries) if (entry.kind === "broken") this.renderBroken(column, entry);
 		this.renderNewSection(column);
 		this.shownRows = this.renderingRows;
+	}
+
+	showAll(): void {
+		this.screen = "all";
+		this.menu = null;
+		this.asking = null;
+		this.shrink = null;
+		this.render();
+	}
+
+	private showToday(): void {
+		this.screen = "today";
+		this.wasClosed = null;
+		this.render();
+	}
+
+	/** Every habit by section, with its days and wins; archived ones fold away at the bottom. */
+	private renderAll(column: HTMLElement, visible: readonly HabitEntry[]): void {
+		const nav = column.createDiv("th-day-nav th-back-nav");
+		const back = nav.createEl("button", { cls: "th-day-label th-back" });
+		setIcon(back.createSpan("th-back-icon"), "chevron-left");
+		back.appendText("Today");
+		back.addEventListener("click", () => this.showToday());
+		column.createDiv("th-today-header").createEl("h1", { cls: "th-title", text: "All habits" });
+		const habits = visible.flatMap((entry) => (entry.kind === "ok" ? [entry] : []));
+		for (const group of groupBySection(habits, (entry) => entry.habit.section)) {
+			if (group.items.length === 0) continue;
+			if (group.section !== undefined) column.createDiv({ cls: "th-group", text: group.section });
+			for (const entry of group.items) this.renderListed(column, entry.path, entry.habit, false);
+		}
+		for (const entry of visible) if (entry.kind === "broken") this.renderBroken(column, entry);
+		const archived = this.ui.repository.list().flatMap((entry) => (entry.kind === "ok" && entry.habit.archived ? [entry] : []));
+		if (archived.length === 0) return;
+		const toggle = column.createEl("button", { cls: "th-meta-done th-archived-toggle", attr: { "aria-expanded": String(this.showArchived) } });
+		toggle.createSpan({ text: `Archived · ${archived.length}` });
+		setIcon(toggle.createSpan("th-meta-chevron"), "chevron-right");
+		toggle.addEventListener("click", () => {
+			this.showArchived = !this.showArchived;
+			this.render();
+		});
+		if (this.showArchived) for (const entry of archived) this.renderListed(column, entry.path, entry.habit, true);
+	}
+
+	private renderListed(column: HTMLElement, path: string, habit: Habit, archived: boolean): void {
+		const row = column.createDiv({ cls: ["th-row", "th-habit", colorClass(habit.color)] });
+		row.toggleClass("is-answered", archived);
+		const text = row.createDiv("th-row-main").createDiv("th-row-text");
+		text.createDiv({ cls: "th-row-title", text: habit.headline });
+		text.createDiv({ cls: "th-row-sub", text: `${recipeDays(habit.currentSchedule)} · ${winsLabel(computeStats(habit, this.ui.service.today()).total)}` });
+		text.addEventListener("click", () => this.ui.openHabit(path, this.leaf));
 	}
 
 	/** The day Today shows: today, or a past day picked with the arrows. */
@@ -312,6 +370,9 @@ export class TodayView extends ItemView {
 		}
 		if (settings.showWins) meta.createSpan({ cls: "th-wins", text: winsLabel(totalWins(all)) });
 		const actions = meta.createDiv("th-meta-actions");
+		const list = actions.createEl("button", { cls: "th-meta-add", attr: { "aria-label": "All habits", title: "All habits" } });
+		setIcon(list, "list");
+		list.addEventListener("click", () => this.showAll());
 		const help = actions.createEl("button", { cls: "th-meta-add th-meta-help", attr: { "aria-label": "How it works", title: "How it works" } });
 		setIcon(help, "circle-help");
 		help.toggleClass("has-dot", !settings.hintsSeen);

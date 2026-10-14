@@ -16,6 +16,7 @@ export function helpRows(mobile: boolean, merge: MergeRule): HelpRow[] {
 		{ action: "Tap a habit", result: "Opens its note." },
 		{ action: mobile ? "Hold and drag a habit" : "Drag a habit", result: "Reorders habits. Drop it on “+ New section” to group them." },
 		{ action: "‹ Today ›", result: "Steps back to mark a day you forgot." },
+		{ action: "List button", result: "Shows all habits, with the ones not due today and the archived ones." },
 		{ action: "Marbles", result: `Every win drops a marble. ${merge.smallPerMedium} small ones merge into a medium, ${merge.mediumPerBig} medium into a big.` },
 		{ action: mobile ? "Tilt the phone" : "Move the mouse", result: "Rolls the marbles." },
 	];

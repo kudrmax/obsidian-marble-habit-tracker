@@ -10,13 +10,20 @@ abstract class ListSuggest extends AbstractInputSuggest<string> {
 	) {
 		super(app, input);
 		this.limit = LIMIT;
-		input.addEventListener("focus", () => input.dispatchEvent(new Event("input")));
+		input.addEventListener("focus", () => {
+			this.showEverything = true;
+			input.dispatchEvent(new Event("input"));
+		});
 	}
+
+	/** Focusing the field lists every option, whatever it already holds; typing then narrows the list. */
+	private showEverything = false;
 
 	protected abstract options(): string[];
 
 	protected override getSuggestions(query: string): string[] {
-		const needle = query.trim().toLowerCase();
+		const needle = this.showEverything ? "" : query.trim().toLowerCase();
+		this.showEverything = false;
 		return this.options().filter((option) => option.toLowerCase().includes(needle));
 	}
 
