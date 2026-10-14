@@ -67,6 +67,8 @@ export class TodayView extends ItemView {
 	/** Today's list, or every habit including the ones not due and the archived ones. */
 	private screen: "today" | "all" = "today";
 	private showArchived = false;
+	/** The card opened to show its recipe; one at a time. */
+	private expanded: string | null = null;
 	private shownRows = new Set<string>();
 	private renderingRows = new Set<string>();
 	private wasClosed: boolean | null = null;
@@ -452,10 +454,12 @@ export class TodayView extends ItemView {
 		const main = row.createDiv("th-row-main");
 
 		const text = main.createDiv("th-row-text");
-		text.createDiv({ cls: "th-row-title", text: habit.headline });
-		const subtitle = this.ui.labels().anchorLine(habit);
-		if (subtitle) text.createDiv({ cls: "th-row-sub", text: subtitle });
-		text.addEventListener("click", () => this.ui.openHabit(path, this.leaf));
+		text.createDiv({ cls: "th-row-title", text: habit.name });
+		text.setAttribute("aria-expanded", String(this.expanded === path));
+		text.addEventListener("click", () => {
+			this.expanded = this.expanded === path ? null : path;
+			this.render();
+		});
 
 		if (this.menu === path && this.canGoOffTrigger(habit)) {
 			const stack = main.createDiv("th-answer-stack");
@@ -465,8 +469,25 @@ export class TodayView extends ItemView {
 		else {
 			this.renderMark(main, path, habit, mark);
 		}
+		if (this.expanded === path) this.renderRecipe(row, path, habit);
 		if (this.asking === path) this.renderReasons(row, path);
 		if (this.shrink === path && mark?.kind === "missed") this.renderShrink(row, path, habit);
+	}
+
+	/** An opened card: the recipe line by line, and a way to the habit's note. */
+	private renderRecipe(row: HTMLElement, path: string, habit: Habit): void {
+		const labels = this.ui.labels();
+		const recipe = row.createDiv("th-card-recipe");
+		for (const part of ["anchor", "tiny", "full", "celebration"] as const) {
+			const value = habit.current(part);
+			if (!value) continue;
+			recipe.createSpan({ cls: "th-card-key", text: labels.title(part) });
+			recipe.createSpan({ cls: "th-card-value", text: value });
+		}
+		const open = recipe.createEl("button", { cls: "th-card-open" });
+		open.appendText("Open note");
+		setIcon(open.createSpan("th-card-open-icon"), "arrow-up-right");
+		open.addEventListener("click", () => this.ui.openHabit(path, this.leaf));
 	}
 
 

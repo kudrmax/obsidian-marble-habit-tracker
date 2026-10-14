@@ -1,4 +1,4 @@
-import { Habit, Part, RecipeChange } from "../domain/Habit";
+import { Part, RecipeChange } from "../domain/Habit";
 import { LocalDate, Weekday } from "../domain/LocalDate";
 import { Schedule } from "../domain/Schedule";
 
@@ -36,11 +36,6 @@ export class RecipeLabels {
 	title(part: Part): string {
 		const label = this.set[part];
 		return label.charAt(0).toUpperCase() + label.slice(1);
-	}
-
-	/** The trigger as the user wrote it, or nothing for a habit without one. */
-	anchorLine(habit: Habit): string {
-		return habit.current("anchor") ?? "";
 	}
 
 	describeChange(change: RecipeChange): string {

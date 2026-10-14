@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { Schedule } from "../src/domain/Schedule";
 import { RecipeLabels, dayMonth, longDate, recipeDays } from "../src/ui/format";
 import { d } from "./support/dates";
-import { habitNote } from "./support/habits";
 
 describe("format", () => {
 	it("names the days of a schedule", () => {
@@ -16,12 +15,7 @@ describe("format", () => {
 	});
 
 	const labels = new RecipeLabels();
-	const anchorLine = (habit: ReturnType<typeof habitNote>) => labels.anchorLine(habit);
 	const describeChange = (change: Parameters<RecipeLabels["describeChange"]>[0]) => labels.describeChange(change);
-
-	it("shows the trigger as the user wrote it", () => {
-		expect(anchorLine(habitNote("Workout"))).toBe("put my mug in the sink");
-	});
 
 	it("names the parts with the labels from settings", () => {
 		const custom = new RecipeLabels({ anchor: "триггер", tiny: "минимум", full: "действие", celebration: "праздник", schedule: "дни" });

@@ -14,7 +14,7 @@ export function helpRows(mobile: boolean, merge: MergeRule): HelpRow[] {
 	return [
 		{ action: `${tap} the circle`, result: `Marks the habit done — the tiny action if it has one. ${tap} again to undo.` },
 		{ action: mobile ? "Hold the circle" : "Right-click or hold the circle", result: "Choose Action, Tiny action or Skipped." },
-		{ action: `${tap} a habit`, result: "Opens its note." },
+		{ action: `${tap} a habit`, result: `Opens its recipe, with a link to its note. ${tap} again to close it.` },
 		{ action: mobile ? "Hold and drag a habit" : "Drag a habit", result: "Reorders habits. Drop it on “+ New section” to group them." },
 		{ action: "‹ › next to the day", result: "Step back to mark a day you forgot." },
 		{ action: "Done · skipped", result: "Answered habits fold into this line under the list. Open it to change an answer." },

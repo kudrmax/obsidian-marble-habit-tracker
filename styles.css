@@ -17,7 +17,7 @@ body {
 	--th-title-size: 30px;
 	--th-text-size: 17px;
 	--th-small-size: 13px;
-	--th-row-min: 62px;
+	--th-row-min: 52px;
 	--th-target: 48px;
 	--th-mark: 28px;
 	--th-answer: 44px;
@@ -481,3 +481,11 @@ button.th-chip.th-off-trigger.is-on { border-color: var(--th-habit); background:
 
 .th-probe { display: none; }
 .th-habit-note .metadata-property.th-own-property, .th-habit-note .metadata-container.th-only-own { display: none; }
+
+.th-card-recipe { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 7px 14px; margin: 6px 0 4px; padding: 12px 14px; border-radius: var(--radius-m); background: var(--th-surface); font-size: 14px; line-height: 1.4; }
+.th-card-key { color: var(--th-faint); }
+.th-card-value { color: var(--th-text); overflow-wrap: anywhere; }
+button.th-card-open { grid-column: 1 / -1; justify-self: start; display: inline-flex; align-items: center; gap: 4px; height: auto; margin-top: 2px; padding: 0; border: none; box-shadow: none; background: transparent; color: var(--interactive-accent); font-size: 14px; cursor: pointer; }
+.th-card-open-icon { display: inline-flex; }
+.th-card-open-icon svg { width: 15px; height: 15px; }
+.th-row-text { cursor: pointer; }
