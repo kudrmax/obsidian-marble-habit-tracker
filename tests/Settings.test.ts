@@ -113,7 +113,7 @@ describe("loadSettings", () => {
 	});
 
 	it("replaces invalid values with defaults", () => {
-		expect(loadSettings({ folder: "  ", redesignThreshold: 0, material: "clay", celebrationLine: "yes", reduceMotion: 1, tilt: "on", haptics: null, mergeSize: 1, missReasons: "Forgot", hideDone: "no" })).toEqual(
+		expect(loadSettings({ folder: 7, redesignThreshold: 0, material: "clay", celebrationLine: "yes", reduceMotion: 1, tilt: "on", haptics: null, mergeSize: 1, missReasons: "Forgot", hideDone: "no" })).toEqual(
 			{ ...DEFAULT_SETTINGS, properties: LEGACY_PROPERTY_NAMES },
 		);
 		expect(loadSettings({ redesignThreshold: 2.5 }).redesignThreshold).toBe(3);
@@ -129,6 +129,10 @@ describe("loadSettings", () => {
 
 	it("reads the old merge size as small marbles per medium", () => {
 		expect(loadSettings({ mergeSize: 5 }).merge).toEqual({ smallPerMedium: 5, mediumPerBig: 4 });
+	});
+
+	it("reads an empty folder as the vault root", () => {
+		expect(loadSettings({ folder: "  " }).folder).toBe("");
 	});
 
 	it("keeps habits found by folder when the folder was saved before tags existed", () => {

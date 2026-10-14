@@ -222,11 +222,15 @@ export class SettingsTab extends PluginSettingTab {
 				});
 		}
 		new Setting(containerEl)
-			.setName(settings.source === "tag" ? "Folder for new habits" : "Folder")
-			.setDesc(settings.source === "tag" ? "Where New habit creates its note." : "Every note in this folder is a habit. Subfolders are ignored.")
+			.setName(settings.source === "tag" ? "New habits are saved to" : "Folder")
+			.setDesc(
+				settings.source === "tag"
+					? "The folder where a habit made with + gets its note. Leave empty for the vault root."
+					: "Every note in this folder is a habit, and new habits are saved here. Subfolders are ignored. Leave empty for the vault root.",
+			)
 			.addText((text) => {
-				const save = (value: string) => void this.save((next) => (next.folder = value.trim() || DEFAULT_SETTINGS.folder));
-				text.setPlaceholder(DEFAULT_SETTINGS.folder).setValue(settings.folder).onChange(save);
+				const save = (value: string) => void this.save((next) => (next.folder = value.trim()));
+				text.setPlaceholder("Vault root").setValue(settings.folder).onChange(save);
 				new FolderSuggest(this.app, text.inputEl, save);
 			});
 		new Setting(containerEl)

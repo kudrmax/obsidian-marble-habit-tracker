@@ -4,7 +4,7 @@ import { DomainError } from "../domain/DomainError";
 import { Habit } from "../domain/Habit";
 import { Frontmatter, HabitDecodeError, PropertyNames, decodeHabit, encodeHabit } from "./HabitCodec";
 
-/** Which notes are habits: every note carrying a tag, or every note in a folder. New habits go to the folder either way. */
+/** Which notes are habits: every note carrying a tag, or every note in a folder. New habits go to the folder either way; an empty folder is the vault root. */
 export interface HabitScope {
 	readonly source: "tag" | "folder";
 	readonly tag: string;
@@ -20,15 +20,15 @@ export class FrontmatterHabitRepository implements HabitRepository {
 
 	contains(path: string): boolean {
 		if (!path.endsWith(".md")) return false;
-		if (this.scope().source === "folder") return path.slice(0, Math.max(0, path.lastIndexOf("/"))) === this.folderPath();
+		if (this.scope().source === "folder") return normalizePath(path.slice(0, Math.max(0, path.lastIndexOf("/")))) === this.folderPath();
 		const file = this.app.vault.getAbstractFileByPath(path);
 		return file instanceof TFile && this.hasTag(file);
 	}
 
 	list(): HabitEntry[] {
 		if (this.scope().source === "tag") return this.app.vault.getMarkdownFiles().filter((file) => this.hasTag(file)).map((file) => this.read(file));
-		const folder = this.app.vault.getAbstractFileByPath(this.folderPath());
-		if (!(folder instanceof TFolder)) return [];
+		const folder = this.folder();
+		if (!folder) return [];
 		return folder.children
 			.filter((child): child is TFile => child instanceof TFile && child.extension === "md")
 			.map((file) => this.read(file));
@@ -55,7 +55,7 @@ export class FrontmatterHabitRepository implements HabitRepository {
 		const folder = this.folderPath();
 		const path = normalizePath(`${folder}/${habit.name}.md`);
 		if (this.app.vault.getAbstractFileByPath(path)) throw new DomainError(`Habit "${habit.name}" already exists`);
-		if (!this.app.vault.getAbstractFileByPath(folder)) await this.app.vault.createFolder(folder);
+		if (!this.folder()) await this.app.vault.createFolder(folder);
 		const file = await this.app.vault.create(path, "");
 		await this.app.fileManager.processFrontMatter(file, (frontmatter: Frontmatter) => {
 			encodeHabit(habit, frontmatter, this.keys());
@@ -66,6 +66,12 @@ export class FrontmatterHabitRepository implements HabitRepository {
 
 	private folderPath(): string {
 		return normalizePath(this.scope().folder);
+	}
+
+	private folder(): TFolder | null {
+		if (this.folderPath() === "/") return this.app.vault.getRoot();
+		const folder = this.app.vault.getAbstractFileByPath(this.folderPath());
+		return folder instanceof TFolder ? folder : null;
 	}
 
 	private tagName(): string {
