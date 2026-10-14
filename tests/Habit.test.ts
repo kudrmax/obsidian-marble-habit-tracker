@@ -36,7 +36,7 @@ describe("Habit", () => {
 		const habit = Habit.create({ name: "Чтение", anchor: "Кофе", tiny: "1 страница", full: "Глава", days: WEEKDAYS }, created);
 		const cleared = habit.clearText("tiny", today);
 		expect(cleared.hasTiny).toBe(false);
-		expect(cleared.headline).toBe("Глава");
+		expect(cleared.current("full")).toBe("Глава");
 		expect(cleared.text("tiny").versions.map((version) => version.value)).toEqual(["", "1 страница"]);
 		expect(cleared.changes()[0]).toMatchObject({ part: "tiny", from: "1 страница", to: "" });
 		expect(cleared.replaceText("tiny", "2 страницы", d("2026-10-10")).current("tiny")).toBe("2 страницы");
@@ -66,10 +66,9 @@ describe("Habit", () => {
 		expect(full.text("anchor").isEmpty).toBe(true);
 		expect(full.hasTiny).toBe(false);
 		expect(full.hasFull).toBe(true);
-		expect(full.headline).toBe("Тренировка");
 		const tiny = Habit.create({ name: "Чтение", tiny: "1 страница", days: WEEKDAYS }, created);
 		expect(tiny.hasTiny).toBe(true);
-		expect(tiny.headline).toBe("1 страница");
+		expect(tiny.hasFull).toBe(false);
 	});
 
 	it("sets and clears marks without changing the original", () => {

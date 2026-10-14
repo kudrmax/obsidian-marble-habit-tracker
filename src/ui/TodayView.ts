@@ -273,12 +273,36 @@ export class TodayView extends ItemView {
 	}
 
 	private renderListed(column: HTMLElement, path: string, habit: Habit, archived: boolean): void {
-		const row = column.createDiv({ cls: ["th-row", "th-habit", colorClass(habit.color)] });
-		row.toggleClass("is-answered", archived);
-		const text = row.createDiv("th-row-main").createDiv("th-row-text");
-		text.createDiv({ cls: "th-row-title", text: habit.headline });
-		text.createDiv({ cls: "th-row-sub", text: `${recipeDays(habit.currentSchedule)} · ${winsLabel(computeStats(habit, this.ui.service.today()).total)}` });
-		text.addEventListener("click", () => this.ui.openHabit(path, this.leaf));
+		this.renderCard(column, path, habit, {
+			dimmed: archived,
+			sub: `${recipeDays(habit.currentSchedule)} · ${winsLabel(computeStats(habit, this.ui.service.today()).total)}`,
+		});
+	}
+
+	/**
+	 * A habit's card, the same on Today and in All habits: its name in its color, opening its recipe on a tap.
+	 * `side` fills the right of the card, like Today's mark; the card is returned for what goes under it.
+	 */
+	private renderCard(
+		column: HTMLElement,
+		path: string,
+		habit: Habit,
+		options: { dimmed: boolean; sub?: string; attrs?: Record<string, string>; side?: (main: HTMLElement) => void },
+	): HTMLElement {
+		const row = column.createDiv({ cls: ["th-row", "th-habit", colorClass(habit.color)], attr: options.attrs ?? {} });
+		row.toggleClass("is-answered", options.dimmed);
+		const main = row.createDiv("th-row-main");
+		const text = main.createDiv("th-row-text");
+		text.createDiv({ cls: "th-row-title", text: habit.name });
+		if (options.sub) text.createDiv({ cls: "th-row-sub", text: options.sub });
+		text.setAttribute("aria-expanded", String(this.expanded === path));
+		text.addEventListener("click", () => {
+			this.expanded = this.expanded === path ? null : path;
+			this.render();
+		});
+		options.side?.(main);
+		if (this.expanded === path) this.renderRecipe(row, path, habit);
+		return row;
 	}
 
 	/** The day Today shows: today, or a past day picked with the arrows. */
@@ -444,32 +468,20 @@ export class TodayView extends ItemView {
 	private renderRow(column: HTMLElement, path: string, habit: Habit): void {
 		const today = this.shownDay();
 		const mark = habit.markOn(today);
-		const row = column.createDiv({
-			cls: ["th-row", "th-habit", colorClass(habit.color)],
-			attr: { "data-slot": "row", "data-drag": path, "data-section": habit.section ?? "" },
+		const row = this.renderCard(column, path, habit, {
+			dimmed: mark !== undefined,
+			attrs: { "data-slot": "row", "data-drag": path, "data-section": habit.section ?? "" },
+			side: (main) => {
+				if (this.menu === path && this.canGoOffTrigger(habit)) {
+					const stack = main.createDiv("th-answer-stack");
+					this.renderAnswers(stack, path, habit, mark);
+					this.renderOffTrigger(stack);
+				} else if (this.menu === path) this.renderAnswers(main, path, habit, mark);
+				else this.renderMark(main, path, habit, mark);
+			},
 		});
-		row.toggleClass("is-answered", mark !== undefined);
 		row.toggleClass("is-new", !this.shownRows.has(path));
 		this.renderingRows.add(path);
-		const main = row.createDiv("th-row-main");
-
-		const text = main.createDiv("th-row-text");
-		text.createDiv({ cls: "th-row-title", text: habit.name });
-		text.setAttribute("aria-expanded", String(this.expanded === path));
-		text.addEventListener("click", () => {
-			this.expanded = this.expanded === path ? null : path;
-			this.render();
-		});
-
-		if (this.menu === path && this.canGoOffTrigger(habit)) {
-			const stack = main.createDiv("th-answer-stack");
-			this.renderAnswers(stack, path, habit, mark);
-			this.renderOffTrigger(stack);
-		} else if (this.menu === path) this.renderAnswers(main, path, habit, mark);
-		else {
-			this.renderMark(main, path, habit, mark);
-		}
-		if (this.expanded === path) this.renderRecipe(row, path, habit);
 		if (this.asking === path) this.renderReasons(row, path);
 		if (this.shrink === path && mark?.kind === "missed") this.renderShrink(row, path, habit);
 	}

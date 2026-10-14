@@ -112,11 +112,6 @@ export class Habit {
 		return this.current("full") !== undefined;
 	}
 
-	/** What the habit is called in a list: its tiny version, or the full one when there is no tiny version. */
-	get headline(): string {
-		return this.current("tiny") ?? this.current("full") ?? this.state.name;
-	}
-
 	get section(): string | undefined {
 		return this.state.section;
 	}
