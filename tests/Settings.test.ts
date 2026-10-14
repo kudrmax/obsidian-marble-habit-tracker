@@ -12,7 +12,7 @@ describe("loadSettings", () => {
 			properties: DEFAULT_PROPERTY_NAMES,
 			labels: { anchor: "trigger", tiny: "tiny action", full: "action", celebration: "celebration", schedule: "days" },
 			redesignThreshold: 3,
-			missReasons: ["Forgot", "Anchor didn't happen", "No energy", "Felt too big"],
+			missReasons: ["Forgot", "Trigger didn't happen", "No energy", "Felt too big"],
 			shrinkReason: "Felt too big",
 			material: "grain",
 			marbleSizes: { small: 24, medium: 44, big: 68 },
@@ -124,6 +124,10 @@ describe("loadSettings", () => {
 
 	it("drops settings that no longer exist", () => {
 		expect(loadSettings({ confetti: false })).toEqual({ ...DEFAULT_SETTINGS, properties: LEGACY_PROPERTY_NAMES });
+	});
+
+	it("renames the old default anchor reason to the trigger", () => {
+		expect(loadSettings({ missReasons: ["Forgot", "Anchor didn't happen", "Свой"] }).missReasons).toEqual(["Forgot", "Trigger didn't happen", "Свой"]);
 	});
 
 	it("reads reasons one per line without blanks or repeats", () => {

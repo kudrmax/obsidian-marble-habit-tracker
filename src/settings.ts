@@ -46,7 +46,7 @@ export const DEFAULT_SETTINGS: HabitSettings = {
 	properties: DEFAULT_PROPERTY_NAMES,
 	labels: DEFAULT_LABELS,
 	redesignThreshold: 3,
-	missReasons: ["Forgot", "Anchor didn't happen", "No energy", "Felt too big"],
+	missReasons: ["Forgot", "Trigger didn't happen", "No energy", "Felt too big"],
 	shrinkReason: "Felt too big",
 	material: "grain",
 	marbleSizes: DEFAULT_MARBLE_SIZES,
@@ -143,9 +143,18 @@ export function parseReasons(text: string): string[] {
 	return [...new Set(text.split("\n").map((line) => line.trim()).filter(Boolean))];
 }
 
+/** The default reason from before the anchor was called the trigger. */
+const LEGACY_ANCHOR_REASON = "Anchor didn't happen";
+const TRIGGER_REASON = "Trigger didn't happen";
+
 function loadReasons(value: unknown): string[] {
 	if (!Array.isArray(value)) return [...DEFAULT_SETTINGS.missReasons];
-	const reasons = parseReasons(value.filter((item): item is string => typeof item === "string").join("\n"));
+	const reasons = parseReasons(
+		value
+			.filter((item): item is string => typeof item === "string")
+			.map((reason) => (reason === LEGACY_ANCHOR_REASON ? TRIGGER_REASON : reason))
+			.join("\n"),
+	);
 	return reasons.length ? reasons : [...DEFAULT_SETTINGS.missReasons];
 }
 

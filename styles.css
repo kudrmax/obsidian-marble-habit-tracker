@@ -331,6 +331,7 @@ button.th-meta-add svg { width: 18px; height: 18px; }
 	animation: th-in 200ms ease;
 }
 
+.th-column:has(> .th-empty) { box-sizing: border-box; height: 100%; padding-bottom: 0; }
 .th-empty { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; padding: 0 32px 120px; text-align: center; }
 
 /* Habit screen */

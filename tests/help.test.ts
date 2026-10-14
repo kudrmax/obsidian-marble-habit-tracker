@@ -9,6 +9,8 @@ describe("helpRows", () => {
 		expect(helpRows(false, merge).map((row) => row.action)).toContain("Right-click or hold the circle");
 		expect(helpRows(true, merge).map((row) => row.action)).toContain("Tilt the phone");
 		expect(helpRows(false, merge).map((row) => row.action)).toContain("Move the mouse");
+		expect(helpRows(true, merge).map((row) => row.action)).toContain("Tap the circle");
+		expect(helpRows(false, merge).map((row) => row.action)).toContain("Click the circle");
 	});
 
 	it("takes the merge counts from settings", () => {
