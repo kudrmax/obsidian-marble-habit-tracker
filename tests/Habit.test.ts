@@ -28,7 +28,7 @@ describe("Habit", () => {
 		const input = { name: "Зарядка", anchor: "Кофе", tiny: "1", days: WEEKDAYS };
 		expect(() => Habit.create({ ...input, name: " " }, created)).toThrow(DomainError);
 		expect(() => Habit.create({ ...input, name: "a/b" }, created)).toThrow(DomainError);
-		expect(() => Habit.create({ ...input, tiny: "", full: " " }, created)).toThrow("tiny or a full");
+		expect(() => Habit.create({ ...input, tiny: "", full: " " }, created)).toThrow("action or a tiny action");
 		expect(() => Habit.create({ ...input, days: [] }, created)).toThrow(DomainError);
 	});
 
@@ -52,7 +52,7 @@ describe("Habit", () => {
 
 	it("keeps a tiny or a full version", () => {
 		const habit = Habit.create({ name: "Чтение", tiny: "1 страница", full: "Глава", days: WEEKDAYS }, created);
-		expect(() => habit.clearText("tiny", today).clearText("full", today)).toThrow("tiny or a full");
+		expect(() => habit.clearText("tiny", today).clearText("full", today)).toThrow("action or a tiny action");
 	});
 
 	it("knows when a habit without an anchor or a tiny version started", () => {

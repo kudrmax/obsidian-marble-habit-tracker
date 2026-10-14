@@ -6,15 +6,15 @@ import { d } from "./support/dates";
 const EXAMPLE: Frontmatter = {
 	order: 1,
 	schedule: [{ value: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"], since: "2026-09-01" }],
-	anchor: [
+	trigger: [
 		{ value: "Поставлю кружку в раковину", since: "2026-09-20" },
 		{ value: "Выпью кофе", since: "2026-09-01", replaced_because: "С кофе забывал — якорь размытый" },
 	],
-	tiny: [
+	action_tiny: [
 		{ value: "2 приседания", since: "2026-09-05" },
 		{ value: "1 приседание", since: "2026-09-01" },
 	],
-	full: [{ value: "15 минут зарядки", since: "2026-09-01" }],
+	action: [{ value: "15 минут зарядки", since: "2026-09-01" }],
 	celebration: [{ value: "«Есть!» + кулак", since: "2026-09-01" }],
 	done_tiny: ["2026-10-08", "2026-10-06"],
 	done_full: ["2026-10-09"],
@@ -41,7 +41,7 @@ describe("decodeHabit", () => {
 			"Зарядка",
 			example({
 				done_tiny: ["2026-10-06", new Date("2026-10-08")],
-				tiny: [
+				action_tiny: [
 					{ value: "1 приседание", since: "2026-09-01" },
 					{ value: "2 приседания", since: "2026-09-05" },
 				],
@@ -102,11 +102,11 @@ describe("decodeHabit", () => {
 	});
 
 	it("keeps several versions from one day in their order", () => {
-		const habit = decodeHabit("Зарядка", example({ tiny: [{ value: "b", since: "2026-10-01" }, { value: "a", since: "2026-10-01" }, { value: "old", since: "2026-09-01" }] }));
+		const habit = decodeHabit("Зарядка", example({ action_tiny: [{ value: "b", since: "2026-10-01" }, { value: "a", since: "2026-10-01" }, { value: "old", since: "2026-09-01" }] }));
 		expect(habit.current("tiny")).toBe("b");
 		const frontmatter = example();
 		encodeHabit(habit, frontmatter);
-		expect((frontmatter.tiny as { value: string }[]).map((version) => version.value)).toEqual(["b", "a", "old"]);
+		expect((frontmatter.action_tiny as { value: string }[]).map((version) => version.value)).toEqual(["b", "a", "old"]);
 	});
 
 	it("reads and writes a skipped day without a reason", () => {
@@ -123,8 +123,8 @@ describe("decodeHabit", () => {
 
 	it.each([
 		["no properties", undefined, "no habit properties"],
-		["neither tiny nor full", { tiny: undefined, full: undefined }, "tiny or a full"],
-		["anchor not a list", { anchor: "Кружка" }, "anchor"],
+		["neither tiny nor full", { action_tiny: undefined, action: undefined }, "action or a tiny action"],
+		["trigger not a list", { trigger: "Кружка" }, "trigger"],
 		["bad date", { done_tiny: ["2026-13-01"] }, "done_tiny"],
 		["two marks on one day", { done_full: ["2026-10-08"] }, "2026-10-08"],
 		["missed without a date", { missed: [{ reason: "Forgot" }] }, "missed"],
@@ -152,7 +152,7 @@ describe("encodeHabit", () => {
 	});
 
 	it("removes lists that became empty", () => {
-		const habit = decodeHabit("Зарядка", example({ done_tiny: undefined, done_full: undefined, missed: undefined, full: undefined, order: undefined }));
+		const habit = decodeHabit("Зарядка", example({ done_tiny: undefined, done_full: undefined, missed: undefined, action: undefined, order: undefined }));
 		const frontmatter: Frontmatter = example();
 		encodeHabit(habit, frontmatter);
 		for (const key of ["done_tiny", "done_full", "missed", "full", "order"]) expect(frontmatter).not.toHaveProperty(key);
@@ -166,7 +166,7 @@ describe("encodeHabit", () => {
 
 	it("reads and writes under custom property names", () => {
 		const keys = { ...DEFAULT_PROPERTY_NAMES, doneTiny: "wins", anchor: "after" };
-		const habit = decodeHabit("Read", { ...example(), after: example().anchor, anchor: undefined, wins: ["2026-10-01"] }, keys);
+		const habit = decodeHabit("Read", { ...example(), after: example().trigger, trigger: undefined, wins: ["2026-10-01"] }, keys);
 		expect(habit.markOn(d("2026-10-01"))).toEqual({ kind: "tiny" });
 		const frontmatter: Frontmatter = {};
 		encodeHabit(habit, frontmatter, keys);

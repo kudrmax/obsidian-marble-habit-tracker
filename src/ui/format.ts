@@ -7,8 +7,16 @@ const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Se
 
 export type LabelSet = Readonly<Record<Part, string>>;
 
-/** The recipe reads as one sentence: "after I … I will … on a good day … and celebrate … every …". */
 export const DEFAULT_LABELS: LabelSet = {
+	anchor: "trigger",
+	tiny: "tiny action",
+	full: "action",
+	celebration: "celebration",
+	schedule: "days",
+};
+
+/** Labels from before 1.16, when the parts read as one sentence; a set still equal to them gets the new names. */
+export const LEGACY_LABELS: LabelSet = {
 	anchor: "after I",
 	tiny: "I will",
 	full: "on a good day",
@@ -30,10 +38,9 @@ export class RecipeLabels {
 		return label.charAt(0).toUpperCase() + label.slice(1);
 	}
 
-	/** "after I …", or nothing for a habit with no anchor. */
+	/** The trigger as the user wrote it, or nothing for a habit without one. */
 	anchorLine(habit: Habit): string {
-		const anchor = habit.current("anchor");
-		return anchor ? `${this.set.anchor} ${anchor}` : "";
+		return habit.current("anchor") ?? "";
 	}
 
 	describeChange(change: RecipeChange): string {
@@ -43,7 +50,7 @@ export class RecipeLabels {
 }
 
 export function recipeDays(schedule: Schedule): string {
-	return schedule.isEveryDay ? "day" : schedule.weekdays.map(weekdayShort).join(", ");
+	return schedule.isEveryDay ? "Every day" : schedule.weekdays.map(weekdayShort).join(", ");
 }
 
 export function weekdayShort(day: Weekday): string {

@@ -118,7 +118,8 @@ export class HabitBlock {
 		const days = this.property(rows, RECIPE_ICONS.schedule, labels.of("schedule")).createDiv({ cls: "metadata-input-longtext th-habit-days", text: recipeDays(habit.currentSchedule) });
 		days.addEventListener("click", () => new EditSheet(this.app, this.ui.service, this.path, habit, "schedule", labels).open());
 		this.editable(this.property(rows, SECTION_ICON, "section"), habit.section ?? "", (next) => this.ui.service.setSection(this.path, next));
-		const anytime = this.property(rows, "unlink", "not at trigger").createEl("input", { cls: "metadata-input-checkbox", type: "checkbox", attr: { title: "Can also be done without the anchor" } });
+		if (!this.ui.settings().notAtTrigger) return;
+		const anytime = this.property(rows, "unlink", "not at trigger").createEl("input", { cls: "metadata-input-checkbox", type: "checkbox", attr: { title: "Can also be done without the trigger" } });
 		anytime.checked = habit.anytime;
 		anytime.addEventListener("change", () => void this.run(() => this.ui.service.setAnytime(this.path, anytime.checked)));
 	}
@@ -156,7 +157,7 @@ export class HabitBlock {
 		stat(stats.current?.length ?? 0, "in a row");
 		stat(stats.best, "best");
 		stat(stats.total, "wins");
-		this.renderGrid(this.property(rows, "layout-grid", "days").createDiv("th-panel-cell"), habit, today);
+		this.renderGrid(this.property(rows, "layout-grid", "calendar").createDiv("th-panel-cell"), habit, today);
 	}
 
 	/** Days as circles, a week per column up to today; it reaches back far enough to fill its row, so a new habit still shows a grid. */

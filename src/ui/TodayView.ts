@@ -344,7 +344,7 @@ export class TodayView extends ItemView {
 		if (subtitle) text.createDiv({ cls: "th-row-sub", text: subtitle });
 		text.addEventListener("click", () => this.ui.openHabit(path, this.leaf));
 
-		if (this.menu === path && canGoOffTrigger(habit)) {
+		if (this.menu === path && this.canGoOffTrigger(habit)) {
 			const stack = main.createDiv("th-answer-stack");
 			this.renderAnswers(stack, path, habit, mark);
 			this.renderOffTrigger(stack);
@@ -360,13 +360,11 @@ export class TodayView extends ItemView {
 
 
 	private renderMark(parent: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
-		const hint = mark
-			? "Click to undo · hold or right-click to change"
-			: habit.hasTiny
-				? "Click for tiny · hold or right-click for full or skipped"
-				: "Click for done · hold or right-click for skipped";
+		const labels = this.ui.labels();
+		const first = habit.hasTiny ? labels.of("tiny") : "done";
+		const hint = mark ? "Click to undo · hold or right-click to change" : `Click for ${first} · hold or right-click for more`;
 		const button = parent.createEl("button", { cls: "th-mark-button", attr: { title: hint } });
-		button.createSpan({ cls: "th-sr-only", text: mark ? "Undo — hold to change" : habit.hasTiny ? "Tiny — hold for full or skipped" : "Done — hold for skipped" });
+		button.createSpan({ cls: "th-sr-only", text: mark ? "Undo — hold to change" : `${labels.title(habit.hasTiny ? "tiny" : "full")} — hold for more` });
 		const circle = button.createSpan("th-mark");
 		if (isDone(mark)) {
 			circle.addClass("is-done");
@@ -410,12 +408,13 @@ export class TodayView extends ItemView {
 			icon(button.createSpan("th-answer-circle"), iconName);
 			button.addEventListener("click", (event) => void this.choose(path, answer, mark, event));
 		};
-		const offTrigger = this.offTrigger && canGoOffTrigger(habit);
+		const offTrigger = this.offTrigger && this.canGoOffTrigger(habit);
 		answers.toggleClass("is-off-trigger", offTrigger);
 		const chosen = (kind: "full" | "tiny") => mark?.kind === kind && isOffTrigger(mark) === offTrigger;
 		option("skip", "Skipped", "x", mark?.kind === "missed");
-		option("full", "Full", "spark", chosen("full"));
-		if (habit.hasTiny) option("tiny", "Tiny", "check", chosen("tiny"));
+		const labels = this.ui.labels();
+		option("full", labels.title("full"), "spark", chosen("full"));
+		if (habit.hasTiny) option("tiny", labels.title("tiny"), "check", chosen("tiny"));
 	}
 
 	/** A switch under the answer circles: the tiny or full answer picked next counts as done without the anchor. */
@@ -493,7 +492,7 @@ export class TodayView extends ItemView {
 
 	private async choose(path: string, answer: Answer, current: DayMark | undefined, event: MouseEvent): Promise<void> {
 		const entry = this.ui.repository.get(path);
-		const offTrigger = this.offTrigger && entry?.kind === "ok" && canGoOffTrigger(entry.habit);
+		const offTrigger = this.offTrigger && entry?.kind === "ok" && this.canGoOffTrigger(entry.habit);
 		const same = (answer === "skip" && current?.kind === "missed") || (answer !== "skip" && current?.kind === answer && isOffTrigger(current) === offTrigger);
 		if (same) return this.answer(path, undefined);
 		if (answer === "skip") {
@@ -596,6 +595,11 @@ export class TodayView extends ItemView {
 		};
 	}
 
+	/** "Not at trigger" means something only when it is turned on, for a habit that allows it and has a trigger to miss. */
+	private canGoOffTrigger(habit: Habit): boolean {
+		return this.ui.settings().notAtTrigger && habit.anytime && habit.current("anchor") !== undefined;
+	}
+
 	private cursorPushEnabled(): boolean {
 		const settings = this.ui.settings();
 		return settings.cursorPush && !settings.reduceMotion;
@@ -644,7 +648,3 @@ export class TodayView extends ItemView {
 	}
 }
 
-/** "Not at trigger" means something only for a habit that allows it and has an anchor to miss. */
-function canGoOffTrigger(habit: Habit): boolean {
-	return habit.anytime && habit.current("anchor") !== undefined;
-}

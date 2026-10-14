@@ -1,4 +1,4 @@
-import { App } from "obsidian";
+import { App, setIcon } from "obsidian";
 import { HabitService } from "../application/HabitService";
 import { HabitColor } from "../domain/HabitColor";
 import { WEEKDAYS, Weekday } from "../domain/LocalDate";
@@ -6,21 +6,13 @@ import { colorCircles, textField, weekdayCircles } from "./components";
 import { RecipeLabels } from "./format";
 import { Sheet } from "./Sheet";
 
-/** Which versions of the habit get tracked: only the tiny one, only the full one, or both. */
-type Track = "tiny" | "full" | "both";
-const TRACKS: ReadonlyArray<{ track: Track; label: string }> = [
-	{ track: "tiny", label: "Tiny" },
-	{ track: "full", label: "Full" },
-	{ track: "both", label: "Both" },
-];
-
+/** A plain habit needs a name, an action and days; the Tiny Habits recipe is an optional part that opens below. */
 export class HabitFormModal extends Sheet {
-	private track: Track = "both";
+	private name = "";
+	private full = "";
 	private anchor = "";
 	private tiny = "";
-	private full = "";
 	private celebration = "";
-	private name = "";
 	private days: Weekday[] = [...WEEKDAYS];
 	private color: HabitColor | undefined;
 	private anytime = false;
@@ -29,50 +21,28 @@ export class HabitFormModal extends Sheet {
 		app: App,
 		private readonly service: HabitService,
 		private readonly labels: RecipeLabels,
+		private readonly notAtTrigger: boolean,
 	) {
 		super(app, "New habit", undefined);
 	}
 
 	protected override fill(body: HTMLElement): void {
-		const field = (label: string, placeholder: string, large: boolean, set: (value: string) => void) =>
-			textField(body, {
+		const labels = this.labels;
+		const field = (parent: HTMLElement, label: string, placeholder: string, set: (value: string) => void) =>
+			textField(parent, {
 				label,
 				placeholder,
-				large,
+				large: true,
 				onInput: (value) => {
 					set(value);
 					this.refreshReady();
 				},
 			});
-		const labels = this.labels;
-		const tracks = body.createDiv("th-sheet-group");
-		tracks.createDiv({ cls: "th-label", text: "Track" });
-		const segments = tracks.createDiv("th-segmented");
-		const first = field(`${labels.title("anchor")} · optional`, "something I already do every day", true, (value) => (this.anchor = value));
-		const tiny = field(labels.title("tiny"), "the tiniest version", true, (value) => (this.tiny = value));
-		const full = field(labels.title("full"), "the whole thing", true, (value) => (this.full = value));
-		const anytime = body.createEl("label", { cls: "th-check" });
-		const box = anytime.createEl("input", { type: "checkbox" });
-		anytime.createSpan({ text: "Can also be done without the anchor" });
-		box.addEventListener("change", () => (this.anytime = box.checked));
-		field(`${labels.title("celebration")} · optional`, "a word or a gesture, like “Yes!”", false, (value) => (this.celebration = value));
-		const show = (track: Track) => {
-			this.track = track;
-			tiny.parentElement?.toggle(track !== "full");
-			full.parentElement?.toggle(track !== "tiny");
-			buttons.forEach((button, index) => button.toggleClass("is-selected", TRACKS[index].track === track));
-			this.refreshReady();
-		};
-		const buttons = TRACKS.map(({ track, label }) => {
-			const button = segments.createEl("button", { text: label, attr: { type: "button" } });
-			button.addEventListener("click", () => show(track));
-			return button;
-		});
-		show(this.track);
-		field("Call it", "Read", false, (value) => (this.name = value));
+		const name = field(body, "Name", "Read", (value) => (this.name = value));
+		field(body, labels.title("full"), "the whole thing", (value) => (this.full = value));
 
 		const days = body.createDiv("th-sheet-group");
-		days.createDiv({ cls: "th-label", text: "Days" });
+		days.createDiv({ cls: "th-label", text: labels.title("schedule") });
 		weekdayCircles(days, this.days, (picked) => {
 			this.days = picked;
 			this.refreshReady();
@@ -80,20 +50,45 @@ export class HabitFormModal extends Sheet {
 		const colors = body.createDiv("th-sheet-group");
 		colors.createDiv({ cls: "th-label", text: "Color" });
 		colorCircles(colors, this.color, (picked) => (this.color = picked));
-		window.setTimeout(() => first.focus(), 0);
+
+		this.renderRecipe(body, field);
+		window.setTimeout(() => name.focus(), 0);
+	}
+
+	private renderRecipe(body: HTMLElement, field: (parent: HTMLElement, label: string, placeholder: string, set: (value: string) => void) => HTMLTextAreaElement): void {
+		const labels = this.labels;
+		const toggle = body.createEl("button", { cls: "th-disclosure", attr: { type: "button", "aria-expanded": "false" } });
+		setIcon(toggle.createSpan("th-disclosure-icon"), "chevron-right");
+		toggle.createSpan({ text: "Tiny Habits recipe" });
+		toggle.createSpan({ cls: "th-disclosure-note", text: "optional" });
+		const recipe = body.createDiv("th-form-recipe");
+		recipe.hide();
+		field(recipe, labels.title("anchor"), "something I already do every day", (value) => (this.anchor = value));
+		field(recipe, labels.title("tiny"), "the tiniest version", (value) => (this.tiny = value));
+		field(recipe, labels.title("celebration"), "a word or a gesture, like “Yes!”", (value) => (this.celebration = value));
+		if (this.notAtTrigger) {
+			const anytime = recipe.createEl("label", { cls: "th-check" });
+			const box = anytime.createEl("input", { type: "checkbox" });
+			anytime.createSpan({ text: "Can also be done without the trigger" });
+			box.addEventListener("change", () => (this.anytime = box.checked));
+		}
+		toggle.addEventListener("click", () => {
+			const open = !recipe.isShown();
+			recipe.toggle(open);
+			toggle.setAttribute("aria-expanded", String(open));
+		});
 	}
 
 	protected override isReady(): boolean {
-		const wanted = [this.name, ...(this.track !== "full" ? [this.tiny] : []), ...(this.track !== "tiny" ? [this.full] : [])];
-		return wanted.every((value) => value.trim()) && this.days.length > 0;
+		return this.name.trim() !== "" && (this.full.trim() !== "" || this.tiny.trim() !== "") && this.days.length > 0;
 	}
 
 	protected override submit(): Promise<unknown> {
 		return this.service.create({
 			name: this.name,
 			anchor: this.anchor,
-			tiny: this.track === "full" ? undefined : this.tiny,
-			full: this.track === "tiny" ? undefined : this.full,
+			tiny: this.tiny,
+			full: this.full,
 			celebration: this.celebration,
 			days: this.days,
 			color: this.color,

@@ -24,18 +24,18 @@ const PREVIEW: ReadonlyArray<{ color: string; size: JarSize; full: boolean }> = 
 	{ color: "--color-orange", size: "small", full: true },
 ];
 const LABEL_PARTS: ReadonlyArray<{ part: keyof LabelSet; name: string }> = [
-	{ part: "anchor", name: "Anchor" },
-	{ part: "tiny", name: "Tiny version" },
-	{ part: "full", name: "Full version" },
+	{ part: "full", name: "Action" },
+	{ part: "tiny", name: "Tiny action" },
+	{ part: "anchor", name: "Trigger" },
 	{ part: "celebration", name: "Celebration" },
 	{ part: "schedule", name: "Days" },
 ];
 const PROPERTY_NAMES: Record<Exclude<keyof PropertyNames, keyof LabelSet>, string> = {
-	doneTiny: "Tiny days",
-	doneFull: "Full days",
+	doneTiny: "Days done tiny",
+	doneFull: "Days done",
 	missed: "Skipped days",
 	offTrigger: "Days not at trigger",
-	anytime: "Can be done without the anchor",
+	anytime: "Can be done without the trigger",
 	color: "Color",
 	order: "Order",
 	section: "Section",
@@ -230,6 +230,10 @@ export class SettingsTab extends PluginSettingTab {
 				new FolderSuggest(this.app, text.inputEl, save);
 			});
 		new Setting(containerEl)
+			.setName("Done without the trigger")
+			.setDesc("Lets a habit with a trigger also count when you did it at another moment. Adds a switch to the habit and a “Not at trigger” chip when you hold its circle.")
+			.addToggle((toggle) => toggle.setValue(settings.notAtTrigger).onChange((value) => void this.save((next) => (next.notAtTrigger = value))));
+		new Setting(containerEl)
 			.setName("Habit block in notes")
 			.setDesc("Show the recipe, progress and history at the top of each habit note, above your own text.")
 			.addToggle((toggle) => toggle.setValue(settings.habitBlock).onChange((value) => void this.save((next) => (next.habitBlock = value))));
@@ -239,7 +243,7 @@ export class SettingsTab extends PluginSettingTab {
 		const settings = this.host.config;
 		new Setting(containerEl)
 			.setName("Field labels")
-			.setDesc("What each part of a habit is called on Today, in the habit panel and in forms. The recipe reads as one sentence: “after I … I will … on a good day … and celebrate … every …”.")
+			.setDesc("What each part of a habit is called in forms and in the habit panel.")
 			.setHeading();
 		for (const { part, name } of LABEL_PARTS) {
 			new Setting(containerEl).setName(name).addText((text) =>

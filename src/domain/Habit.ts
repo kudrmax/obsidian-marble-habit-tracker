@@ -15,7 +15,7 @@ export const sameSchedule = (a: Schedule, b: Schedule): boolean => a.equals(b);
 
 /** The value of a version that removes a part from that day on. */
 const REMOVED = "";
-const NEEDS_A_VERSION = "A habit needs a tiny or a full version";
+const NEEDS_A_VERSION = "A habit needs an action or a tiny action";
 
 function present(value: string | undefined): string | undefined {
 	return value?.trim() ? value : undefined;

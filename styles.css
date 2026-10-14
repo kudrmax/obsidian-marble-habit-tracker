@@ -322,11 +322,6 @@ button.th-meta-add svg { width: 18px; height: 18px; }
 .tiny-habits.th-screen { max-width: var(--th-column); margin: 0 auto; padding: 16px var(--th-gutter) 48px; box-sizing: border-box; }
 .th-screen-header { display: flex; align-items: center; gap: 10px; }
 .th-screen-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--th-habit); }
-.th-recipe { display: grid; grid-template-columns: 112px minmax(0, 1fr); row-gap: 10px; align-items: baseline; }
-.th-recipe-value { color: var(--th-text); cursor: pointer; overflow-wrap: anywhere; }
-@media (hover: hover) { .th-recipe-value:hover { color: var(--th-habit); } }
-.th-recipe-value { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
-.th-recipe-value.is-empty { color: var(--th-faint); }
 .th-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .th-stat-value { font-size: 32px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; color: var(--th-muted); }
 .th-stat:first-child .th-stat-value { color: var(--th-text); }
@@ -442,6 +437,11 @@ button.th-style-tile.is-selected { border-color: var(--interactive-accent); }
 .th-section-name { width: 100%; }
 
 /* A row of mutually exclusive choices, like Obsidian's own segmented controls. */
+button.th-disclosure { display: flex; align-items: center; justify-content: flex-start; gap: 6px; width: 100%; height: auto; margin-top: 14px; padding: 10px 0; border: none; border-top: 1px solid var(--background-modifier-border); border-radius: 0; box-shadow: none; background: transparent; color: var(--text-normal); font-size: var(--font-ui-small); font-weight: var(--font-semibold); cursor: pointer; }
+.th-disclosure-icon { display: inline-flex; color: var(--text-faint); transition: transform 150ms ease; }
+.th-disclosure-icon svg { width: 14px; height: 14px; }
+button.th-disclosure[aria-expanded="true"] .th-disclosure-icon { transform: rotate(90deg); }
+.th-disclosure-note { color: var(--text-faint); font-weight: var(--font-normal); }
 .th-segmented { display: inline-flex; gap: 2px; padding: 2px; border-radius: var(--radius-m); background: var(--background-modifier-form-field, var(--background-secondary)); }
 .th-segmented button { height: auto; padding: 6px 14px; border: none; box-shadow: none; background: transparent; color: var(--text-muted); font-size: var(--font-ui-small); }
 .th-segmented button.is-selected { background: var(--interactive-normal); color: var(--text-normal); box-shadow: var(--input-shadow); }

@@ -35,15 +35,18 @@ export const DEFAULT_PROPERTY_NAMES: PropertyNames = {
 	archived: "archived",
 	anytime: "anytime",
 	schedule: "schedule",
-	anchor: "anchor",
-	tiny: "tiny",
-	full: "full",
+	anchor: "trigger",
+	tiny: "action_tiny",
+	full: "action",
 	celebration: "celebration",
 	doneTiny: "done_tiny",
 	doneFull: "done_full",
 	missed: "missed",
 	offTrigger: "off_trigger",
 };
+
+/** The names used before 1.16: an install that already has settings keeps reading its notes with them. */
+export const LEGACY_PROPERTY_NAMES: PropertyNames = { ...DEFAULT_PROPERTY_NAMES, anchor: "anchor", tiny: "tiny", full: "full" };
 
 export function decodeHabit(name: string, frontmatter: Frontmatter | null | undefined, keys: PropertyNames = DEFAULT_PROPERTY_NAMES): Habit {
 	if (!frontmatter) throw new HabitDecodeError("no habit properties");

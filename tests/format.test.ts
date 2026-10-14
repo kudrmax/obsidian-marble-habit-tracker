@@ -5,8 +5,8 @@ import { d } from "./support/dates";
 import { habitNote } from "./support/habits";
 
 describe("format", () => {
-	it("finishes the recipe sentence after \"every\"", () => {
-		expect(recipeDays(Schedule.everyDay())).toBe("day");
+	it("names the days of a schedule", () => {
+		expect(recipeDays(Schedule.everyDay())).toBe("Every day");
 		expect(recipeDays(new Schedule(["fri", "mon", "wed"]))).toBe("Mon, Wed, Fri");
 	});
 
@@ -19,25 +19,25 @@ describe("format", () => {
 	const anchorLine = (habit: ReturnType<typeof habitNote>) => labels.anchorLine(habit);
 	const describeChange = (change: Parameters<RecipeLabels["describeChange"]>[0]) => labels.describeChange(change);
 
-	it("shows the anchor as the start of the recipe", () => {
-		expect(anchorLine(habitNote("Workout"))).toBe("after I put my mug in the sink");
+	it("shows the trigger as the user wrote it", () => {
+		expect(anchorLine(habitNote("Workout"))).toBe("put my mug in the sink");
 	});
 
 	it("names the parts with the labels from settings", () => {
-		const custom = new RecipeLabels({ anchor: "после того как", tiny: "я", full: "в хороший день", celebration: "и порадуюсь", schedule: "каждый" });
-		expect(custom.anchorLine(habitNote("Workout"))).toBe("после того как put my mug in the sink");
-		expect(custom.title("tiny")).toBe("Я");
+		const custom = new RecipeLabels({ anchor: "триггер", tiny: "минимум", full: "действие", celebration: "праздник", schedule: "дни" });
+		expect(custom.title("tiny")).toBe("Минимум");
+		expect(custom.of("anchor")).toBe("триггер");
 	});
 
 	it("describes a removed part", () => {
-		expect(describeChange({ part: "tiny", date: d("2026-10-01"), from: "read a page", to: "" })).toBe("I will → removed");
+		expect(describeChange({ part: "tiny", date: d("2026-10-01"), from: "read a page", to: "" })).toBe("tiny action → removed");
 	});
 
 	it("describes a recipe change by its new value", () => {
-		expect(describeChange({ part: "tiny", date: d("2026-10-01"), from: "read a page", to: "open the book" })).toBe("I will → open the book");
-		expect(describeChange({ part: "full", date: d("2026-10-01"), to: "15 min workout" })).toBe("on a good day → 15 min workout");
+		expect(describeChange({ part: "tiny", date: d("2026-10-01"), from: "read a page", to: "open the book" })).toBe("tiny action → open the book");
+		expect(describeChange({ part: "full", date: d("2026-10-01"), to: "15 min workout" })).toBe("action → 15 min workout");
 		expect(describeChange({ part: "schedule", date: d("2026-10-01"), from: Schedule.everyDay(), to: new Schedule(["sat"]) })).toBe(
-			"every → Sat",
+			"days → Sat",
 		);
 	});
 });

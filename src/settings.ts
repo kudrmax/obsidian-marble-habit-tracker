@@ -1,6 +1,6 @@
 import { DEFAULT_MERGE_RULE, MergeRule } from "./domain/Jar";
-import { DEFAULT_PROPERTY_NAMES, PropertyNames } from "./infrastructure/HabitCodec";
-import { DEFAULT_LABELS, LabelSet } from "./ui/format";
+import { DEFAULT_PROPERTY_NAMES, LEGACY_PROPERTY_NAMES, PropertyNames } from "./infrastructure/HabitCodec";
+import { DEFAULT_LABELS, LEGACY_LABELS, LabelSet } from "./ui/format";
 import { DEFAULT_MARBLE_SIZES, JarMaterial, MAX_MARBLE, MIN_MARBLE, MarbleSizes, isJarMaterial } from "./ui/jar/JarAssets";
 
 export type HabitSource = "tag" | "folder";
@@ -30,6 +30,8 @@ export interface HabitSettings {
 	tilt: boolean;
 	/** On a computer, the mouse pushes the marbles it passes through. */
 	cursorPush: boolean;
+	/** Habits may be marked as done without their trigger. */
+	notAtTrigger: boolean;
 	haptics: boolean;
 }
 
@@ -54,6 +56,7 @@ export const DEFAULT_SETTINGS: HabitSettings = {
 	reduceMotion: false,
 	tilt: true,
 	cursorPush: true,
+	notAtTrigger: false,
 	haptics: true,
 };
 
@@ -74,7 +77,7 @@ export function loadSettings(data: unknown): HabitSettings {
 		tag: text(raw.tag, DEFAULT_SETTINGS.tag).replace(/^#/, ""),
 		folder: text(raw.folder, DEFAULT_SETTINGS.folder),
 		habitBlock: flag(raw.habitBlock, DEFAULT_SETTINGS.habitBlock),
-		properties: loadProperties(raw.properties),
+		properties: loadProperties(raw.properties, data === null || data === undefined ? DEFAULT_PROPERTY_NAMES : LEGACY_PROPERTY_NAMES),
 		labels: loadLabels(raw.labels),
 		redesignThreshold: integer(raw.redesignThreshold, 1, Number.MAX_SAFE_INTEGER, DEFAULT_SETTINGS.redesignThreshold),
 		missReasons: loadReasons(raw.missReasons),
@@ -90,6 +93,7 @@ export function loadSettings(data: unknown): HabitSettings {
 		reduceMotion: flag(raw.reduceMotion, DEFAULT_SETTINGS.reduceMotion),
 		tilt: flag(raw.tilt, DEFAULT_SETTINGS.tilt),
 		cursorPush: flag(raw.cursorPush, DEFAULT_SETTINGS.cursorPush),
+		notAtTrigger: flag(raw.notAtTrigger, DEFAULT_SETTINGS.notAtTrigger),
 		haptics: flag(raw.haptics, DEFAULT_SETTINGS.haptics),
 	};
 }
@@ -104,7 +108,8 @@ function loadLabels(value: unknown): LabelSet {
 	const raw = (typeof value === "object" && value !== null ? value : {}) as Partial<Record<keyof LabelSet, unknown>>;
 	const label = (part: keyof LabelSet) => {
 		const text = raw[part];
-		return typeof text === "string" && text.trim() ? text.trim() : DEFAULT_LABELS[part];
+		if (typeof text !== "string" || !text.trim() || text.trim().toLowerCase() === LEGACY_LABELS[part].toLowerCase()) return DEFAULT_LABELS[part];
+		return text.trim();
 	};
 	return { anchor: label("anchor"), tiny: label("tiny"), full: label("full"), celebration: label("celebration"), schedule: label("schedule") };
 }
@@ -139,9 +144,10 @@ function loadReasons(value: unknown): string[] {
 	return reasons.length ? reasons : [...DEFAULT_SETTINGS.missReasons];
 }
 
-function loadProperties(value: unknown): PropertyNames {
+/** A fresh install gets the current names; an older one keeps the names its notes were written with. */
+function loadProperties(value: unknown, fallbacks: PropertyNames): PropertyNames {
 	const raw = (typeof value === "object" && value !== null ? value : {}) as Record<string, unknown>;
-	const entries = Object.entries<string>({ ...DEFAULT_PROPERTY_NAMES }).map(([key, fallback]): [string, string] => {
+	const entries = Object.entries<string>({ ...fallbacks }).map(([key, fallback]): [string, string] => {
 		const name = raw[key];
 		return [key, typeof name === "string" && name.trim() ? name.trim() : fallback];
 	});

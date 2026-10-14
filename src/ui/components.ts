@@ -62,6 +62,7 @@ export function textField(
 	const input = field.createEl("textarea", { attr: { rows: options.hero ? "3" : "1", placeholder: options.placeholder ?? "" } });
 	input.value = options.value ?? "";
 	const grow = () => {
+		if (!input.isShown()) return;
 		input.setCssProps({ height: "auto" });
 		input.setCssProps({ height: `${input.scrollHeight}px` });
 	};

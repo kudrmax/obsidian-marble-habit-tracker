@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_PROPERTY_NAMES } from "../src/infrastructure/HabitCodec";
+import { DEFAULT_PROPERTY_NAMES, LEGACY_PROPERTY_NAMES } from "../src/infrastructure/HabitCodec";
 import { DEFAULT_SETTINGS, loadSettings, parseReasons } from "../src/settings";
 
 describe("loadSettings", () => {
@@ -10,7 +10,7 @@ describe("loadSettings", () => {
 			folder: "Habits",
 			habitBlock: true,
 			properties: DEFAULT_PROPERTY_NAMES,
-			labels: { anchor: "after I", tiny: "I will", full: "on a good day", celebration: "and celebrate", schedule: "every" },
+			labels: { anchor: "trigger", tiny: "tiny action", full: "action", celebration: "celebration", schedule: "days" },
 			redesignThreshold: 3,
 			missReasons: ["Forgot", "Anchor didn't happen", "No energy", "Felt too big"],
 			shrinkReason: "Felt too big",
@@ -25,6 +25,7 @@ describe("loadSettings", () => {
 			reduceMotion: false,
 			tilt: true,
 			cursorPush: true,
+			notAtTrigger: false,
 			haptics: true,
 		});
 		expect(loadSettings(undefined)).toEqual(DEFAULT_SETTINGS);
@@ -53,6 +54,7 @@ describe("loadSettings", () => {
 				reduceMotion: true,
 				tilt: false,
 				cursorPush: false,
+				notAtTrigger: true,
 				haptics: false,
 			}),
 		).toEqual({
@@ -60,8 +62,8 @@ describe("loadSettings", () => {
 			tag: "routine",
 			folder: "Привычки",
 			habitBlock: false,
-			properties: { ...DEFAULT_PROPERTY_NAMES, doneTiny: "done" },
-			labels: { anchor: "после того как", tiny: "I will", full: "on a good day", celebration: "and celebrate", schedule: "every" },
+			properties: { ...LEGACY_PROPERTY_NAMES, doneTiny: "done" },
+			labels: { anchor: "после того как", tiny: "tiny action", full: "action", celebration: "celebration", schedule: "days" },
 			redesignThreshold: 5,
 			missReasons: ["Ill", "Travel"],
 			shrinkReason: "",
@@ -76,8 +78,21 @@ describe("loadSettings", () => {
 			reduceMotion: true,
 			tilt: false,
 			cursorPush: false,
+			notAtTrigger: true,
 			haptics: false,
 		});
+	});
+
+	it("gives a fresh install the current property names and keeps the old ones for an earlier install", () => {
+		expect(loadSettings(null).properties).toEqual(DEFAULT_PROPERTY_NAMES);
+		expect(DEFAULT_PROPERTY_NAMES).toMatchObject({ anchor: "trigger", tiny: "action_tiny", full: "action" });
+		expect(loadSettings({ speed: 100 }).properties).toEqual(LEGACY_PROPERTY_NAMES);
+		expect(LEGACY_PROPERTY_NAMES).toMatchObject({ anchor: "anchor", tiny: "tiny", full: "full" });
+	});
+
+	it("renames labels still equal to the old recipe sentence, keeping ones the user wrote", () => {
+		const labels = loadSettings({ labels: { anchor: "After I", tiny: "I will", full: "в хороший день", celebration: "and celebrate", schedule: "every" } }).labels;
+		expect(labels).toEqual({ anchor: "trigger", tiny: "tiny action", full: "в хороший день", celebration: "celebration", schedule: "days" });
 	});
 
 	it("replaces a day start hour outside midnight to noon with the default", () => {
@@ -99,13 +114,13 @@ describe("loadSettings", () => {
 
 	it("replaces invalid values with defaults", () => {
 		expect(loadSettings({ folder: "  ", redesignThreshold: 0, material: "clay", celebrationLine: "yes", reduceMotion: 1, tilt: "on", haptics: null, mergeSize: 1, missReasons: "Forgot", hideDone: "no" })).toEqual(
-			DEFAULT_SETTINGS,
+			{ ...DEFAULT_SETTINGS, properties: LEGACY_PROPERTY_NAMES },
 		);
 		expect(loadSettings({ redesignThreshold: 2.5 }).redesignThreshold).toBe(3);
 	});
 
 	it("drops settings that no longer exist", () => {
-		expect(loadSettings({ confetti: false })).toEqual(DEFAULT_SETTINGS);
+		expect(loadSettings({ confetti: false })).toEqual({ ...DEFAULT_SETTINGS, properties: LEGACY_PROPERTY_NAMES });
 	});
 
 	it("reads reasons one per line without blanks or repeats", () => {
