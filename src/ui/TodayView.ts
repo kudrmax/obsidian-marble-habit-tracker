@@ -23,10 +23,13 @@ import { Placement, arrange, groupBySection, visibleEntries } from "./order";
 import { Drop, RowDrag } from "./RowDrag";
 import { SectionNameModal } from "./SectionNameModal";
 import { ScreenChrome } from "./ScreenChrome";
-import { dayTitle, totalWins, winsLabel, offersShrink, todayEntries } from "./today";
+import { closedDayLine, dayTitle, totalWins, winsLabel, offersShrink, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
 
 export const HABITS_VIEW = "tiny-habits-grid";
+const SVG_NS = "http://www.w3.org/2000/svg";
+const RING_RADIUS = 50;
+const RING_GAP = 9;
 
 const HOLD_MS = 450;
 /** How long the circle of a just-marked habit keeps popping, while its row is still on screen. */
@@ -202,10 +205,10 @@ export class TodayView extends ItemView {
 		const answered = habits.filter((entry) => entry.habit.markOn(today) !== undefined).length;
 		const answeredHabits = habits.filter((entry) => entry.habit.markOn(today) !== undefined);
 		const closed = habits.length > 0 && answered === habits.length;
-		this.renderHead(column, all, habits.length ? answered / habits.length : null);
-		if (closed && this.wasClosed === false) this.haptics.merge();
+		this.renderHead(column, all, answeredHabits, habits.length && !closed ? answered / habits.length : null);
+		if (closed) this.renderRing(column, habits.map((entry) => entry.habit), this.wasClosed === false);
 		this.wasClosed = closed;
-		if (habits.length === 0) column.createDiv({ cls: "th-nothing", text: "Nothing for today" });
+		if (habits.length === 0) column.createDiv("th-ring-block").createEl("h2", { cls: "th-title", text: "Nothing for today" });
 
 		const hideDone = this.ui.settings().hideDone;
 		const folded = (entry: Extract<HabitEntry, { kind: "ok" }>) =>
@@ -223,7 +226,6 @@ export class TodayView extends ItemView {
 		}
 		for (const entry of entries) if (entry.kind === "broken") this.renderBroken(column, entry);
 		this.renderNewSection(column);
-		this.renderFoot(column, answeredHabits);
 		this.shownRows = this.renderingRows;
 	}
 
@@ -284,7 +286,7 @@ export class TodayView extends ItemView {
 	}
 
 	/** The day as the title, with arrows to step through past days; the wins and the day's progress under it. */
-	private renderHead(column: HTMLElement, all: readonly HabitEntry[], progress: number | null): void {
+	private renderHead(column: HTMLElement, all: readonly HabitEntry[], answered: readonly Extract<HabitEntry, { kind: "ok" }>[], progress: number | null): void {
 		const today = this.ui.service.today();
 		const shown = this.shownDay();
 		const isToday = shown.equals(today);
@@ -303,23 +305,61 @@ export class TodayView extends ItemView {
 		};
 		step("Previous day", "chevron-left", -1, false);
 		step("Next day", "chevron-right", 1, isToday);
-		if (this.ui.settings().showWins) head.createDiv({ cls: "th-head-sub", text: winsLabel(totalWins(all)) });
+		const sub = head.createDiv("th-head-sub");
+		this.renderFolded(sub, answered);
+		if (this.ui.settings().showWins) sub.createSpan({ cls: "th-head-wins", text: winsLabel(totalWins(all)) });
 		if (progress !== null) head.createDiv("th-progress").createDiv("th-progress-fill").setCssProps({ width: `${progress * 100}%` });
 	}
 
-	/** Under the list, the answered habits folded into one line: "3 done · 1 skipped". */
-	private renderFoot(column: HTMLElement, answered: readonly Extract<HabitEntry, { kind: "ok" }>[]): void {
-		if (answered.length === 0 || !this.ui.settings().hideDone) return;
+	/** A closed day: a ring with an arc per habit, done in its color and skipped in grey. */
+	private renderRing(column: HTMLElement, habits: readonly Habit[], justClosed: boolean): void {
+		const day = this.shownDay();
+		const done = habits.filter((habit) => isDone(habit.markOn(day))).length;
+		const block = column.createDiv("th-ring-block");
+		block.toggleClass("is-fresh", justClosed);
+		const ring = block.createDiv("th-ring");
+		const svg = ring.appendChild(document.createElementNS(SVG_NS, "svg"));
+		svg.setAttribute("viewBox", "-60 -60 120 120");
+		svg.setAttribute("aria-hidden", "true");
+		const circumference = 2 * Math.PI * RING_RADIUS;
+		const share = circumference / habits.length;
+		const gap = habits.length > 1 ? RING_GAP : 0;
+		const arc = (classes: string[], length: number, offset: number, index: number) => {
+			const circle = svg.appendChild(document.createElementNS(SVG_NS, "circle"));
+			circle.setAttribute("r", String(RING_RADIUS));
+			circle.setAttribute("class", classes.join(" "));
+			circle.style.setProperty("--th-arc", `${length}`);
+			circle.style.setProperty("--th-rest", `${circumference - length}`);
+			circle.style.setProperty("stroke-dashoffset", `${-offset}`);
+			circle.style.setProperty("animation-delay", `${index * 90}ms`);
+		};
+		arc(["th-ring-track"], circumference, 0, 0);
+		habits.forEach((habit, index) => {
+			const classes = isDone(habit.markOn(day)) ? ["th-ring-arc", "th-habit", colorClass(habit.color)] : ["th-ring-arc", "is-missed"];
+			arc(classes, share - gap, index * share + gap / 2, index);
+		});
+		ring.createDiv({ cls: "th-ring-count", text: `${done}/${habits.length}` });
+		block.createEl("h2", { cls: "th-title", text: "Day closed" });
+		block.createDiv({ cls: "th-ring-sub", text: closedDayLine(habits.length - done) });
+		if (justClosed) this.haptics.merge();
+	}
+
+	/** The answered habits folded into "3 done · 1 skipped", which opens them in the list. */
+	private renderFolded(parent: HTMLElement, answered: readonly Extract<HabitEntry, { kind: "ok" }>[]): void {
+		if (answered.length === 0) return;
+		const folds = this.ui.settings().hideDone;
 		const day = this.shownDay();
 		const done = answered.filter((entry) => isDone(entry.habit.markOn(day)));
 		const skipped = answered.length - done.length;
-		const toggle = column.createDiv("th-foot").createEl("button", { cls: "th-foot-row th-foot-done", attr: { "aria-expanded": String(this.showDone) } });
+		const toggle = parent.createEl("button", { cls: "th-fold", attr: { "aria-expanded": String(this.showDone || !folds) } });
+		toggle.disabled = !folds;
 		const dots = toggle.createSpan("th-done-dots");
 		for (const entry of answered) {
 			const color = isDone(entry.habit.markOn(day)) ? ["th-habit", colorClass(entry.habit.color)] : ["is-skipped"];
 			dots.createSpan({ cls: ["th-done-dot", ...color] });
 		}
 		toggle.createSpan({ text: [done.length ? `${done.length} done` : "", skipped ? `${skipped} skipped` : ""].filter(Boolean).join(" · ") });
+		if (!folds) return;
 		setIcon(toggle.createSpan("th-meta-chevron"), "chevron-right");
 		toggle.addEventListener("click", () => {
 			this.showDone = !this.showDone;

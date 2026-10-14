@@ -241,22 +241,32 @@ button.th-archived-toggle { margin: 12px 0 10px; font-size: var(--th-small-size)
 .th-head { padding: 10px 0 18px; }
 .th-head-line { display: flex; align-items: center; gap: 2px; }
 .th-head-line .th-title { flex: 1; min-width: 0; }
-button.th-head-step, button.th-head-today, button.th-back, button.th-foot-row, button.th-archived-toggle { height: auto; border: none; box-shadow: none; background: transparent; cursor: pointer; font-size: var(--th-small-size); }
+button.th-head-step, button.th-head-today, button.th-back, button.th-archived-toggle { height: auto; border: none; box-shadow: none; background: transparent; cursor: pointer; font-size: var(--th-small-size); }
 button.th-head-step { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-s); color: var(--th-muted); }
 button.th-head-step svg { width: 20px; height: 20px; }
 button.th-head-step:last-child { margin-right: -8px; }
 button.th-head-step:disabled { opacity: 0.3; cursor: default; }
 button.th-head-today { margin-right: 4px; padding: 3px 10px; border-radius: 999px; color: var(--interactive-accent); background: hsla(var(--interactive-accent-hsl), 0.14); }
 @media (hover: hover) { button.th-head-step:not(:disabled):hover { background: var(--background-modifier-hover); color: var(--th-text); } }
-.th-head-sub { margin-top: 4px; font-size: var(--th-small-size); color: var(--th-faint); font-variant-numeric: tabular-nums; }
-.th-nothing { padding: 8px 0; color: var(--th-faint); font-size: var(--th-small-size); }
-.th-foot { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; margin-top: 4px; }
-button.th-foot-row { display: inline-flex; align-items: center; gap: 8px; padding: 6px 0; color: var(--th-faint); }
-button.th-foot-done { color: var(--th-muted); }
-.th-foot-icon { display: inline-flex; }
-.th-foot-icon svg { width: 16px; height: 16px; }
-@media (hover: hover) { button.th-foot-row:hover { color: var(--th-text); } }
-button.th-foot-done[aria-expanded="true"] .th-meta-chevron, button.th-archived-toggle[aria-expanded="true"] .th-meta-chevron { transform: rotate(90deg); }
+.th-head-sub { display: flex; align-items: center; gap: 12px; min-height: 24px; margin-top: 6px; font-size: var(--th-small-size); color: var(--th-muted); }
+.th-head-wins { margin-left: auto; color: var(--th-faint); font-variant-numeric: tabular-nums; }
+button.th-fold { display: inline-flex; align-items: center; gap: 8px; height: auto; padding: 0; border: none; box-shadow: none; background: transparent; color: var(--th-muted); font-size: inherit; cursor: pointer; }
+button.th-fold:disabled { opacity: 1; cursor: default; }
+@media (hover: hover) { button.th-fold:not(:disabled):hover { color: var(--th-text); } }
+button.th-fold[aria-expanded="true"] .th-meta-chevron { transform: rotate(90deg); }
+.th-ring-block { display: flex; flex-direction: column; align-items: center; padding: 28px 0 26px; text-align: center; }
+.th-ring-block.is-fresh { animation: th-in 300ms ease; }
+.th-ring-block .th-title { font-size: 26px; }
+.th-ring { position: relative; width: 168px; height: 168px; margin-bottom: 18px; }
+.th-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
+.th-ring circle { fill: none; stroke-width: 7; stroke-linecap: round; stroke-dasharray: var(--th-arc) var(--th-rest); }
+.th-ring-track { stroke: var(--th-line); stroke-linecap: butt; }
+.th-ring-arc { stroke: var(--th-habit); }
+.th-ring-arc.is-missed { stroke: var(--th-faint); opacity: 0.5; }
+.th-ring-block.is-fresh .th-ring-arc { animation: th-arc 600ms cubic-bezier(.2, .9, .3, 1) both; }
+.th-ring-block.is-fresh .th-ring-count { animation: th-pop 520ms cubic-bezier(.2, .9, .3, 1.2) 300ms both; }
+.th-ring-count { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 34px; font-weight: 700; letter-spacing: -0.02em; color: var(--th-text); font-variant-numeric: tabular-nums; }
+.th-ring-sub { margin-top: 6px; font-size: 14px; color: var(--th-muted); }
 button.th-back { display: inline-flex; align-items: center; gap: 2px; padding: 4px 8px 4px 0; margin-left: -4px; color: var(--th-muted); }
 button.th-back svg { width: 18px; height: 18px; }
 .th-back-nav { padding-top: 6px; }

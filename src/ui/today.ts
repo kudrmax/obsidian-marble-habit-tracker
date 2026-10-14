@@ -14,6 +14,10 @@ export function dayTitle(day: LocalDate, today: LocalDate): string {
 	return longDate(day);
 }
 
+export function closedDayLine(skipped: number): string {
+	return skipped === 0 ? "Every habit, done" : `${skipped} skipped honestly · see you tomorrow`;
+}
+
 export function totalWins(entries: readonly HabitEntry[]): number {
 	return entries.reduce((sum, entry) => sum + (entry.kind === "ok" ? entry.habit.marks().filter(([, mark]) => isDone(mark)).length : 0), 0);
 }

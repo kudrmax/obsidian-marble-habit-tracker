@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HabitEntry } from "../src/application/ports";
 import { TINY, missed } from "../src/domain/DayMark";
-import { dayTitle, totalWins, winsLabel, offersShrink, todayEntries } from "../src/ui/today";
+import { closedDayLine, dayTitle, totalWins, winsLabel, offersShrink, todayEntries } from "../src/ui/today";
 import { d } from "./support/dates";
 import { habitNote } from "./support/habits";
 
@@ -16,6 +16,13 @@ describe("totalWins", () => {
 		expect(totalWins([read, floss, { kind: "broken", path: "Habits/X.md", name: "X", problem: "bad" }])).toBe(4);
 		expect(winsLabel(1)).toBe("1 win");
 		expect(winsLabel(214)).toBe("214 wins");
+	});
+});
+
+describe("closedDayLine", () => {
+	it("praises a full day and owns up to skips", () => {
+		expect(closedDayLine(0)).toBe("Every habit, done");
+		expect(closedDayLine(1)).toBe("1 skipped honestly · see you tomorrow");
 	});
 });
 
