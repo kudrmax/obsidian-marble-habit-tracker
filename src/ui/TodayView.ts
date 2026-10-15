@@ -39,6 +39,8 @@ const POP_MS = 450;
 const CAPTION_MS = 2000;
 /** How far a row with an open menu keeps from the sheet's edges. */
 const VIEW_GAP = 12;
+/** How far a name moved aside by the choices keeps from the last of them. */
+const NAME_GAP = 12;
 const DAY_CHECK_MS = 60_000;
 /** Obsidian re-reads a note a moment after it is written, so the tap point has to wait for the new mark. */
 const ORIGIN_TTL_MS = 4000;
@@ -90,8 +92,9 @@ export class TodayView extends ItemView {
 	private sheet: TodaySheet | null = null;
 	/** The choices' arrival while it plays, so a cancel mid-way stops it. */
 	private unfolding: { stop(): void } | null = null;
-	/** The row whose choices just closed, to slide its content back in. */
+	/** The row whose choices just closed, to slide its content back in, and how far its name had moved aside. */
 	private closing: string | null = null;
+	private push = 0;
 	private shelves: readonly Box[] = [];
 	private sheetTop = 0;
 	private shownWins: number | null = null;
@@ -612,7 +615,7 @@ export class TodayView extends ItemView {
 		const main = row.querySelector<HTMLElement>(".th-row-main");
 		if (main && this.menu === path) this.renderChoices(main, path, habit, mark);
 		if (main && this.closing === path) {
-			this.motion.refold(this.contentOf(main));
+			this.motion.refold(this.contentOf(main), this.push);
 			this.closing = null;
 		}
 		if (this.asking === path) this.renderReasons(row, path);
@@ -620,25 +623,27 @@ export class TodayView extends ItemView {
 	}
 
 	/**
-	 * The answers in the row, as quiet iOS capsules — full in the habit's color, tiny and skip in the system grey — with
-	 * cancel where the circle was, under the finger. They arrive pulled by the marble: the circle fills into a marble
-	 * that rolls across the row, pulls each button out behind itself through a liquid neck, and rolls out of the row.
-	 * A tap anywhere else brings the row back.
+	 * The answers in the row, as marbles with a sign and no words: cancel where the circle was, under the finger, then
+	 * full in the habit's color, tiny tinted with it, and skip in grey. The name moves aside to make room, and a long one
+	 * runs off the row. They arrive rolling: the circle fills into the skip marble, which rolls right and pushes the name,
+	 * and the others roll in from the left behind it; all of them stop at once. A tap anywhere else brings the row back.
 	 */
 	private renderChoices(main: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
 		const labels = this.ui.labels();
 		const offTrigger = this.offTrigger && this.canGoOffTrigger(habit);
 		const chosen = (kind: "full" | "tiny") => mark?.kind === kind && isOffTrigger(mark) === offTrigger;
 		const origin = main.querySelector<HTMLElement>(".th-mark")?.getBoundingClientRect() ?? null;
-		main.addClass("is-choosing");
 		const bar = main.createDiv("th-row-choices");
-		const cancel = bar.createEl("button", { cls: "th-choices-cancel", attr: { "aria-label": "Cancel" } });
-		cancel.createSpan("th-choices-cancel-ring");
+		const marble = (cls: string, label: string, sign: "x" | "check" | "minus", selected: boolean) => {
+			const button = bar.createEl("button", { cls: ["th-choice", cls], attr: { "aria-label": label, title: label, "aria-pressed": String(selected) } });
+			icon(button.createSpan("th-choice-ball").createSpan("th-choice-sign"), sign);
+			return button;
+		};
+		const cancel = marble("is-cancel", "Cancel", "x", false);
+		cancel.removeAttribute("aria-pressed");
 		cancel.addEventListener("click", () => this.closeChoices());
-		const option = (answer: Answer, text: string, cls: string, selected: boolean) => {
-			const button = bar.createEl("button", { cls: ["th-choice-pill", cls], attr: { "aria-pressed": String(selected) } });
-			if (selected) icon(button.createSpan("th-choice-pill-check"), "check");
-			button.createSpan({ cls: "th-choice-pill-text", text });
+		const option = (answer: Answer, label: string, cls: string, sign: "check" | "minus", selected: boolean) => {
+			const button = marble(cls, label, sign, selected);
 			button.addEventListener("click", (event) => {
 				this.unfolding?.stop();
 				this.unfolding = null;
@@ -647,9 +652,9 @@ export class TodayView extends ItemView {
 				void this.choose(path, answer, mark, event);
 			});
 		};
-		if (habit.hasFull) option("full", labels.title("full"), "is-full", chosen("full"));
-		if (habit.hasTiny) option("tiny", labels.title("tiny"), "is-tiny", chosen("tiny"));
-		option("skip", "Skip", "is-skip", mark?.kind === "missed");
+		if (habit.hasFull) option("full", labels.title("full"), "is-full", "check", chosen("full"));
+		if (habit.hasTiny) option("tiny", labels.title("tiny"), "is-tiny", "check", chosen("tiny"));
+		option("skip", "Skip", "is-skip", "minus", mark?.kind === "missed");
 		if (this.canGoOffTrigger(habit)) {
 			const toggle = bar.createEl("button", { cls: "th-choices-toggle", attr: { "aria-pressed": String(this.offTrigger), "aria-label": "Not at trigger", title: "Not at trigger" } });
 			setIcon(toggle, "unlink");
@@ -658,13 +663,16 @@ export class TodayView extends ItemView {
 				this.render();
 			});
 		}
-		if (!this.menuOpening) {
-			main.addClass("is-steady");
-			return;
-		}
+		const name = main.querySelector<HTMLElement>(".th-row-text");
+		const last = bar.lastElementChild as HTMLElement;
+		const edge = (last.querySelector<HTMLElement>(".th-choice-ball") ?? last).getBoundingClientRect().right;
+		this.push = name ? Math.max(0, edge + NAME_GAP - name.getBoundingClientRect().left) : 0;
+		main.setCssProps({ "--th-push": `${this.push}px` });
+		main.addClass("is-choosing");
+		if (!this.menuOpening) return;
 		this.menuOpening = false;
 		this.bringIntoView(main);
-		this.unfolding = this.motion.pullChoices(main, this.contentOf(main), cancel, [...bar.querySelectorAll<HTMLElement>(".th-choice-pill")], [...bar.querySelectorAll<HTMLElement>(".th-choices-toggle")], origin);
+		this.unfolding = this.motion.rollChoices([...bar.querySelectorAll<HTMLElement>(".th-choice")], [...bar.querySelectorAll<HTMLElement>(".th-choices-toggle")], name, this.push, origin);
 	}
 
 	/** Back from the choices to the row; anything still unfolding stops at once, so cancel works mid-animation. */
@@ -678,7 +686,7 @@ export class TodayView extends ItemView {
 
 	/** The row's own content — circle and name — without the choices laid over it. */
 	private contentOf(main: HTMLElement): HTMLElement[] {
-		return [...main.children].filter((child): child is HTMLElement => child instanceof HTMLElement && !child.hasClass("th-row-choices") && !child.hasClass("th-pull"));
+		return [...main.children].filter((child): child is HTMLElement => child instanceof HTMLElement && !child.hasClass("th-row-choices"));
 	}
 
 	/** An opened card: the recipe line by line, and a way to the habit's note. */

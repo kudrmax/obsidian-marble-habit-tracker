@@ -11,25 +11,18 @@ const DAY_MS = 260;
 const PUSH_MS = 380;
 const GROW_MS = 300;
 const BUMP_MS = 420;
-/** The circle filling into a marble, and the marble rolling across the row and out of it. */
-const FILL_MS = 80;
-const PULL_MS = 340;
+/**
+ * The choices rolling into the row: the circle fills into the skip marble, then every marble rolls the same span of
+ * time and all of them stop together. The others set off one after another from the left edge, nearest to skip first.
+ */
+const FILL_MS = 90;
+const ROLL_MS = 440;
+const FIRST_IN_MS = 85;
+const NEXT_IN_MS = 60;
+/** Where an incoming marble starts: just past the row's left edge. */
+const OFF_EDGE = 4;
 const REVEAL_MS = 140;
 const REFOLD_MS = 220;
-/**
- * The liquid the marble pulls the buttons out of: shapes are blurred and cut sharp again, so two close shapes melt
- * together, then painted one flat color. A neck thicker than NECK_MIN survives the cut; thinner, it breaks.
- */
-const LIQUID_BLUR = 5;
-const LIQUID_CUT = "0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 30 -14";
-const NECK = 11;
-const NECK_MIN = 4;
-/** How far behind the marble's centre a button's end trails, and how far past the button the neck holds before it breaks. */
-const TRAIL = 9;
-const PINCH = 16;
-/** A button grows taller as it lengthens, from a sliver at its left end. */
-const SLIVER = 12;
-let liquids = 0;
 
 /** Stepping a day back or forward, opening All habits, or going back from it. */
 export type Slide = "earlier" | "later" | "push" | "pop";
@@ -98,132 +91,75 @@ export class Motion {
 	}
 
 	/**
-	 * The choices arrive pulled by the marble: the circle at `origin` fills into a marble that rolls right across the row.
-	 * Passing each button it pulls it out behind itself through a liquid neck — the button shows at its left end and
-	 * stretches after the marble — and at the button's right end the neck thins and breaks, leaving the button ready.
-	 * After the last one the marble rolls out of the row. `extras` show once all the buttons are out. `stop` ends all of
-	 * it at once and leaves the row as it is drawn.
+	 * The choices roll into place. The circle at `origin` fills into the last choice — skip — which rolls right to its
+	 * place and pushes the name `push` px aside as it goes; the other choices roll in from the row's left edge behind it.
+	 * Each marble turns by the distance it rolls and ends upright, and all of them stop at the same moment. `extras`
+	 * show once the marbles are in. `stop` ends all of it at once and leaves the row as it is drawn.
 	 */
-	pullChoices(surface: HTMLElement, content: readonly HTMLElement[], cancel: HTMLElement, choices: readonly HTMLElement[], extras: readonly HTMLElement[], origin: DOMRect | null): { stop(): void } {
+	rollChoices(choices: readonly HTMLElement[], extras: readonly HTMLElement[], name: HTMLElement | null, push: number, origin: DOMRect | null): { stop(): void } {
 		const running: Animation[] = [];
-		const hidden = [...choices, ...extras];
-		let stage: HTMLElement | null = null;
 		let frame = 0;
 		let stopped = false;
+		const settle = () => {
+			for (const element of [...choices, ...extras, ...(name ? [name] : [])]) element.style.removeProperty("transform");
+			for (const element of [...choices, ...extras]) element.style.removeProperty("visibility");
+			for (const choice of choices) choice.querySelector<HTMLElement>(".th-choice-sign")?.style.removeProperty("transform");
+		};
 		const stop = () => {
 			stopped = true;
 			cancelAnimationFrame(frame);
 			for (const animation of running) animation.cancel();
-			stage?.remove();
-			for (const element of hidden) element.style.visibility = "";
+			settle();
 		};
-		if (this.reduced() || !origin || choices.length === 0) return { stop };
-		const play = (element: HTMLElement, keyframes: Keyframe[], options: KeyframeAnimationOptions) => {
-			const animation = element.animate(keyframes, options);
-			running.push(animation);
-			return animation;
+		const skip = choices[choices.length - 1];
+		const surface = skip?.parentElement;
+		if (this.reduced() || !origin || !skip || !surface) return { stop };
+		const left = surface.getBoundingClientRect().left;
+		const ball = (choice: HTMLElement) => (choice.querySelector<HTMLElement>(".th-choice-ball") ?? choice).getBoundingClientRect();
+		const size = ball(skip).width;
+		const rollers = choices.map((choice, index) => {
+			const box = ball(choice);
+			const centre = box.left + box.width / 2;
+			const from = choice === skip ? origin.left + origin.width / 2 - centre : -(centre - left + size / 2 + OFF_EDGE);
+			const order = choices.length - 2 - index;
+			return { choice, sign: choice.querySelector<HTMLElement>(".th-choice-sign"), from, enter: choice === skip ? 0 : FIRST_IN_MS + order * NEXT_IN_MS };
+		});
+		const out = (t: number) => 1 - (1 - t) ** 3;
+		const place = (roller: (typeof rollers)[number], offset: number) => {
+			roller.choice.style.transform = `translateX(${offset}px)`;
+			if (roller.sign) roller.sign.style.transform = `rotate(${(offset / (Math.PI * size)) * 360}deg)`;
 		};
-		const area = surface.getBoundingClientRect();
-		const size = origin.width;
-		const start = origin.left - area.left + size / 2;
-		const cy = origin.top - area.top + size / 2;
-		for (const element of content) {
-			const isCircle = element.querySelector(".th-mark") !== null;
-			play(element, [{ opacity: isCircle ? 0 : 1 }, { opacity: 0 }], { duration: isCircle ? 1 : FILL_MS, fill: "forwards" });
+		const pushName = (offset: number) => {
+			if (name) name.style.transform = `translateX(${Math.min(push, Math.max(0, push + offset))}px)`;
+		};
+		for (const roller of rollers) {
+			if (roller.choice !== skip) roller.choice.style.visibility = "hidden";
 		}
-		play(cancel, [{ opacity: 0, transform: "rotate(-90deg) scale(0.7)" }, { opacity: 1, transform: "none" }], { duration: FILL_MS * 1.6, easing: SETTLE });
-		const colors = choices.map((choice) => getComputedStyle(choice).backgroundColor);
-		const buttons = choices.map((choice, index) => {
-			const box = choice.getBoundingClientRect();
-			return { choice, color: colors[index], left: box.left - area.left, width: box.width, height: box.height, middle: box.top - area.top + box.height / 2 };
-		});
-		for (const element of hidden) element.style.visibility = "hidden";
-
-		const host = surface.createDiv("th-pull");
-		stage = host;
-		const defs = host.createSvg("svg", { cls: "th-pull-defs", attr: { "aria-hidden": "true" } }).createSvg("defs");
-		const place = (blob: HTMLElement, left: number, top: number, width: number, height: number) =>
-			blob.setCssProps({ left: `${left}px`, top: `${top}px`, width: `${Math.max(0, width)}px`, height: `${Math.max(0, height)}px` });
-		const drop = (blob: HTMLElement) => place(blob, 0, 0, 0, 0);
-		// Under the marble the liquid is the marble's size, so a neck meets its edge and none of it shows around the marble.
-		const under = size;
-		// Each button is pulled in its own color: one pool of liquid per color, each with a drop under the marble for its necks to hold on to.
-		const pools = new Map<string, { liquid: HTMLElement; ball: HTMLElement }>();
-		const pool = (color: string) => {
-			const found = pools.get(color);
-			if (found) return found;
-			const id = `th-liquid-${++liquids}`;
-			const filter = defs.createSvg("filter", { attr: { id } });
-			filter.createSvg("feGaussianBlur", { attr: { in: "SourceGraphic", stdDeviation: String(LIQUID_BLUR), result: "blur" } });
-			filter.createSvg("feColorMatrix", { attr: { in: "blur", mode: "matrix", values: LIQUID_CUT, result: "cut" } });
-			filter.createSvg("feFlood", { attr: { "flood-color": color, result: "paint" } });
-			filter.createSvg("feComposite", { attr: { in: "paint", in2: "cut", operator: "in" } });
-			const liquid = host.createDiv("th-pull-liquid");
-			liquid.style.filter = `url(#${id})`;
-			const ball = liquid.createDiv("th-pull-blob");
-			drop(ball);
-			const made = { liquid, ball };
-			pools.set(color, made);
-			return made;
-		};
-		const pulled = buttons.map((button) => {
-			const { liquid } = pool(button.color);
-			const body = liquid.createDiv("th-pull-blob");
-			const neck = liquid.createDiv("th-pull-blob");
-			drop(body);
-			drop(neck);
-			return { ...button, body, neck, done: false };
-		});
-		const marble = host.createDiv("th-marble is-rolling");
-		const habit = getComputedStyle(marble).getPropertyValue("--th-habit").trim() || colors[0];
-		marble.setCssProps({ left: `${start - size / 2}px`, top: `${cy - size / 2}px`, width: `${size}px`, height: `${size}px`, background: habit });
-		const spin = marble.createDiv("th-marble-spin");
-		const reveal = (button: (typeof pulled)[number]) => {
-			button.done = true;
-			button.body.remove();
-			button.neck.remove();
-			button.choice.style.visibility = "";
-			for (const child of Array.from(button.choice.children)) if (child instanceof HTMLElement) play(child, [{ opacity: 0 }, { opacity: 1 }], { duration: REVEAL_MS });
-		};
-		const trail = size / 2 + TRAIL;
-		const end = area.width + under;
-		// Kicked off fast, so the first answer — the one picked most — is ready soonest; it still rolls as it leaves the row.
-		const kick = (t: number) => 0.6 * (1 - (1 - t) ** 2) + 0.4 * t;
+		for (const element of extras) element.style.visibility = "hidden";
+		const first = rollers[rollers.length - 1];
+		place(first, first.from);
+		pushName(first.from);
 		const roll = (begun: number) => (now: number) => {
 			if (stopped) return;
-			const t = Math.min(1, (now - begun) / PULL_MS);
-			const x = start + (end - start) * kick(t);
-			for (const { ball } of pools.values()) place(ball, x - under / 2, cy - under / 2, under, under);
-			marble.style.transform = `translateX(${x - start}px)`;
-			spin.style.transform = `rotate(${((x - start) / (Math.PI * size)) * 360}deg)`;
-			for (const button of pulled) {
-				if (button.done) continue;
-				const reach = x - trail;
-				const width = Math.min(button.width, reach - button.left);
-				if (width <= 2) continue;
-				const height = Math.min(button.height, SLIVER + width * 0.6);
-				place(button.body, button.left, button.middle - height / 2, width, height);
-				const past = reach - (button.left + button.width);
-				if (past >= PINCH) {
-					reveal(button);
-					continue;
-				}
-				const neck = past <= 0 ? NECK : NECK - (NECK - NECK_MIN) * (past / PINCH);
-				const right = button.left + width;
-				place(button.neck, right - 8, cy - neck / 2, x - right + 8, neck);
+			const elapsed = now - begun;
+			for (const roller of rollers) {
+				if (elapsed < roller.enter) continue;
+				const t = Math.min(1, (elapsed - roller.enter) / (ROLL_MS - roller.enter));
+				const offset = roller.from * (1 - out(t));
+				roller.choice.style.removeProperty("visibility");
+				place(roller, offset);
+				if (roller === first) pushName(offset);
 			}
-			if (t < 1) {
+			if (elapsed < ROLL_MS) {
 				frame = requestAnimationFrame(roll(begun));
 				return;
 			}
-			for (const button of pulled) if (!button.done) reveal(button);
-			stage?.remove();
-			for (const element of extras) {
-				element.style.visibility = "";
-				play(element, [{ opacity: 0 }, { opacity: 1 }], { duration: REVEAL_MS });
-			}
+			settle();
+			for (const element of extras) running.push(element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: REVEAL_MS }));
 		};
-		play(marble, [{ transform: "scale(0.25)" }, { transform: "scale(1.1)", offset: 0.65 }, { transform: "none" }], { duration: FILL_MS, easing: SETTLE }).finished.then(
+		const fill = (first.choice.querySelector<HTMLElement>(".th-choice-ball") ?? first.choice).animate([{ transform: "scale(0.8)" }, { transform: "scale(1.08)", offset: 0.6 }, { transform: "none" }], { duration: FILL_MS, easing: SETTLE });
+		running.push(fill);
+		fill.finished.then(
 			() => {
 				if (stopped) return;
 				frame = requestAnimationFrame((now) => roll(now)(now));
@@ -233,15 +169,15 @@ export class Motion {
 		return { stop };
 	}
 
-	/** Closing the choices without an answer: the row's content slides back in. */
-	refold(content: readonly HTMLElement[]): void {
+	/** Closing the choices without an answer: the name slides back from where the choices pushed it, the circle shows again. */
+	refold(content: readonly HTMLElement[], push: number): void {
 		if (this.reduced()) return;
 		for (const element of content) {
+			const isCircle = element.querySelector(".th-mark") !== null;
 			element.animate(
-				[
-					{ transform: "translateX(24px)", opacity: 0 },
-					{ transform: "none", opacity: 1 },
-				],
+				isCircle
+					? [{ transform: "scale(0.6)", opacity: 0 }, { transform: "none", opacity: 1 }]
+					: [{ transform: `translateX(${push}px)` }, { transform: "none" }],
 				{ duration: REFOLD_MS, easing: SETTLE },
 			);
 		}

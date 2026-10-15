@@ -539,35 +539,25 @@ button.th-footer-add:active, button.th-footer-link:active { background: var(--ba
 
 
 /*
- * The answers in the row, as quiet iOS capsules: full in the habit's color, tiny and skip in the system grey. They sit
- * where the name was, with cancel exactly on the circle, and are as tall as fit the row so it keeps its height.
+ * The answers in the row, as marbles with a sign and no words, one size, a fingertip apart: cancel exactly on the
+ * circle, then full in the habit's color, tiny tinted with it, skip grey. The name moves aside past them and a long
+ * one runs off the row.
  */
-.th-row-main.is-choosing.is-steady > :not(.th-row-choices) { visibility: hidden; }
-.th-row-choices { position: absolute; inset: 0; display: flex; align-items: center; gap: 8px; padding: 0 var(--th-gutter) 0 calc(var(--th-gutter) - 10px); }
-button.th-choices-cancel { flex: 0 0 44px; width: 44px; height: 44px; margin-right: -6px; padding: 0; border: none; border-radius: 22px; box-shadow: none; background: transparent; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.th-choices-cancel-ring { position: relative; width: var(--th-mark); height: var(--th-mark); border-radius: 50%; corner-shape: round; background: rgba(118, 118, 128, 0.24); }
-.th-choices-cancel-ring::before, .th-choices-cancel-ring::after { content: ""; position: absolute; left: 50%; top: 50%; width: 42%; height: 1.8px; margin: -0.9px 0 0 -21%; border-radius: 1px; background: var(--text-muted); transform: rotate(45deg); }
-.th-choices-cancel-ring::after { transform: rotate(-45deg); }
-button.th-choices-cancel:active .th-choices-cancel-ring { transform: scale(0.86); }
-button.th-choice-pill { flex: 1 1 0; min-width: 0; height: 32px; padding: 0 10px; border: none; border-radius: 16px; corner-shape: round; box-shadow: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; background: rgba(118, 118, 128, 0.24); color: var(--text-normal); font-size: 15px; font-weight: 500; letter-spacing: -0.01em; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform 120ms ease, filter 120ms ease; }
-button.th-choice-pill:active { transform: scale(0.95); }
-.th-choice-pill-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.th-choice-pill-check { display: inline-flex; }
-.th-choice-pill-check svg { width: 14px; height: 14px; stroke-width: 3px; }
-button.th-choice-pill.is-full { background: var(--th-habit); color: #ffffff; font-weight: 600; }
-button.th-choice-pill.is-skip { color: var(--text-muted); }
-button.th-choice-pill.is-picked { filter: brightness(1.2); }
-button.th-choices-toggle { flex: 0 0 32px; width: 32px; height: 32px; padding: 0; border: none; border-radius: 16px; corner-shape: round; box-shadow: none; display: inline-flex; align-items: center; justify-content: center; background: transparent; color: var(--text-faint); cursor: pointer; }
+.th-row-main.is-choosing { overflow: hidden; }
+.th-row-main.is-choosing .th-mark-button { visibility: hidden; }
+.th-row-main.is-choosing .th-row-text { transform: translateX(var(--th-push, 0px)); }
+.th-row-choices { position: absolute; inset: 0; display: flex; align-items: center; padding: 0 var(--th-gutter) 0 calc(var(--th-gutter) - 10px); }
+button.th-choice { --th-ball: rgb(142, 142, 147); --th-sign: #ffffff; flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border: none; border-radius: 22px; box-shadow: none; background: transparent; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.th-choice-ball { position: relative; width: calc(var(--th-mark) + 6px); height: calc(var(--th-mark) + 6px); border-radius: 50%; corner-shape: round; background: var(--th-ball); box-shadow: inset -2px -3px 0 rgba(0, 0, 0, 0.22); transition: transform 120ms ease, filter 120ms ease; }
+.th-choice-sign { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--th-sign); }
+.th-choice-sign svg { width: 15px; height: 15px; stroke-width: 3px; }
+button.th-choice:hover { background: transparent; }
+button.th-choice:active .th-choice-ball { transform: scale(0.88); }
+button.th-choice.is-cancel { --th-ball: color-mix(in srgb, rgb(118, 118, 128) 30%, var(--th-bg)); --th-sign: var(--text-muted); }
+button.th-choice.is-full { --th-ball: var(--th-habit); }
+button.th-choice.is-tiny { --th-ball: color-mix(in srgb, var(--th-habit) 30%, var(--th-bg)); --th-sign: var(--th-habit); }
+button.th-choice[aria-pressed="true"] .th-choice-ball { box-shadow: inset -2px -3px 0 rgba(0, 0, 0, 0.22), inset 0 0 0 2px rgba(255, 255, 255, 0.55); }
+button.th-choice.is-picked .th-choice-ball { filter: brightness(1.2); }
+button.th-choices-toggle { flex: 0 0 32px; width: 32px; height: 32px; margin: 0 6px; padding: 0; border: none; border-radius: 16px; corner-shape: round; box-shadow: none; display: inline-flex; align-items: center; justify-content: center; background: transparent; color: var(--text-faint); cursor: pointer; }
 button.th-choices-toggle svg { width: 16px; height: 16px; stroke-width: 2.4px; }
 button.th-choices-toggle[aria-pressed="true"] { background: rgba(118, 118, 128, 0.24); color: var(--th-habit); }
-/* A marble on its way from the circle to a button: drawn like the jar's, flat with a darker lower edge and a spark. */
-.th-marble { position: absolute; z-index: 3; border-radius: 50%; corner-shape: round; box-shadow: inset -2px -3px 0 rgba(0, 0, 0, 0.22); pointer-events: none; }
-.th-marble::after { content: ""; position: absolute; right: 24%; top: 22%; width: 16%; height: 16%; border-radius: 50%; background: rgba(255, 255, 255, 0.85); }
-/* The marble pulling the choices out: a liquid layer the buttons stretch from, the marble over it, clipped to the row it rolls out of. */
-.th-pull { position: absolute; inset: 0; z-index: 3; overflow: hidden; pointer-events: none; }
-.th-pull-defs { position: absolute; width: 0; height: 0; }
-.th-pull-liquid { position: absolute; inset: 0; }
-.th-pull-blob { position: absolute; border-radius: 999px; background: var(--th-habit); }
-.th-marble.is-rolling::after { display: none; }
-.th-marble-spin { position: absolute; inset: 0; border-radius: 50%; }
-.th-marble-spin::after { content: ""; position: absolute; right: 24%; top: 22%; width: 16%; height: 16%; border-radius: 50%; background: rgba(255, 255, 255, 0.85); }
