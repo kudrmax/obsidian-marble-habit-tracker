@@ -18,7 +18,6 @@ import { Hsl, parseColor } from "./jar/color";
 import { JarCanvas, JarItem } from "./jar/JarCanvas";
 import { KeyboardWatch } from "./KeyboardWatch";
 import { LEAVE_MS, Motion, Slide } from "./Motion";
-import { ContextMenu, ContextMenuItem } from "./ContextMenu";
 import { TodaySheet } from "./TodaySheet";
 import { Box } from "./jar/JarPhysics";
 import { Point } from "./jar/JarPhysics";
@@ -89,7 +88,8 @@ export class TodayView extends ItemView {
 	private opening: string | null = null;
 	private menuOpening = false;
 	private sheet: TodaySheet | null = null;
-	private contextMenu: ContextMenu | null = null;
+	/** The row whose choices just closed, to slide its content back in. */
+	private closing: string | null = null;
 	private shelves: readonly Box[] = [];
 	private sheetTop = 0;
 	private shownWins: number | null = null;
@@ -131,14 +131,6 @@ export class TodayView extends ItemView {
 		this.sheet = sheet;
 		this.scrollEl = sheet.scroll;
 		this.columnEl = this.scrollEl.createDiv("th-column");
-		this.contextMenu = new ContextMenu(
-			root,
-			() => {
-				this.menu = null;
-				this.render();
-			},
-			() => this.ui.settings().reduceMotion,
-		);
 		this.rowDrag = new RowDrag(
 			this.columnEl,
 			() => this.haptics.tap(),
@@ -193,7 +185,6 @@ export class TodayView extends ItemView {
 		this.jar = null;
 		this.sheet?.destroy();
 		this.sheet = null;
-		this.contextMenu?.close();
 		window.clearTimeout(this.captionTimer);
 		for (const timer of this.celebrating.values()) window.clearTimeout(timer);
 	}
@@ -264,10 +255,9 @@ export class TodayView extends ItemView {
 		this.renderFooter(column, true);
 		this.shownRows = this.renderingRows;
 		this.playMotion(column);
-		this.openMenu(column);
 	}
 
-	/** Scrolls the sheet, and only the sheet, so a row half under the navbar is in full view before its menu opens. */
+	/** Scrolls the sheet, and only the sheet, so a row half under the navbar is in full view while it shows its choices. */
 	private bringIntoView(element: HTMLElement): void {
 		const inset = parseFloat(this.contentEl.style.getPropertyValue("--th-bottom-inset")) || 0;
 		const visible = this.scrollEl.getBoundingClientRect();
@@ -617,8 +607,66 @@ export class TodayView extends ItemView {
 		});
 		row.toggleClass("is-new", !this.shownRows.has(path));
 		this.renderingRows.add(path);
+		const main = row.querySelector<HTMLElement>(".th-row-main");
+		if (main && this.menu === path) this.renderChoices(main, path, habit, mark);
+		if (main && this.closing === path) {
+			this.motion.refold(this.contentOf(main));
+			this.closing = null;
+		}
 		if (this.asking === path) this.renderReasons(row, path);
 		if (this.shrink === path && mark?.kind === "missed") this.renderShrink(row, path, habit);
+	}
+
+	/**
+	 * The answers in the row itself: its circle and name slide away to the left, and in their place a close button and
+	 * the answers as iOS capsule buttons spring in from the right — tiny filled in the habit's color, full tinted with
+	 * the second ring, skipped in grey. Picking one fills it and folds the others into it before the answer lands.
+	 */
+	private renderChoices(main: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
+		const labels = this.ui.labels();
+		const offTrigger = this.offTrigger && this.canGoOffTrigger(habit);
+		const chosen = (kind: "full" | "tiny") => mark?.kind === kind && isOffTrigger(mark) === offTrigger;
+		main.addClass("is-choosing");
+		const bar = main.createDiv("th-row-choices");
+		const close = bar.createEl("button", { cls: "th-choices-close", attr: { "aria-label": "Close" } });
+		setIcon(close, "x");
+		close.addEventListener("click", () => this.closeChoices());
+		const option = (answer: Answer, text: string, glyph: string[], cls: string, selected: boolean) => {
+			const button = bar.createEl("button", { cls: ["th-choice-pill", cls], attr: { "aria-pressed": String(selected) } });
+			const circle = button.createSpan({ cls: ["th-mark", ...glyph] });
+			if (answer !== "skip") icon(circle, "check");
+			button.createSpan({ cls: "th-choice-pill-text", text });
+			button.addEventListener("click", (event) => {
+				const others = [...bar.querySelectorAll<HTMLElement>(".th-choice-pill, .th-choices-close, .th-choices-toggle")].filter((other) => other !== button);
+				void this.motion.pick(button, others).then(() => this.choose(path, answer, mark, event));
+			});
+		};
+		if (habit.hasTiny) option("tiny", labels.title("tiny"), ["is-done"], "is-tiny", chosen("tiny"));
+		if (habit.hasFull) option("full", labels.title("full"), habit.hasTiny ? ["is-done", "is-more"] : ["is-done"], habit.hasTiny ? "is-full" : "is-tiny", chosen("full"));
+		option("skip", "Skip", ["is-missed"], "is-skip", mark?.kind === "missed");
+		if (this.canGoOffTrigger(habit)) {
+			const toggle = bar.createEl("button", { cls: "th-choices-toggle", attr: { "aria-pressed": String(this.offTrigger), "aria-label": "Not at trigger", title: "Not at trigger" } });
+			setIcon(toggle, "unlink");
+			toggle.addEventListener("click", () => {
+				this.offTrigger = !this.offTrigger;
+				this.render();
+			});
+		}
+		if (!this.menuOpening) return;
+		this.menuOpening = false;
+		this.bringIntoView(main);
+		this.motion.unfold(this.contentOf(main), [...bar.children] as HTMLElement[]);
+	}
+
+	/** The row's own content — circle and name — without the choices laid over it. */
+	private contentOf(main: HTMLElement): HTMLElement[] {
+		return [...main.children].filter((child): child is HTMLElement => child instanceof HTMLElement && !child.hasClass("th-row-choices"));
+	}
+
+	private closeChoices(): void {
+		this.closing = this.menu;
+		this.menu = null;
+		this.render();
 	}
 
 	/** An opened card: the recipe line by line, and a way to the habit's note. */
@@ -660,46 +708,6 @@ export class TodayView extends ItemView {
 			this.showMenu(path);
 		});
 		button.addEventListener("click", () => this.showMenu(path));
-	}
-
-	/**
-	 * A tap on the circle drops the answers out of it as iOS's pull-down menu: tiny first, nearest the finger,
-	 * then full and skipped, each drawn as the circle will look; then Clear for a marked day, and "Not at trigger".
-	 * It is drawn again after every redraw while it stays open.
-	 */
-	private openMenu(column: HTMLElement): void {
-		const path = this.menu;
-		const row = path ? column.querySelector<HTMLElement>(`.th-row[data-drag="${CSS.escape(path)}"]`) : null;
-		const entry = path ? this.ui.repository.get(path) : undefined;
-		if (!path || !row || entry?.kind !== "ok") {
-			this.contextMenu?.close();
-			return;
-		}
-		const habit = entry.habit;
-		const mark = habit.markOn(this.shownDay());
-		const labels = this.ui.labels();
-		const offTrigger = this.offTrigger && this.canGoOffTrigger(habit);
-		const chosen = (kind: "full" | "tiny") => mark?.kind === kind && isOffTrigger(mark) === offTrigger;
-		const items: ContextMenuItem[] = [];
-		if (habit.hasTiny) items.push({ text: labels.title("tiny"), detail: habit.current("tiny"), glyph: "done", selected: chosen("tiny"), onClick: (event) => void this.choose(path, "tiny", mark, event) });
-		items.push({ text: labels.title("full"), detail: habit.current("full"), glyph: habit.hasTiny ? "more" : "done", selected: chosen("full"), onClick: (event) => void this.choose(path, "full", mark, event) });
-		items.push({ text: "Skipped", glyph: "skipped", selected: mark?.kind === "missed", onClick: (event) => void this.choose(path, "skip", mark, event) });
-		if (mark) items.push({ text: "Clear", icon: "rotate-ccw", group: true, onClick: () => void this.answer(path, undefined) });
-		if (this.canGoOffTrigger(habit)) {
-			items.push({
-				text: "Not at trigger",
-				icon: "unlink",
-				group: !mark,
-				selected: this.offTrigger,
-				onClick: () => {
-					this.offTrigger = !this.offTrigger;
-					this.render();
-				},
-			});
-		}
-		if (this.menuOpening) this.bringIntoView(row);
-		this.contextMenu?.openBar(row.querySelector<HTMLElement>(".th-mark-button") ?? row, items, this.menuOpening, ["th-habit", colorClass(habit.color)]);
-		this.menuOpening = false;
 	}
 
 	private renderReasons(row: HTMLElement, path: string): void {
@@ -757,7 +765,8 @@ export class TodayView extends ItemView {
 	private closeMenuOutside(event: MouseEvent): void {
 		if (!this.menu && !this.asking) return;
 		const target = event.target as HTMLElement | null;
-		if (target?.closest(".th-context, .th-mark-button, .th-row-extra")) return;
+		if (target?.closest(".th-row-choices, .th-mark-button, .th-row-extra")) return;
+		this.closing = this.menu;
 		this.menu = null;
 		this.asking = null;
 		this.other = null;
