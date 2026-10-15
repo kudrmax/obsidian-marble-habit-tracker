@@ -16,6 +16,7 @@ const BUMP_MS = 420;
 const UNFOLD_OUT_MS = 200;
 const UNFOLD_IN_MS = 440;
 const MORPH_MS = 650;
+const LABEL_MS = 180;
 const ENTER_MS = 520;
 const STAGGER_MS = 70;
 const PICK_MS = 220;
@@ -115,10 +116,15 @@ export class Motion {
 				width: `${box.width}px`,
 				height: `${box.height}px`,
 			});
-			target.animate([{ opacity: 0 }, { opacity: 0, offset: 0.82 }, { opacity: 1 }], { duration: MORPH_MS });
-			ghost
-				.animate([{ ...frame(origin), opacity: 1 }, { ...frame(end), opacity: 1, offset: 0.85 }, { ...frame(end), opacity: 0 }], { duration: MORPH_MS, easing: FLIGHT, fill: "forwards" })
-				.finished.then(() => ghost.remove(), () => ghost.remove());
+			// The ring and the button are the same shape at the end, so one takes the other's place in a single frame: no fade, no flicker.
+			target.style.visibility = "hidden";
+			const label = target.querySelector<HTMLElement>(".th-choice-pill-text");
+			const land = () => {
+				ghost.remove();
+				target.style.visibility = "";
+				label?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: LABEL_MS, easing: "ease-out" });
+			};
+			ghost.animate([frame(origin), frame(end)], { duration: MORPH_MS, easing: FLIGHT, fill: "forwards" }).finished.then(land, land);
 		}
 		entering.forEach((choice, index) => {
 			const from = area.left - choice.getBoundingClientRect().right - 8;
