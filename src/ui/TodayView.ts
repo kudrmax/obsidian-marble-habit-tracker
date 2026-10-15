@@ -145,6 +145,7 @@ export class TodayView extends ItemView {
 			(drop) => this.dropped(drop),
 		);
 		this.jar = new JarCanvas(root, this.jarOptions());
+		this.updateFloor();
 		this.chrome = new ScreenChrome(root, this.containerEl, (shelves, ledges) => {
 			this.shelves = shelves;
 			this.updateFloor();
@@ -279,8 +280,10 @@ export class TodayView extends ItemView {
 
 	/** The sheet moved: its top edge is the jar's floor, and the celebration line rides just above it. */
 	private sheetMoved(top: number): void {
+		const first = this.sheetTop <= 0 && top > 0;
 		this.sheetTop = top;
 		this.updateFloor();
+		if (first) this.syncJar(visibleEntries(this.ui.repository.list()));
 	}
 
 	private updateFloor(): void {
@@ -660,7 +663,7 @@ export class TodayView extends ItemView {
 	}
 
 	/**
-	 * A tap on the circle opens the answers as iOS's context menu over a blurred screen: tiny first, nearest the finger,
+	 * A tap on the circle drops the answers out of it as iOS's pull-down menu: tiny first, nearest the finger,
 	 * then full and skipped, each drawn as the circle will look; then Clear for a marked day, and "Not at trigger".
 	 * It is drawn again after every redraw while it stays open.
 	 */
@@ -695,7 +698,7 @@ export class TodayView extends ItemView {
 			});
 		}
 		if (this.menuOpening) this.bringIntoView(row);
-		this.contextMenu?.open(row, items, this.menuOpening, ["th-habit", colorClass(habit.color)]);
+		this.contextMenu?.openBar(row.querySelector<HTMLElement>(".th-mark-button") ?? row, items, this.menuOpening, ["th-habit", colorClass(habit.color)]);
 		this.menuOpening = false;
 	}
 
@@ -832,7 +835,8 @@ export class TodayView extends ItemView {
 	}
 
 	private syncJar(entries: readonly HabitEntry[]): void {
-		if (!this.jar) return;
+		// Until the sheet has its place there is no floor; marbles laid out now would be shot up when it appears.
+		if (!this.jar || this.sheetTop <= 0) return;
 		const today = this.ui.service.today();
 		const names = new Map<string, Habit>();
 		const items: JarItem[] = entries.flatMap((entry) => {

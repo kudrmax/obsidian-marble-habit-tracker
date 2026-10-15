@@ -51,6 +51,8 @@ export class TodaySheet {
 		this.grabber().addEventListener("click", () => this.snap(this.detent === "half" ? "full" : "half"));
 		this.resizer = new ResizeObserver(() => this.place(this.detentTop(this.detent)));
 		this.resizer.observe(root);
+		// Placed at once, not on the observer's first call, so the jar never sees a screen without its floor.
+		if (root.clientHeight > 0) this.place(this.detentTop(this.detent));
 	}
 
 	destroy(): void {

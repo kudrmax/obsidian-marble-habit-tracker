@@ -527,11 +527,8 @@ button.th-footer-add:active, button.th-footer-link:active { background: var(--ba
 /* The celebration line rides just above the sheet. */
 .th-caption { top: calc(var(--th-sheet-top) - 44px); bottom: auto; z-index: 5; }
 
-/* iOS's context menu: the screen blurs, the held row lifts out, the menu opens beside it. */
-.th-context { position: absolute; inset: 0; z-index: 20; background: rgba(0, 0, 0, 0.32); -webkit-backdrop-filter: blur(18px) saturate(1.2); backdrop-filter: blur(18px) saturate(1.2); }
-.th-context-row { position: absolute; border-radius: 14px; corner-shape: round; overflow: hidden; background: var(--background-secondary); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35); transform-origin: 50% 50%; }
-.th-context-row .th-row { margin: 0; }
-.th-context-row .th-row-main { padding-right: 12px; }
+/* iOS's pull-down menu: it springs out of the tapped circle over a barely dimmed screen. */
+.th-context { position: absolute; inset: 0; z-index: 20; background: rgba(0, 0, 0, 0.12); }
 .th-context-menu { position: absolute; width: 290px; max-width: calc(100% - 24px); border-radius: 14px; corner-shape: round; overflow: hidden; background: color-mix(in srgb, var(--background-secondary) 88%, transparent); -webkit-backdrop-filter: blur(40px) saturate(1.8); backdrop-filter: blur(40px) saturate(1.8); box-shadow: 0 12px 44px rgba(0, 0, 0, 0.4), 0 0 0 0.5px var(--background-modifier-border); }
 button.th-context-item { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; height: auto; min-height: 46px; padding: 10px 16px 10px 12px; border: none; border-radius: 0; box-shadow: none; background: transparent; color: var(--text-normal); font-size: 17px; text-align: left; cursor: pointer; }
 button.th-context-item + button.th-context-item::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; transform: scaleY(0.5); transform-origin: top; background: var(--background-modifier-border); }
@@ -557,3 +554,17 @@ button.th-context-item.is-selected .th-context-check { visibility: visible; }
 .th-mark.is-popping.is-more { animation: th-pop 420ms var(--th-ease-pop), th-halo 520ms 160ms var(--th-ease-pop) both; }
 @keyframes th-draw { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
 @keyframes th-halo { from { box-shadow: 0 0 0 0 var(--background-secondary), 0 0 0 0 var(--th-habit); } to { box-shadow: 0 0 0 2px var(--background-secondary), 0 0 0 3.5px var(--th-habit); } }
+
+/* The answers as a capsule of big circles springing out of the tapped one, as iMessage's reactions do. */
+.th-context.is-bar { background: rgba(0, 0, 0, 0.18); }
+.th-choice-bar { position: absolute; display: flex; gap: 2px; padding: 8px 8px 6px; border-radius: 30px; corner-shape: round; background: color-mix(in srgb, var(--background-secondary) 86%, transparent); -webkit-backdrop-filter: blur(30px) saturate(1.8); backdrop-filter: blur(30px) saturate(1.8); box-shadow: 0 10px 34px rgba(0, 0, 0, 0.38), 0 0 0 0.5px var(--background-modifier-border); }
+button.th-choice-bar-item { display: flex; flex-direction: column; align-items: center; gap: 5px; width: 66px; height: auto; padding: 4px 2px 2px; border: none; border-radius: 18px; box-shadow: none; background: transparent; color: var(--text-muted); cursor: pointer; transition: transform 120ms ease, background-color 120ms ease; -webkit-tap-highlight-color: transparent; }
+button.th-choice-bar-item:active { transform: scale(0.9); }
+button.th-choice-bar-item.is-selected { background: var(--background-modifier-hover); color: var(--text-normal); }
+.th-choice-bar-glyph.th-mark { --th-mark: 40px; flex: 0 0 auto; border-width: 2.5px; }
+.th-choice-bar-glyph.th-mark svg { width: 20px; height: 20px; }
+.th-choice-bar-glyph.th-mark.is-more { box-shadow: 0 0 0 2.5px var(--background-secondary), 0 0 0 4.5px var(--th-habit); }
+.th-choice-bar-glyph.th-mark.is-missed::after { height: 2.5px; }
+.th-choice-bar-icon { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; corner-shape: round; background: var(--background-modifier-hover); color: var(--text-muted); }
+.th-choice-bar-icon svg { width: 20px; height: 20px; }
+.th-choice-bar-label { max-width: 62px; font-size: 11px; line-height: 13px; font-weight: 500; text-align: center; white-space: normal; }

@@ -25,8 +25,8 @@ const EDGE = 12;
 const OPEN_MS = 220;
 
 /**
- * iOS's context menu: the screen blurs and dims, the held row lifts out of it, and a menu opens under the row — or
- * above it when there is no room below. A tap anywhere outside closes it.
+ * iOS's pull-down menu: it springs out of the control that was tapped, over a barely dimmed screen, and a tap
+ * anywhere outside closes it.
  */
 export class ContextMenu {
 	private layer: HTMLElement | null = null;
@@ -41,21 +41,19 @@ export class ContextMenu {
 		return this.layer !== null;
 	}
 
-	/** Opens over `row`, which stays where it is underneath; `fresh` plays the opening, a redraw of an open menu doesn't. */
-	open(row: HTMLElement, items: readonly ContextMenuItem[], fresh: boolean, className: string[]): void {
+	/**
+	 * Drops the menu out of `anchor`, the control that was tapped, as iOS's pull-down menu does: under it, or above it
+	 * turned over when there is no room below. `fresh` plays the opening; a redraw of an open menu doesn't.
+	 */
+	open(anchor: HTMLElement, items: readonly ContextMenuItem[], fresh: boolean, className: string[]): void {
 		this.close();
 		const area = this.host.getBoundingClientRect();
-		const box = row.getBoundingClientRect();
+		const box = anchor.getBoundingClientRect();
 		const layer = this.host.createDiv("th-context");
 		this.layer = layer;
 		layer.addEventListener("click", (event) => {
 			if (event.target === layer) this.onDismiss();
 		});
-		const lifted = layer.createDiv({ cls: ["th-context-row", ...className] });
-		lifted.append(row.cloneNode(true));
-		lifted.setCssProps({ top: `${box.top - area.top}px`, left: `${box.left - area.left}px`, width: `${box.width}px` });
-		lifted.addEventListener("click", () => this.onDismiss());
-
 		const menu = layer.createDiv({ cls: ["th-context-menu", ...className], attr: { role: "menu" } });
 		for (const item of items) {
 			if (item.group) menu.createDiv("th-context-gap");
@@ -74,26 +72,76 @@ export class ContextMenu {
 		const height = menu.offsetHeight;
 		const below = box.bottom - area.top + GAP;
 		const above = box.top - area.top - GAP - height;
-		const fitsBelow = below + height <= area.height - this.bottomInset() - EDGE;
-		const opensBelow = fitsBelow || above < EDGE;
-		const top = opensBelow ? below : above;
+		const opensBelow = below + height <= area.height - this.bottomInset() - EDGE || above < EDGE;
 		// Opening upwards, iOS turns the menu over so its first item stays nearest the finger.
 		if (!opensBelow) menu.replaceChildren(...[...menu.children].reverse());
-		menu.setCssProps({ top: `${top}px`, left: `${Math.max(EDGE, box.left - area.left + 8)}px` });
-		menu.style.transformOrigin = opensBelow ? "24px 0" : "24px 100%";
-		if (!fresh || this.reduced()) {
-			layer.addClass("is-open");
-			return;
-		}
-		layer.animate([{ opacity: 0 }, { opacity: 1 }], { duration: OPEN_MS, easing: "ease-out" });
+		const left = Math.max(EDGE, Math.min(box.left - area.left, area.width - menu.offsetWidth - EDGE));
+		menu.setCssProps({ top: `${opensBelow ? below : above}px`, left: `${left}px` });
+		menu.style.transformOrigin = `${box.left - area.left + box.width / 2 - left}px ${opensBelow ? "0" : "100%"}`;
 		layer.addClass("is-open");
-		lifted.animate([{ transform: "scale(1)" }, { transform: "scale(1.03)", offset: 0.5 }, { transform: "scale(1.015)" }], { duration: OPEN_MS * 1.4, easing: SPRING, fill: "forwards" });
+		if (!fresh || this.reduced()) return;
+		layer.animate([{ opacity: 0 }, { opacity: 1 }], { duration: OPEN_MS, easing: "ease-out" });
 		menu.animate(
 			[
-				{ transform: "scale(0.82)", opacity: 0 },
+				{ transform: "scale(0.35)", opacity: 0 },
 				{ transform: "none", opacity: 1 },
 			],
-			{ duration: 300, easing: SPRING },
+			{ duration: 340, easing: SPRING },
+		);
+	}
+
+	/**
+	 * Springs a capsule of big choices out of `anchor`, as iMessage's reactions do: each choice drawn as its result, the
+	 * first one over the anchor itself so the finger is already on it, a short label under each.
+	 */
+	openBar(anchor: HTMLElement, items: readonly ContextMenuItem[], fresh: boolean, className: string[]): void {
+		this.close();
+		const area = this.host.getBoundingClientRect();
+		const box = anchor.getBoundingClientRect();
+		const layer = this.host.createDiv("th-context is-bar");
+		this.layer = layer;
+		layer.addEventListener("click", (event) => {
+			if (event.target === layer) this.onDismiss();
+		});
+		const bar = layer.createDiv({ cls: ["th-choice-bar", ...className], attr: { role: "menu" } });
+		items.forEach((item) => {
+			const button = bar.createEl("button", { cls: "th-choice-bar-item", attr: { role: "menuitem", "aria-label": item.text } });
+			button.toggleClass("is-selected", item.selected === true);
+			if (item.glyph) {
+				const glyph = button.createSpan({ cls: ["th-choice-bar-glyph", "th-mark", ...GLYPHS[item.glyph]] });
+				if (item.glyph !== "skipped") setIcon(glyph, "check");
+			} else if (item.icon) setIcon(button.createSpan("th-choice-bar-icon"), item.icon);
+			button.createSpan({ cls: "th-choice-bar-label", text: item.text });
+			button.addEventListener("click", (event) => item.onClick(event));
+		});
+		const first = bar.firstElementChild as HTMLElement | null;
+		const firstGlyph = first?.firstElementChild as HTMLElement | null;
+		const glyphOffsetX = firstGlyph ? firstGlyph.offsetLeft + firstGlyph.offsetWidth / 2 : 0;
+		const glyphOffsetY = firstGlyph ? firstGlyph.offsetTop + firstGlyph.offsetHeight / 2 : 0;
+		const centerX = box.left - area.left + box.width / 2;
+		const centerY = box.top - area.top + box.height / 2;
+		const left = Math.max(EDGE, Math.min(centerX - glyphOffsetX, area.width - bar.offsetWidth - EDGE));
+		const top = Math.max(EDGE, Math.min(centerY - glyphOffsetY, area.height - this.bottomInset() - bar.offsetHeight - EDGE));
+		bar.setCssProps({ left: `${left}px`, top: `${top}px` });
+		bar.style.transformOrigin = `${centerX - left}px ${centerY - top}px`;
+		layer.addClass("is-open");
+		if (!fresh || this.reduced()) return;
+		layer.animate([{ opacity: 0 }, { opacity: 1 }], { duration: OPEN_MS, easing: "ease-out" });
+		bar.animate(
+			[
+				{ transform: "scale(0.4)", opacity: 0 },
+				{ transform: "none", opacity: 1 },
+			],
+			{ duration: 360, easing: SPRING },
+		);
+		[...bar.children].forEach((child, index) =>
+			(child as HTMLElement).animate(
+				[
+					{ transform: "translateX(-14px) scale(0.6)", opacity: 0 },
+					{ transform: "none", opacity: 1 },
+				],
+				{ duration: 320, delay: 40 * index, easing: SPRING, fill: "backwards" },
+			),
 		);
 	}
 
