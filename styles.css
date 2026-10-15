@@ -539,29 +539,27 @@ button.th-footer-add:active, button.th-footer-link:active { background: var(--ba
 
 
 /*
- * The answers in the row, as iOS buttons in the habit's color from strongest to weakest: full filled, tiny tinted,
- * skip plain. They are as tall as the circle's target, so the row keeps its height.
+ * The answers in the row, as quiet iOS capsules: full in the habit's color, tiny and skip in the system grey. They sit
+ * where the name was, with cancel exactly on the circle, and are as tall as fit the row so it keeps its height.
  */
-/* The drawer: the row's content becomes a lid that slides right, leaving its circle in view at the edge. */
-.th-row-main.is-choosing { overflow: hidden; --th-drawer: calc(100% - 76px); }
-.th-row-lid { position: absolute; inset: 0; z-index: 2; display: flex; align-items: center; gap: 4px; padding: 0 var(--th-gutter) 0 calc(var(--th-gutter) - 10px); background: var(--background-secondary); box-shadow: -10px 0 18px rgba(0, 0, 0, 0.4); cursor: pointer; }
-.th-row-lid.is-open { transform: translateX(var(--th-drawer)); }
-.th-row-choices { position: absolute; inset: 0; display: flex; align-items: center; gap: 8px; padding: 0 86px 0 calc(var(--th-gutter) - 10px); background: var(--background-primary); }
-/* Cancel sits exactly where the tapped circle was, the same size, so it is under the finger. */
+.th-row-main.is-choosing.is-steady > :not(.th-row-choices) { visibility: hidden; }
+.th-row-choices { position: absolute; inset: 0; display: flex; align-items: center; gap: 8px; padding: 0 var(--th-gutter) 0 calc(var(--th-gutter) - 10px); }
 button.th-choices-cancel { flex: 0 0 44px; width: 44px; height: 44px; margin-right: -6px; padding: 0; border: none; border-radius: 22px; box-shadow: none; background: transparent; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.th-choices-cancel-ring { position: relative; box-sizing: border-box; width: var(--th-mark); height: var(--th-mark); border-radius: 50%; corner-shape: round; border: 2px solid var(--text-faint); }
-.th-choices-cancel-ring::before, .th-choices-cancel-ring::after { content: ""; position: absolute; left: 50%; top: 50%; width: 44%; height: 2px; margin: -1px 0 0 -22%; border-radius: 1px; background: var(--text-muted); transform: rotate(45deg); }
+.th-choices-cancel-ring { position: relative; width: var(--th-mark); height: var(--th-mark); border-radius: 50%; corner-shape: round; background: rgba(118, 118, 128, 0.24); }
+.th-choices-cancel-ring::before, .th-choices-cancel-ring::after { content: ""; position: absolute; left: 50%; top: 50%; width: 42%; height: 1.8px; margin: -0.9px 0 0 -21%; border-radius: 1px; background: var(--text-muted); transform: rotate(45deg); }
 .th-choices-cancel-ring::after { transform: rotate(-45deg); }
 button.th-choices-cancel:active .th-choices-cancel-ring { transform: scale(0.86); }
-button.th-choice-pill { flex: 1 1 0; min-width: 0; height: 34px; padding: 0 10px; border: none; border-radius: 17px; corner-shape: round; box-shadow: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; background: transparent; color: var(--th-habit); font-size: 15px; font-weight: 600; letter-spacing: -0.01em; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform 120ms ease, filter 120ms ease; }
+button.th-choice-pill { flex: 1 1 0; min-width: 0; height: 32px; padding: 0 10px; border: none; border-radius: 16px; corner-shape: round; box-shadow: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; background: rgba(118, 118, 128, 0.24); color: var(--text-normal); font-size: 15px; font-weight: 500; letter-spacing: -0.01em; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform 120ms ease, filter 120ms ease; }
 button.th-choice-pill:active { transform: scale(0.95); }
 .th-choice-pill-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .th-choice-pill-check { display: inline-flex; }
-.th-choice-pill-check svg { width: 15px; height: 15px; stroke-width: 3px; }
-button.th-choice-pill.is-full { background: var(--th-habit); color: #ffffff; }
-button.th-choice-pill.is-tiny { background: color-mix(in srgb, var(--th-habit) 20%, transparent); }
-button.th-choice-pill.is-skip { box-shadow: inset 0 0 0 2px var(--th-habit); }
+.th-choice-pill-check svg { width: 14px; height: 14px; stroke-width: 3px; }
+button.th-choice-pill.is-full { background: var(--th-habit); color: #ffffff; font-weight: 600; }
+button.th-choice-pill.is-skip { color: var(--text-muted); }
 button.th-choice-pill.is-picked { filter: brightness(1.2); }
-button.th-choices-toggle { flex: 0 0 34px; width: 34px; height: 34px; padding: 0; border: none; border-radius: 17px; corner-shape: round; box-shadow: none; display: inline-flex; align-items: center; justify-content: center; background: transparent; color: var(--text-faint); cursor: pointer; }
+button.th-choices-toggle { flex: 0 0 32px; width: 32px; height: 32px; padding: 0; border: none; border-radius: 16px; corner-shape: round; box-shadow: none; display: inline-flex; align-items: center; justify-content: center; background: transparent; color: var(--text-faint); cursor: pointer; }
 button.th-choices-toggle svg { width: 16px; height: 16px; stroke-width: 2.4px; }
-button.th-choices-toggle[aria-pressed="true"] { background: color-mix(in srgb, var(--th-habit) 20%, transparent); color: var(--th-habit); }
+button.th-choices-toggle[aria-pressed="true"] { background: rgba(118, 118, 128, 0.24); color: var(--th-habit); }
+/* A marble on its way from the circle to a button: drawn like the jar's, flat with a darker lower edge and a spark. */
+.th-marble { position: absolute; z-index: 3; border-radius: 50%; corner-shape: round; box-shadow: inset -2px -3px 0 rgba(0, 0, 0, 0.22); pointer-events: none; }
+.th-marble::after { content: ""; position: absolute; right: 24%; top: 22%; width: 16%; height: 16%; border-radius: 50%; background: rgba(255, 255, 255, 0.85); }

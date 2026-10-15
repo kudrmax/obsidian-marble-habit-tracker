@@ -88,6 +88,8 @@ export class TodayView extends ItemView {
 	private opening: string | null = null;
 	private menuOpening = false;
 	private sheet: TodaySheet | null = null;
+	/** The choices' arrival while it plays, so a cancel mid-way stops it. */
+	private unfolding: { stop(): void } | null = null;
 	/** The row whose choices just closed, to slide its content back in. */
 	private closing: string | null = null;
 	private shelves: readonly Box[] = [];
@@ -618,46 +620,38 @@ export class TodayView extends ItemView {
 	}
 
 	/**
-	 * The answers in the row, as a drawer: the row is a lid that slides right in one firm move and uncovers the answers
-	 * lying under it — full filled, tiny tinted, skip outlined, in the habit's color — with cancel where the circle was,
-	 * under the finger. The lid's edge stays in view with the circle; a tap on it, or on cancel, slides it back. Picking one swells it and folds the others into it before the answer lands;
+	 * The answers in the row, as quiet iOS capsules — full in the habit's color, tiny and skip in the system grey — with
+	 * cancel where the circle was, under the finger. They arrive as the marble splits: the circle fills into a marble,
+	 * the marble splits into three that roll to their places, and each swells into its button. Picking one swells it and folds the others into it before the answer lands;
 	 * a tap anywhere else brings the row back.
 	 */
 	private renderChoices(main: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
 		const labels = this.ui.labels();
 		const offTrigger = this.offTrigger && this.canGoOffTrigger(habit);
 		const chosen = (kind: "full" | "tiny") => mark?.kind === kind && isOffTrigger(mark) === offTrigger;
+		const origin = main.querySelector<HTMLElement>(".th-mark")?.getBoundingClientRect() ?? null;
 		main.addClass("is-choosing");
-		const under = main.createDiv("th-row-choices");
-		const lid = main.createDiv("th-row-lid");
-		lid.append(...this.contentOf(main).filter((child) => child !== under && child !== lid));
-		const close = () => void this.motion.closeDrawer(lid).then(() => {
-			this.closing = null;
-			this.menu = null;
-			this.render();
-		});
-		lid.addEventListener("click", (event) => {
-			event.stopPropagation();
-			close();
-		}, true);
-		const cancel = under.createEl("button", { cls: "th-choices-cancel", attr: { "aria-label": "Cancel" } });
+		const bar = main.createDiv("th-row-choices");
+		const cancel = bar.createEl("button", { cls: "th-choices-cancel", attr: { "aria-label": "Cancel" } });
 		cancel.createSpan("th-choices-cancel-ring");
-		cancel.addEventListener("click", close);
+		cancel.addEventListener("click", () => this.closeChoices());
 		const option = (answer: Answer, text: string, cls: string, selected: boolean) => {
-			const button = under.createEl("button", { cls: ["th-choice-pill", cls], attr: { "aria-pressed": String(selected) } });
+			const button = bar.createEl("button", { cls: ["th-choice-pill", cls], attr: { "aria-pressed": String(selected) } });
 			if (selected) icon(button.createSpan("th-choice-pill-check"), "check");
 			button.createSpan({ cls: "th-choice-pill-text", text });
 			button.addEventListener("click", (event) => {
+				this.unfolding?.stop();
+				this.unfolding = null;
 				button.addClass("is-picked");
 				this.haptics.tap();
-				void this.motion.closeDrawer(lid).then(() => this.choose(path, answer, mark, event));
+				void this.choose(path, answer, mark, event);
 			});
 		};
 		if (habit.hasFull) option("full", labels.title("full"), "is-full", chosen("full"));
 		if (habit.hasTiny) option("tiny", labels.title("tiny"), "is-tiny", chosen("tiny"));
 		option("skip", "Skip", "is-skip", mark?.kind === "missed");
 		if (this.canGoOffTrigger(habit)) {
-			const toggle = under.createEl("button", { cls: "th-choices-toggle", attr: { "aria-pressed": String(this.offTrigger), "aria-label": "Not at trigger", title: "Not at trigger" } });
+			const toggle = bar.createEl("button", { cls: "th-choices-toggle", attr: { "aria-pressed": String(this.offTrigger), "aria-label": "Not at trigger", title: "Not at trigger" } });
 			setIcon(toggle, "unlink");
 			toggle.addEventListener("click", () => {
 				this.offTrigger = !this.offTrigger;
@@ -665,17 +659,26 @@ export class TodayView extends ItemView {
 			});
 		}
 		if (!this.menuOpening) {
-			lid.addClass("is-open");
+			main.addClass("is-steady");
 			return;
 		}
 		this.menuOpening = false;
 		this.bringIntoView(main);
-		void this.motion.openDrawer(lid).then(() => this.haptics.tap());
+		this.unfolding = this.motion.splitMarble(main, this.contentOf(main), cancel, [...bar.querySelectorAll<HTMLElement>(".th-choice-pill")], origin);
+	}
+
+	/** Back from the choices to the row; anything still unfolding stops at once, so cancel works mid-animation. */
+	private closeChoices(): void {
+		this.unfolding?.stop();
+		this.unfolding = null;
+		this.closing = this.menu;
+		this.menu = null;
+		this.render();
 	}
 
 	/** The row's own content — circle and name — without the choices laid over it. */
 	private contentOf(main: HTMLElement): HTMLElement[] {
-		return [...main.children].filter((child): child is HTMLElement => child instanceof HTMLElement && !child.hasClass("th-row-choices") && !child.hasClass("th-row-lid"));
+		return [...main.children].filter((child): child is HTMLElement => child instanceof HTMLElement && !child.hasClass("th-row-choices") && !child.hasClass("th-marble"));
 	}
 
 	/** An opened card: the recipe line by line, and a way to the habit's note. */
@@ -775,6 +778,8 @@ export class TodayView extends ItemView {
 		if (!this.menu && !this.asking) return;
 		const target = event.target as HTMLElement | null;
 		if (target?.closest(".th-row-choices, .th-mark-button, .th-row-extra")) return;
+		this.unfolding?.stop();
+		this.unfolding = null;
 		this.closing = this.menu;
 		this.menu = null;
 		this.asking = null;

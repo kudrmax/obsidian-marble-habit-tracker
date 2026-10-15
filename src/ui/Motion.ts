@@ -11,9 +11,13 @@ const DAY_MS = 260;
 const PUSH_MS = 380;
 const GROW_MS = 300;
 const BUMP_MS = 420;
-/** The drawer: firm and without bounce, as heavy things move on iOS. */
-const DRAWER_MS = 380;
-const DRAWER = "cubic-bezier(0.22, 1, 0.36, 1)";
+/** The marble splitting into the choices: filling, rolling, swelling. */
+const FILL_MS = 200;
+const ROLL_MS = 360;
+const ROLL_STAGGER_MS = 40;
+const SWELL_MS = 300;
+/** The skip marble is grey, as skipped days are. */
+const SKIP_MARBLE = "rgb(142, 142, 147)";
 
 /** Stepping a day back or forward, opening All habits, or going back from it. */
 export type Slide = "earlier" | "later" | "push" | "pop";
@@ -81,23 +85,71 @@ export class Motion {
 		return animation.finished.then(() => undefined);
 	}
 
-	/** The row's lid slides right in one firm move, no bounce, and stays open; resolves when it has landed. */
-	openDrawer(lid: HTMLElement): Promise<void> {
-		lid.addClass("is-open");
-		if (this.reduced()) return Promise.resolve();
-		return lid
-			.animate([{ transform: "none" }, { transform: openTransform(lid) }], { duration: DRAWER_MS, easing: DRAWER })
-			.finished.then(() => undefined, () => undefined);
-	}
-
-	/** The lid slides back over the answers; resolves once it covers them again. */
-	closeDrawer(lid: HTMLElement): Promise<void> {
-		const from = openTransform(lid);
-		lid.removeClass("is-open");
-		if (this.reduced()) return Promise.resolve();
-		return lid
-			.animate([{ transform: from }, { transform: "none" }], { duration: DRAWER_MS * 0.75, easing: DRAWER, fill: "forwards" })
-			.finished.then(() => undefined, () => undefined);
+	/**
+	 * The choices arrive as the marble splits: the circle at `origin` fills into a marble, the marble splits into three
+	 * of the same size that roll right to their places, and each swells into its button. Every step can be stopped
+	 * half-way: `stop` ends all of it at once and leaves the row as it is drawn.
+	 */
+	splitMarble(surface: HTMLElement, content: readonly HTMLElement[], cancel: HTMLElement, choices: readonly HTMLElement[], origin: DOMRect | null): { stop(): void } {
+		const running: Animation[] = [];
+		const marbles: HTMLElement[] = [];
+		let stopped = false;
+		const stop = () => {
+			stopped = true;
+			for (const animation of running) animation.cancel();
+			for (const marble of marbles) marble.remove();
+			for (const choice of choices) choice.style.visibility = "";
+		};
+		if (this.reduced() || !origin || choices.length === 0) return { stop };
+		const play = (element: HTMLElement, keyframes: Keyframe[], options: KeyframeAnimationOptions) => {
+			const animation = element.animate(keyframes, options);
+			running.push(animation);
+			return animation.finished.then(() => !stopped, () => false);
+		};
+		const area = surface.getBoundingClientRect();
+		const size = origin.width;
+		const cx = origin.left - area.left + size / 2;
+		const cy = origin.top - area.top + size / 2;
+		const marble = (color: string) => {
+			const element = surface.createDiv("th-marble");
+			element.setCssProps({ left: `${cx - size / 2}px`, top: `${cy - size / 2}px`, width: `${size}px`, height: `${size}px`, background: color });
+			marbles.push(element);
+			return element;
+		};
+		for (const element of content) {
+			const isCircle = element.querySelector(".th-mark") !== null;
+			void play(element, [{ opacity: isCircle ? 0 : 1 }, { opacity: 0 }], { duration: isCircle ? 1 : FILL_MS, fill: "forwards" });
+		}
+		void play(cancel, [{ opacity: 0, transform: "rotate(-90deg) scale(0.7)" }, { opacity: 1, transform: "none" }], { duration: FILL_MS * 1.6, easing: SETTLE });
+		const colors = choices.map((choice) => getComputedStyle(choice).backgroundColor);
+		const habit = colors[0];
+		const marbleColor = (index: number) => (index === choices.length - 1 && choices.length > 1 ? SKIP_MARBLE : habit);
+		for (const choice of choices) choice.style.visibility = "hidden";
+		void (async () => {
+			const whole = marble(habit);
+			if (!(await play(whole, [{ transform: "scale(0.25)" }, { transform: "scale(1.12)", offset: 0.7 }, { transform: "none" }], { duration: FILL_MS, easing: SETTLE }))) return;
+			whole.remove();
+			const boxes = choices.map((choice) => choice.getBoundingClientRect());
+			const balls = choices.map((_, index) => marble(marbleColor(index)));
+			const rolls = balls.map((ball, index) => {
+				const box = boxes[index];
+				const distance = box.left - area.left + box.width / 2 - cx;
+				const turn = (distance / (Math.PI * size)) * 360;
+				return play(ball, [{ transform: "none" }, { transform: `translateX(${distance}px) rotate(${turn}deg)` }], { duration: ROLL_MS, delay: index * ROLL_STAGGER_MS, easing: SETTLE, fill: "forwards" });
+			});
+			if (!(await Promise.all(rolls)).every(Boolean)) return;
+			const swells = choices.map((choice, index) => {
+				const box = boxes[index];
+				const inset = `inset(${(box.height - size) / 2}px ${(box.width - size) / 2}px round ${size / 2}px)`;
+				choice.style.visibility = "";
+				balls[index].remove();
+				const label = choice.querySelector<HTMLElement>(".th-choice-pill-text");
+				if (label) void play(label, [{ opacity: 0 }, { opacity: 0, offset: 0.5 }, { opacity: 1 }], { duration: SWELL_MS, delay: index * 30 });
+				return play(choice, [{ clipPath: inset, backgroundColor: marbleColor(index) }, { clipPath: `inset(0px 0px round ${box.height / 2}px)`, backgroundColor: colors[index] }], { duration: SWELL_MS, delay: index * 30, easing: SPRING });
+			});
+			await Promise.all(swells);
+		})();
+		return { stop };
 	}
 
 	/** Closing the choices without an answer: the row's content slides back in. */
@@ -109,7 +161,7 @@ export class Motion {
 					{ transform: "translateX(24px)", opacity: 0 },
 					{ transform: "none", opacity: 1 },
 				],
-				{ duration: DRAWER_MS * 0.6, easing: SETTLE },
+				{ duration: ROLL_MS * 0.6, easing: SETTLE },
 			);
 		}
 	}
@@ -119,13 +171,4 @@ export class Motion {
 		if (this.reduced()) return;
 		element.animate([{ transform: "scale(1)" }, { transform: "scale(1.08)" }, { transform: "scale(1)" }], { duration: BUMP_MS, easing: SPRING });
 	}
-}
-
-/** Where the open lid stands, read from its own style so the distance lives in CSS alone. */
-function openTransform(lid: HTMLElement): string {
-	const open = lid.hasClass("is-open");
-	if (!open) lid.addClass("is-open");
-	const transform = getComputedStyle(lid).transform;
-	if (!open) lid.removeClass("is-open");
-	return transform === "none" ? "none" : transform;
 }
