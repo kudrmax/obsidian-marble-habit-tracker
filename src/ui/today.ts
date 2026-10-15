@@ -22,6 +22,18 @@ export function totalWins(entries: readonly HabitEntry[]): number {
 	return entries.reduce((sum, entry) => sum + (entry.kind === "ok" ? entry.habit.marks().filter(([, mark]) => isDone(mark)).length : 0), 0);
 }
 
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+/** The small line under the big number: since the month of the very first win, with its year if that was another year. */
+export function winsSince(entries: readonly HabitEntry[], today: LocalDate): string {
+	const first = entries
+		.flatMap((entry) => (entry.kind === "ok" ? entry.habit.marks().filter(([, mark]) => isDone(mark)).map(([date]) => date) : []))
+		.reduce<LocalDate | null>((earliest, date) => (earliest === null || date.isBefore(earliest) ? date : earliest), null);
+	if (!first) return "wins";
+	const month = MONTHS[first.month - 1];
+	return first.year === today.year ? `wins since ${month}` : `wins since ${month} ${first.year}`;
+}
+
 export function winsLabel(count: number): string {
 	return count === 1 ? "1 win" : `${count} wins`;
 }

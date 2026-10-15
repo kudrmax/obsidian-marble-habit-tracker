@@ -10,7 +10,8 @@ export const LEAVE_MS = LEAVE_HOLD_MS + LEAVE_FOLD_MS;
 const DAY_MS = 260;
 const PUSH_MS = 380;
 const GROW_MS = 300;
-const PROGRESS_MS = 450;
+const ENTER_MS = 360;
+const BUMP_MS = 420;
 
 /** Stepping a day back or forward, opening All habits, or going back from it. */
 export type Slide = "earlier" | "later" | "push" | "pop";
@@ -78,26 +79,21 @@ export class Motion {
 		return animation.finished.then(() => undefined);
 	}
 
-	/** The progress bar moves from its last width to the new one. */
-	progress(fill: HTMLElement, from: number | null, to: number): void {
-		const target = `${to * 100}%`;
-		if (from === null || from === to || this.reduced()) {
-			fill.setCssProps({ width: target });
-			return;
-		}
-		fill.setCssProps({ width: target });
-		fill.animate([{ width: `${from * 100}%` }, { width: target }], { duration: PROGRESS_MS, easing: SETTLE });
-	}
-
-	/** A small menu opens from the control it belongs to. */
-	pop(element: HTMLElement): void {
+	/** The next thing takes the place of one just finished: it rises into view. */
+	enter(element: HTMLElement): void {
 		if (this.reduced()) return;
 		element.animate(
 			[
-				{ transform: "scale(0.6)", opacity: 0 },
+				{ transform: "translateY(18px)", opacity: 0 },
 				{ transform: "none", opacity: 1 },
 			],
-			{ duration: 260, easing: SPRING },
+			{ duration: ENTER_MS, easing: SETTLE },
 		);
+	}
+
+	/** A number that just grew swells for a moment, like a counter ticking up. */
+	bump(element: HTMLElement): void {
+		if (this.reduced()) return;
+		element.animate([{ transform: "scale(1)" }, { transform: "scale(1.08)" }, { transform: "scale(1)" }], { duration: BUMP_MS, easing: SPRING });
 	}
 }

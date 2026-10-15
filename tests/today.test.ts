@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HabitEntry } from "../src/application/ports";
 import { TINY, missed } from "../src/domain/DayMark";
-import { closedDayLine, dayTitle, totalWins, winsLabel, offersShrink, todayEntries } from "../src/ui/today";
+import { closedDayLine, dayTitle, totalWins, winsLabel, winsSince, offersShrink, todayEntries } from "../src/ui/today";
 import { d } from "./support/dates";
 import { habitNote } from "./support/habits";
 
@@ -16,6 +16,16 @@ describe("totalWins", () => {
 		expect(totalWins([read, floss, { kind: "broken", path: "Habits/X.md", name: "X", problem: "bad" }])).toBe(4);
 		expect(winsLabel(1)).toBe("1 win");
 		expect(winsLabel(214)).toBe("214 wins");
+	});
+});
+
+describe("winsSince", () => {
+	it("names the month of the first win, with its year when that was another year", () => {
+		const read = ok("Read", { done_tiny: ["2026-05-14", "2026-10-08"], missed: [{ date: "2026-04-01", reason: "Forgot" }] });
+		const floss = ok("Floss", { done_full: ["2026-06-02"] });
+		expect(winsSince([read, floss], today)).toBe("wins since May");
+		expect(winsSince([ok("Old", { done_tiny: ["2025-12-30"] })], today)).toBe("wins since December 2025");
+		expect(winsSince([ok("New")], today)).toBe("wins");
 	});
 });
 

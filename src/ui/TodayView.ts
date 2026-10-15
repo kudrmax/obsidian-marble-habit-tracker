@@ -18,13 +18,16 @@ import { Hsl, parseColor } from "./jar/color";
 import { JarCanvas, JarItem } from "./jar/JarCanvas";
 import { KeyboardWatch } from "./KeyboardWatch";
 import { LEAVE_MS, Motion, Slide } from "./Motion";
+import { ContextMenu, ContextMenuItem } from "./ContextMenu";
+import { TodaySheet } from "./TodaySheet";
+import { Box } from "./jar/JarPhysics";
 import { Point } from "./jar/JarPhysics";
 import { IN_HAND, TiltSensor } from "./jar/TiltSensor";
 import { Placement, arrange, groupBySection, visibleEntries } from "./order";
 import { Drop, RowDrag } from "./RowDrag";
 import { SectionNameModal } from "./SectionNameModal";
 import { ScreenChrome } from "./ScreenChrome";
-import { closedDayLine, dayTitle, totalWins, winsLabel, offersShrink, todayEntries } from "./today";
+import { closedDayLine, dayTitle, totalWins, winsLabel, winsSince, offersShrink, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
 
 export const HABITS_VIEW = "tiny-habits-grid";
@@ -86,7 +89,13 @@ export class TodayView extends ItemView {
 	/** The card just opened, to grow its recipe in once. */
 	private opening: string | null = null;
 	private menuOpening = false;
-	private lastProgress: { day: string; value: number } | null = null;
+	private sheet: TodaySheet | null = null;
+	private contextMenu: ContextMenu | null = null;
+	private shelves: readonly Box[] = [];
+	private sheetTop = 0;
+	/** The habit in the card at the top of the sheet, to slide the next one in when it changes. */
+	private focused: string | null = null;
+	private shownWins: number | null = null;
 	private readonly tilt = new TiltSensor((gravity) => this.jar?.setGravity(gravity));
 
 	constructor(
@@ -117,8 +126,22 @@ export class TodayView extends ItemView {
 		const root = this.contentEl;
 		root.empty();
 		root.addClass("tiny-habits", "th-today");
-		this.scrollEl = root.createDiv("th-today-scroll");
+		const sheet = new TodaySheet(
+			root,
+			(top) => this.sheetMoved(top),
+			() => this.haptics.tap(),
+		);
+		this.sheet = sheet;
+		this.scrollEl = sheet.scroll;
 		this.columnEl = this.scrollEl.createDiv("th-column");
+		this.contextMenu = new ContextMenu(
+			root,
+			() => {
+				this.menu = null;
+				this.render();
+			},
+			() => this.ui.settings().reduceMotion,
+		);
 		this.rowDrag = new RowDrag(
 			this.columnEl,
 			() => this.haptics.tap(),
@@ -126,7 +149,8 @@ export class TodayView extends ItemView {
 		);
 		this.jar = new JarCanvas(root, this.jarOptions());
 		this.chrome = new ScreenChrome(root, this.containerEl, (shelves, ledges) => {
-			this.jar?.setObstacles(shelves);
+			this.shelves = shelves;
+			this.updateFloor();
 			this.jar?.setLedges(ledges);
 		});
 		const keyboard = new KeyboardWatch(root, () => this.jar?.refit());
@@ -169,6 +193,9 @@ export class TodayView extends ItemView {
 		this.rowDrag = null;
 		this.jar?.destroy();
 		this.jar = null;
+		this.sheet?.destroy();
+		this.sheet = null;
+		this.contextMenu?.close();
 		window.clearTimeout(this.holdTimer);
 		window.clearTimeout(this.captionTimer);
 		for (const timer of this.celebrating.values()) window.clearTimeout(timer);
@@ -206,37 +233,56 @@ export class TodayView extends ItemView {
 		const today = this.shownDay();
 		const entries = todayEntries(all, today);
 		const habits = entries.flatMap((entry) => (entry.kind === "ok" ? [entry] : []));
-		const answered = habits.filter((entry) => entry.habit.markOn(today) !== undefined).length;
 		const answeredHabits = habits.filter((entry) => entry.habit.markOn(today) !== undefined);
-		const closed = habits.length > 0 && answered === habits.length;
-		this.renderHead(column, all, answeredHabits, habits.length && !closed ? answered / habits.length : null);
+		const closed = habits.length > 0 && answeredHabits.length === habits.length && this.leaving.size === 0;
+		this.renderHero(all, habits.length, answeredHabits.filter((entry) => isDone(entry.habit.markOn(today))).length);
+		this.renderHead();
 		if (closed) this.renderRing(column, habits.map((entry) => entry.habit), this.wasClosed === false);
 		this.wasClosed = closed;
 		if (habits.length === 0) column.createDiv("th-ring-block").createEl("h2", { cls: "th-title", text: "Nothing for today" });
 
 		const hideDone = this.ui.settings().hideDone;
-		const folded = (entry: Extract<HabitEntry, { kind: "ok" }>) =>
-			entry.habit.markOn(today) !== undefined &&
-			this.menu !== entry.path &&
-			this.asking !== entry.path &&
-			this.shrink !== entry.path &&
-			!this.leaving.has(entry.path);
-		const shown = habits.filter((entry) => !hideDone || this.showDone || !folded(entry));
-		const sections = groupBySection(
+		const open = (entry: Extract<HabitEntry, { kind: "ok" }>) =>
+			entry.habit.markOn(today) === undefined ||
+			this.menu === entry.path ||
+			this.asking === entry.path ||
+			this.shrink === entry.path ||
+			this.leaving.has(entry.path);
+		const ordered = groupBySection(
 			all.flatMap((entry) => (entry.kind === "ok" ? [entry] : [])),
 			(entry) => entry.habit.section,
-		);
-		for (const group of sections) {
-			const rows = shown.filter((entry) => entry.habit.section === group.section);
-			if (rows.length === 0) continue;
-			if (group.section !== undefined) this.renderSection(column, group.section);
-			for (const entry of rows) this.renderRow(column, entry.path, entry.habit);
+		).flatMap((group) => group.items.filter((item) => habits.some((habit) => habit.path === item.path)));
+		const focus = ordered.find((entry) => open(entry) && (entry.habit.markOn(today) === undefined || this.leaving.has(entry.path) || this.asking === entry.path));
+		if (focus) this.renderFocus(column, focus.path, focus.habit);
+		const shown = ordered.filter((entry) => entry !== focus && (!hideDone || this.showDone || open(entry)));
+		let section: string | undefined | null = null;
+		for (const entry of shown) {
+			if (entry.habit.section !== section) {
+				section = entry.habit.section;
+				if (section !== undefined) this.renderSection(column, section);
+			}
+			this.renderRow(column, entry.path, entry.habit);
 		}
 		for (const entry of entries) if (entry.kind === "broken") this.renderBroken(column, entry);
 		this.renderNewSection(column);
+		this.renderFolded(column, answeredHabits.filter((entry) => !this.leaving.has(entry.path)));
 		this.renderFooter(column, true);
 		this.shownRows = this.renderingRows;
 		this.playMotion(column);
+		this.openMenu(column);
+	}
+
+	/** The sheet moved: its top edge is the jar's floor, and the celebration line rides just above it. */
+	private sheetMoved(top: number): void {
+		this.sheetTop = top;
+		this.updateFloor();
+	}
+
+	private updateFloor(): void {
+		const width = this.contentEl.clientWidth;
+		const height = this.contentEl.clientHeight;
+		const floor: Box = { left: -width, top: this.sheetTop, right: 2 * width, bottom: height + this.sheetTop, radius: 0 };
+		this.jar?.setObstacles(this.sheetTop > 0 ? [...this.shelves, floor] : this.shelves);
 	}
 
 	/** Starts what moves after a redraw: rows folding away, a new day or screen sliding in, a recipe growing open. */
@@ -274,11 +320,7 @@ export class TodayView extends ItemView {
 
 	/** Every habit by section, with its days and wins; archived ones fold away at the bottom. */
 	private renderAll(column: HTMLElement, visible: readonly HabitEntry[]): void {
-		const back = column.createDiv("th-back-nav").createEl("button", { cls: "th-back" });
-		setIcon(back.createSpan("th-back-icon"), "chevron-left");
-		back.appendText("Today");
-		back.addEventListener("click", () => this.showToday());
-		column.createDiv("th-head").createEl("h1", { cls: "th-title", text: "All habits" });
+		this.renderHead();
 		const habits = visible.flatMap((entry) => (entry.kind === "ok" ? [entry] : []));
 		for (const group of groupBySection(habits, (entry) => entry.habit.section)) {
 			if (group.items.length === 0) continue;
@@ -306,32 +348,33 @@ export class TodayView extends ItemView {
 	}
 
 	/**
-	 * A habit's card, the same on Today and in All habits: its name in its color, opening its recipe on a tap.
-	 * `side` fills the right of the card, like Today's mark; the card is returned for what goes under it.
+	 * A habit's card, the same on Today and in All habits: a circle in its color, then its name, which opens its recipe.
+	 * `lead` puts Today's working circle in front; the card is returned for what goes under it.
 	 */
 	private renderCard(
 		column: HTMLElement,
 		path: string,
 		habit: Habit,
-		options: { dimmed: boolean; sub?: string; attrs?: Record<string, string>; side?: (main: HTMLElement) => void },
+		options: { dimmed: boolean; sub?: string; attrs?: Record<string, string>; lead?: (main: HTMLElement) => void },
 	): HTMLElement {
 		const row = column.createDiv({ cls: ["th-row", "th-habit", colorClass(habit.color)], attr: options.attrs ?? {} });
 		row.toggleClass("is-answered", options.dimmed);
 		const main = row.createDiv("th-row-main");
+		if (options.lead) options.lead(main);
+		else main.createSpan("th-mark-slot").createSpan("th-mark");
 		const text = main.createDiv("th-row-text");
 		text.createDiv({ cls: "th-row-title", text: habit.name });
 		if (options.sub) text.createDiv({ cls: "th-row-sub", text: options.sub });
 		text.setAttribute("aria-expanded", String(this.expanded === path));
 		row.toggleClass("is-expanded", this.expanded === path);
 		text.addEventListener("click", () => void this.toggleRecipe(path));
-		options.side?.(main);
 		if (this.expanded === path) this.renderRecipe(row, path, habit);
 		return row;
 	}
 
 	/** Opens a card's recipe, or folds the open one away first; one card is open at a time. */
 	private async toggleRecipe(path: string): Promise<void> {
-		const open = this.columnEl.querySelector<HTMLElement>(".th-row.is-expanded .th-card-recipe");
+		const open = this.columnEl.querySelector<HTMLElement>(".is-expanded .th-card-recipe");
 		if (open) await this.motion.fold(open);
 		const closing = this.expanded === path;
 		this.expanded = closing ? null : path;
@@ -345,14 +388,49 @@ export class TodayView extends ItemView {
 		return this.day && this.day.isBefore(today) ? this.day : today;
 	}
 
-	/** The day as the title, with arrows to step through past days; the wins and the day's progress under it. */
-	private renderHead(column: HTMLElement, all: readonly HabitEntry[], answered: readonly Extract<HabitEntry, { kind: "ok" }>[], progress: number | null): void {
+	/**
+	 * The stage above the sheet: the wins as one big number with a small line under it, and the day's count on the
+	 * right. The number pops when it grows.
+	 */
+	private renderHero(all: readonly HabitEntry[], due: number, done: number): void {
+		const hero = this.sheet?.hero;
+		if (!hero) return;
+		hero.empty();
+		const today = this.ui.service.today();
+		const wins = totalWins(all);
+		const main = hero.createDiv("th-hero-main");
+		if (this.ui.settings().showWins) {
+			const number = main.createDiv({ cls: "th-hero-number", text: String(wins) });
+			if (this.shownWins !== null && wins > this.shownWins) this.motion.bump(number);
+			main.createDiv({ cls: "th-hero-caption", text: winsSince(all, today) });
+		}
+		this.shownWins = wins;
+		if (due === 0) return;
+		const side = hero.createDiv("th-hero-side");
+		const count = side.createDiv("th-hero-count");
+		count.createSpan({ text: String(done) });
+		count.createSpan({ cls: "th-hero-of", text: `/${due}` });
+		side.createDiv({ cls: "th-hero-caption", text: dayTitle(this.shownDay(), today).toLowerCase() });
+	}
+
+	/** The sheet's header: the day with arrows to step through past days, or All habits with the way back. */
+	private renderHead(): void {
+		const head = this.sheet?.head;
+		if (!head) return;
+		head.empty();
+		const line = head.createDiv("th-head-line");
+		if (this.screen === "all") {
+			const back = line.createEl("button", { cls: "th-back" });
+			setIcon(back.createSpan("th-back-icon"), "chevron-left");
+			back.appendText("Today");
+			back.addEventListener("click", () => this.showToday());
+			line.createEl("h2", { cls: "th-sheet-title", text: "All habits" });
+			return;
+		}
 		const today = this.ui.service.today();
 		const shown = this.shownDay();
 		const isToday = shown.equals(today);
-		const head = column.createDiv("th-head");
-		const line = head.createDiv("th-head-line");
-		line.createEl("h1", { cls: "th-title", text: dayTitle(shown, today) });
+		line.createEl("h2", { cls: "th-sheet-title", text: dayTitle(shown, today) });
 		if (!isToday) {
 			const back = line.createEl("button", { cls: "th-head-today", text: "Today", attr: { title: "Back to today" } });
 			back.addEventListener("click", () => this.showDay(today));
@@ -365,17 +443,45 @@ export class TodayView extends ItemView {
 		};
 		step("Previous day", "chevron-left", -1, false);
 		step("Next day", "chevron-right", 1, isToday);
-		const sub = head.createDiv("th-head-sub");
-		this.renderFolded(sub, answered);
-		if (this.ui.settings().showWins) sub.createSpan({ cls: "th-head-wins", text: winsLabel(totalWins(all)) });
-		if (progress === null) {
-			this.lastProgress = null;
-			return;
+	}
+
+	/**
+	 * The habit to do now, first in the sheet: its name large and three answers, Done the big one. When it is
+	 * answered it stays a moment, then the next habit slides into its place.
+	 */
+	private renderFocus(column: HTMLElement, path: string, habit: Habit): void {
+		const mark = habit.markOn(this.shownDay());
+		const labels = this.ui.labels();
+		const card = column.createDiv({ cls: ["th-focus", "th-habit", colorClass(habit.color)], attr: { "data-focus": path } });
+		card.toggleClass("is-expanded", this.expanded === path);
+		const body = card.createDiv("th-focus-body");
+		body.createDiv({ cls: "th-focus-tag", text: habit.section ?? "Next" });
+		const name = body.createDiv({ cls: "th-focus-name", text: habit.name, attr: { role: "button", "aria-expanded": String(this.expanded === path) } });
+		name.addEventListener("click", () => void this.toggleRecipe(path));
+		if (this.expanded === path) this.renderRecipe(body, path, habit);
+		const actions = body.createDiv("th-focus-actions");
+		const main = actions.createEl("button", { cls: "th-focus-done", attr: { "aria-label": labels.title(habit.hasTiny ? "tiny" : "full") } });
+		main.toggleClass("is-done", isDone(mark));
+		icon(main.createSpan("th-focus-done-check"), "check");
+		main.createSpan({ cls: "th-focus-done-text", text: "Done" });
+		main.addEventListener("click", (event) => {
+			if (isDone(mark)) return void this.answer(path, undefined);
+			void this.answer(path, habit.hasTiny ? TINY : FULL, event);
+		});
+		if (habit.hasTiny) {
+			const full = actions.createEl("button", { cls: "th-focus-side is-full", attr: { "aria-label": labels.title("full"), title: labels.title("full") } });
+			full.toggleClass("is-selected", mark?.kind === "full");
+			icon(full, "spark");
+			full.addEventListener("click", (event) => void this.choose(path, "full", mark, event));
 		}
-		const fill = head.createDiv("th-progress").createDiv("th-progress-fill");
-		const key = String(shown);
-		this.motion.progress(fill, this.lastProgress?.day === key ? this.lastProgress.value : null, progress);
-		this.lastProgress = { day: key, value: progress };
+		const skip = actions.createEl("button", { cls: "th-focus-side is-skip", attr: { "aria-label": "Skipped", title: "Skipped" } });
+		skip.toggleClass("is-selected", mark?.kind === "missed");
+		icon(skip, "x");
+		skip.addEventListener("click", (event) => void this.choose(path, "skip", mark, event));
+		if (this.asking === path) this.renderReasons(card, path);
+		if (this.shrink === path && mark?.kind === "missed") this.renderShrink(card, path, habit);
+		if (this.focused !== null && this.focused !== path) this.motion.enter(body);
+		this.focused = path;
 	}
 
 	/** A closed day: a ring with an arc per habit, done in its color and skipped in grey. */
@@ -411,23 +517,20 @@ export class TodayView extends ItemView {
 		if (justClosed) this.haptics.merge();
 	}
 
-	/** The answered habits folded into "3 done · 1 skipped", which opens them in the list. */
-	private renderFolded(parent: HTMLElement, answered: readonly Extract<HabitEntry, { kind: "ok" }>[]): void {
-		if (answered.length === 0) return;
-		const folds = this.ui.settings().hideDone;
+	/** The answered habits folded into one row at the end of the list, "3 done · 1 skipped", which opens them. */
+	private renderFolded(column: HTMLElement, answered: readonly Extract<HabitEntry, { kind: "ok" }>[]): void {
+		if (answered.length === 0 || !this.ui.settings().hideDone) return;
 		const day = this.shownDay();
 		const done = answered.filter((entry) => isDone(entry.habit.markOn(day)));
 		const skipped = answered.length - done.length;
-		const toggle = parent.createEl("button", { cls: "th-fold", attr: { "aria-expanded": String(this.showDone || !folds) } });
-		toggle.disabled = !folds;
+		const toggle = column.createEl("button", { cls: "th-fold", attr: { "aria-expanded": String(this.showDone) } });
 		const dots = toggle.createSpan("th-done-dots");
 		for (const entry of answered) {
 			const color = isDone(entry.habit.markOn(day)) ? ["th-habit", colorClass(entry.habit.color)] : ["is-skipped"];
 			dots.createSpan({ cls: ["th-done-dot", ...color] });
 		}
-		toggle.createSpan({ text: [done.length ? `${done.length} done` : "", skipped ? `${skipped} skipped` : ""].filter(Boolean).join(" · ") });
-		if (!folds) return;
-		setIcon(toggle.createSpan("th-meta-chevron"), "chevron-right");
+		toggle.createSpan({ cls: "th-fold-text", text: [done.length ? `${done.length} done` : "", skipped ? `${skipped} skipped` : ""].filter(Boolean).join(" · ") });
+		toggle.createSpan({ cls: "th-fold-action", text: this.showDone ? "Hide" : "Show" });
 		toggle.addEventListener("click", () => {
 			this.showDone = !this.showDone;
 			this.render();
@@ -541,9 +644,8 @@ export class TodayView extends ItemView {
 		const row = this.renderCard(column, path, habit, {
 			dimmed: mark !== undefined,
 			attrs: { "data-slot": "row", "data-drag": path, "data-section": habit.section ?? "" },
-			side: (main) => this.renderMark(main, path, habit, mark),
+			lead: (main) => this.renderMark(main, path, habit, mark),
 		});
-		if (this.menu === path) this.renderMenu(row, path, habit, mark);
 		row.toggleClass("is-new", !this.shownRows.has(path));
 		this.renderingRows.add(path);
 		if (this.asking === path) this.renderReasons(row, path);
@@ -608,35 +710,51 @@ export class TodayView extends ItemView {
 		});
 	}
 
-	/** The answers in a menu under the circle, like an iOS pull-down menu: tiny, full and skipped, then "Not at trigger". */
-	private renderMenu(row: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
-		row.addClass("has-menu");
-		const menu = row.createDiv({ cls: "th-menu", attr: { role: "menu" } });
+	/**
+	 * The answers for a held circle as iOS's context menu over a blurred screen: tiny, full and skipped, then the recipe
+	 * and "Not at trigger". It is drawn again after every redraw while it stays open.
+	 */
+	private openMenu(column: HTMLElement): void {
+		const path = this.menu;
+		const row = path ? column.querySelector<HTMLElement>(`.th-row[data-drag="${CSS.escape(path)}"]`) : null;
+		const entry = path ? this.ui.repository.get(path) : undefined;
+		if (!path || !row || entry?.kind !== "ok") {
+			this.contextMenu?.close();
+			return;
+		}
+		const habit = entry.habit;
+		const mark = habit.markOn(this.shownDay());
 		const labels = this.ui.labels();
 		const offTrigger = this.offTrigger && this.canGoOffTrigger(habit);
 		const chosen = (kind: "full" | "tiny") => mark?.kind === kind && isOffTrigger(mark) === offTrigger;
-		const item = (text: string, iconName: "x" | "spark" | "check" | "unlink", cls: string, selected: boolean, onClick: (event: MouseEvent) => void) => {
-			const button = menu.createEl("button", { cls: ["th-menu-item", cls], attr: { role: "menuitem" } });
-			button.toggleClass("is-selected", selected);
-			icon(button.createSpan("th-menu-check"), "check");
-			button.createSpan({ cls: "th-menu-text", text });
-			icon(button.createSpan("th-menu-icon"), iconName);
-			button.addEventListener("click", onClick);
-		};
-		if (habit.hasTiny) item(labels.title("tiny"), "check", "is-tiny", chosen("tiny"), (event) => void this.choose(path, "tiny", mark, event));
-		item(labels.title("full"), "spark", "is-full", chosen("full"), (event) => void this.choose(path, "full", mark, event));
-		item("Skipped", "x", "is-skip", mark?.kind === "missed", (event) => void this.choose(path, "skip", mark, event));
-		if (this.canGoOffTrigger(habit)) {
-			menu.createDiv("th-menu-gap");
-			item("Not at trigger", "unlink", "is-toggle", this.offTrigger, () => {
-				this.offTrigger = !this.offTrigger;
+		const items: ContextMenuItem[] = [];
+		if (habit.hasTiny) items.push({ text: labels.title("tiny"), icon: "check", tinted: true, selected: chosen("tiny"), onClick: (event) => void this.choose(path, "tiny", mark, event) });
+		items.push({ text: labels.title("full"), icon: "sparkle", tinted: true, selected: chosen("full"), onClick: (event) => void this.choose(path, "full", mark, event) });
+		items.push({ text: "Skipped", icon: "x", selected: mark?.kind === "missed", onClick: (event) => void this.choose(path, "skip", mark, event) });
+		items.push({
+			text: "Recipe",
+			icon: "scroll-text",
+			group: true,
+			onClick: () => {
+				this.menu = null;
+				this.expanded = path;
+				this.opening = path;
 				this.render();
+			},
+		});
+		if (this.canGoOffTrigger(habit)) {
+			items.push({
+				text: "Not at trigger",
+				icon: "unlink",
+				selected: this.offTrigger,
+				onClick: () => {
+					this.offTrigger = !this.offTrigger;
+					this.render();
+				},
 			});
 		}
-		if (this.menuOpening) {
-			this.motion.pop(menu);
-			this.menuOpening = false;
-		}
+		this.contextMenu?.open(row, items, this.menuOpening, ["th-habit", colorClass(habit.color)]);
+		this.menuOpening = false;
 	}
 
 	private renderReasons(row: HTMLElement, path: string): void {
@@ -694,7 +812,7 @@ export class TodayView extends ItemView {
 	private closeMenuOutside(event: MouseEvent): void {
 		if (!this.menu && !this.asking) return;
 		const target = event.target as HTMLElement | null;
-		if (target?.closest(".th-menu, .th-mark-button, .th-row-extra")) return;
+		if (target?.closest(".th-context, .th-mark-button, .th-row-extra")) return;
 		this.menu = null;
 		this.asking = null;
 		this.other = null;
