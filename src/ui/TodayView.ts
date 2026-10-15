@@ -619,8 +619,8 @@ export class TodayView extends ItemView {
 
 	/**
 	 * The answers in the row itself, as iOS buttons in the habit's color from strongest to weakest: full filled, tiny
-	 * tinted, skip plain. The circle stretches into the full button where it stood, the others come out from under it,
-	 * and the name slides off to the right. Picking one swells it and folds the others into it before the answer lands;
+	 * tinted, skip outlined. The circle flies right and stretches into the skip button, keeping its ring, while the
+	 * others come in from the left edge and the name fades. Picking one swells it and folds the others into it before the answer lands;
 	 * a tap anywhere else brings the row back.
 	 */
 	private renderChoices(main: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
@@ -651,15 +651,18 @@ export class TodayView extends ItemView {
 				this.render();
 			});
 		}
-		if (!this.menuOpening) return;
+		if (!this.menuOpening) {
+			main.addClass("is-steady");
+			return;
+		}
 		this.menuOpening = false;
 		this.bringIntoView(main);
-		this.motion.unfold(this.contentOf(main), [...bar.children] as HTMLElement[], origin);
+		this.motion.unfold(main, this.contentOf(main), [...bar.querySelectorAll<HTMLElement>(".th-choice-pill")], origin);
 	}
 
 	/** The row's own content — circle and name — without the choices laid over it. */
 	private contentOf(main: HTMLElement): HTMLElement[] {
-		return [...main.children].filter((child): child is HTMLElement => child instanceof HTMLElement && !child.hasClass("th-row-choices"));
+		return [...main.children].filter((child): child is HTMLElement => child instanceof HTMLElement && !child.hasClass("th-row-choices") && !child.hasClass("th-morph"));
 	}
 
 	/** An opened card: the recipe line by line, and a way to the habit's note. */

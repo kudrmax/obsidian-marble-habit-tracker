@@ -1,6 +1,8 @@
 /** iOS's own curve for things settling into place, and a spring that overshoots a little. */
 export const SETTLE = "cubic-bezier(0.2, 0.8, 0.2, 1)";
 export const SPRING = "cubic-bezier(0.34, 1.4, 0.64, 1)";
+/** Even through the middle, so a moving shape is seen on its way and not only where it lands. */
+const FLIGHT = "cubic-bezier(0.55, 0, 0.25, 1)";
 
 /** A just-answered row stays on screen this long, so the filled circle is seen, then folds away. */
 const LEAVE_HOLD_MS = 420;
@@ -13,8 +15,9 @@ const GROW_MS = 300;
 const BUMP_MS = 420;
 const UNFOLD_OUT_MS = 200;
 const UNFOLD_IN_MS = 440;
-const GROW_OUT_MS = 420;
-const STAGGER_MS = 45;
+const MORPH_MS = 650;
+const ENTER_MS = 520;
+const STAGGER_MS = 70;
 const PICK_MS = 220;
 
 /** Stepping a day back or forward, opening All habits, or going back from it. */
@@ -84,37 +87,47 @@ export class Motion {
 	}
 
 	/**
-	 * A row turns into its choices: the first one grows out of the circle at `origin`, exactly its size and shape at the
-	 * start, the others slide out from under it one by one, and the row's own content drifts off to the right.
+	 * A row turns into its choices, so that one is seen becoming the other: the circle at `origin` flies right, stretching
+	 * into the last choice — it keeps its ring — while the other choices come in from the left edge and the name fades.
 	 */
-	unfold(content: readonly HTMLElement[], choices: readonly HTMLElement[], origin: DOMRect | null): void {
-		if (this.reduced()) return;
+	unfold(surface: HTMLElement, content: readonly HTMLElement[], choices: readonly HTMLElement[], origin: DOMRect | null): void {
+		if (this.reduced() || choices.length === 0) return;
 		for (const element of content) {
+			// The circle leaves at once: from here on the flying ring is the circle.
+			const isCircle = element.querySelector(".th-mark") !== null;
 			element.animate(
 				[
-					{ transform: "none", opacity: 1 },
-					{ transform: "translateX(56px)", opacity: 0 },
+					{ transform: "none", opacity: isCircle ? 0 : 1 },
+					{ transform: isCircle ? "none" : "translateX(40px)", opacity: 0 },
 				],
-				{ duration: UNFOLD_OUT_MS, easing: SETTLE, fill: "forwards" },
+				{ duration: isCircle ? 1 : UNFOLD_OUT_MS, easing: SETTLE, fill: "forwards" },
 			);
 		}
-		const [first, ...rest] = choices;
-		if (!first) return;
-		const box = first.getBoundingClientRect();
+		const target = choices[choices.length - 1];
+		const entering = choices.slice(0, -1);
+		const area = surface.getBoundingClientRect();
 		if (origin) {
-			const top = origin.top - box.top;
-			const left = origin.left - box.left;
-			const circle = `inset(${top}px ${box.right - origin.right}px ${box.bottom - origin.bottom}px ${left}px round ${origin.width / 2}px)`;
-			first.animate([{ clipPath: circle }, { clipPath: `inset(0px 0px 0px 0px round ${box.height / 2}px)` }], { duration: GROW_OUT_MS, easing: SPRING });
+			const end = target.getBoundingClientRect();
+			const ghost = surface.createDiv("th-morph");
+			const frame = (box: { left: number; top: number; width: number; height: number }) => ({
+				left: `${box.left - area.left}px`,
+				top: `${box.top - area.top}px`,
+				width: `${box.width}px`,
+				height: `${box.height}px`,
+			});
+			target.animate([{ opacity: 0 }, { opacity: 0, offset: 0.82 }, { opacity: 1 }], { duration: MORPH_MS });
+			ghost
+				.animate([{ ...frame(origin), opacity: 1 }, { ...frame(end), opacity: 1, offset: 0.85 }, { ...frame(end), opacity: 0 }], { duration: MORPH_MS, easing: FLIGHT, fill: "forwards" })
+				.finished.then(() => ghost.remove(), () => ghost.remove());
 		}
-		rest.forEach((choice, index) => {
-			const from = box.left + box.width / 2 - (choice.getBoundingClientRect().left + choice.getBoundingClientRect().width / 2);
+		entering.forEach((choice, index) => {
+			const from = area.left - choice.getBoundingClientRect().right - 8;
 			choice.animate(
 				[
-					{ transform: `translateX(${from}px) scale(0.7)`, opacity: 0 },
+					{ transform: `translateX(${from}px)`, opacity: 0.4 },
 					{ transform: "none", opacity: 1 },
 				],
-				{ duration: UNFOLD_IN_MS, delay: 60 + index * STAGGER_MS, easing: SPRING, fill: "backwards" },
+				{ duration: ENTER_MS, delay: 90 + (entering.length - 1 - index) * STAGGER_MS, easing: SPRING, fill: "backwards" },
 			);
 		});
 	}
