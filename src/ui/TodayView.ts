@@ -619,8 +619,8 @@ export class TodayView extends ItemView {
 
 	/**
 	 * The answers in the row itself, as iOS buttons in the habit's color from strongest to weakest: full filled, tiny
-	 * tinted, skip outlined. The circle flies right and stretches into the skip button, keeping its ring, while the
-	 * others come in from the left edge and the name fades. Picking one swells it and folds the others into it before the answer lands;
+	 * tinted, skip outlined. The tapped circle stays under the finger as the cancel button, and out of it a capsule
+	 * spills to the right and splits into the answers, as the Dynamic Island splits. Picking one swells it and folds the others into it before the answer lands;
 	 * a tap anywhere else brings the row back.
 	 */
 	private renderChoices(main: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
@@ -631,12 +631,19 @@ export class TodayView extends ItemView {
 		const origin = circle?.getBoundingClientRect() ?? null;
 		main.addClass("is-choosing");
 		const bar = main.createDiv("th-row-choices");
+		const cancel = bar.createEl("button", { cls: "th-choices-cancel", attr: { "aria-label": "Cancel" } });
+		cancel.createSpan("th-choices-cancel-ring");
+		cancel.addEventListener("click", () => {
+			this.closing = this.menu;
+			this.menu = null;
+			this.render();
+		});
 		const option = (answer: Answer, text: string, cls: string, selected: boolean) => {
 			const button = bar.createEl("button", { cls: ["th-choice-pill", cls], attr: { "aria-pressed": String(selected) } });
 			if (selected) icon(button.createSpan("th-choice-pill-check"), "check");
 			button.createSpan({ cls: "th-choice-pill-text", text });
 			button.addEventListener("click", (event) => {
-				const others = [...bar.querySelectorAll<HTMLElement>(".th-choice-pill, .th-choices-toggle")].filter((other) => other !== button);
+				const others = [...bar.querySelectorAll<HTMLElement>(".th-choice-pill, .th-choices-toggle, .th-choices-cancel")].filter((other) => other !== button);
 				void this.motion.pick(button, others).then(() => this.choose(path, answer, mark, event));
 			});
 		};
@@ -657,7 +664,7 @@ export class TodayView extends ItemView {
 		}
 		this.menuOpening = false;
 		this.bringIntoView(main);
-		this.motion.unfold(main, this.contentOf(main), [...bar.querySelectorAll<HTMLElement>(".th-choice-pill")], origin);
+		this.motion.unfold(main, this.contentOf(main), cancel, [...bar.querySelectorAll<HTMLElement>(".th-choice-pill")], origin);
 	}
 
 	/** The row's own content — circle and name — without the choices laid over it. */

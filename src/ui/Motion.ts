@@ -1,8 +1,6 @@
 /** iOS's own curve for things settling into place, and a spring that overshoots a little. */
 export const SETTLE = "cubic-bezier(0.2, 0.8, 0.2, 1)";
 export const SPRING = "cubic-bezier(0.34, 1.4, 0.64, 1)";
-/** Even through the middle, so a moving shape is seen on its way and not only where it lands. */
-const FLIGHT = "cubic-bezier(0.55, 0, 0.25, 1)";
 
 /** A just-answered row stays on screen this long, so the filled circle is seen, then folds away. */
 const LEAVE_HOLD_MS = 420;
@@ -13,12 +11,8 @@ const DAY_MS = 260;
 const PUSH_MS = 380;
 const GROW_MS = 300;
 const BUMP_MS = 420;
-const UNFOLD_OUT_MS = 200;
-const UNFOLD_IN_MS = 440;
-const MORPH_MS = 650;
-const LABEL_MS = 180;
-const ENTER_MS = 520;
-const STAGGER_MS = 70;
+/** From the tap to the last frame of the choices, as tried and timed on the demos. */
+const CHOICES_MS = 480;
 const PICK_MS = 220;
 
 /** Stepping a day back or forward, opening All habits, or going back from it. */
@@ -88,66 +82,78 @@ export class Motion {
 	}
 
 	/**
-	 * A row turns into its choices, so that one is seen becoming the other: the circle at `origin` flies right, stretching
-	 * into the last choice — it keeps its ring — while the other choices come in from the left edge and the name fades.
+	 * A row turns into its choices as the Dynamic Island splits: the circle at `origin` stays put and turns into the
+	 * cancel button, a capsule in the habit's color spills out of it to the right across the row, and then pinches into
+	 * the choices, each taking on its own look; the name fades. Half the time to spill, half to split.
 	 */
-	unfold(surface: HTMLElement, content: readonly HTMLElement[], choices: readonly HTMLElement[], origin: DOMRect | null): void {
+	unfold(surface: HTMLElement, content: readonly HTMLElement[], cancel: HTMLElement, choices: readonly HTMLElement[], origin: DOMRect | null): void {
 		if (this.reduced() || choices.length === 0) return;
 		for (const element of content) {
-			// The circle leaves at once: from here on the flying ring is the circle.
 			const isCircle = element.querySelector(".th-mark") !== null;
 			element.animate(
 				[
 					{ transform: "none", opacity: isCircle ? 0 : 1 },
-					{ transform: isCircle ? "none" : "translateX(40px)", opacity: 0 },
+					{ transform: isCircle ? "none" : "translateX(24px)", opacity: 0 },
 				],
-				{ duration: isCircle ? 1 : UNFOLD_OUT_MS, easing: SETTLE, fill: "forwards" },
+				{ duration: isCircle ? 1 : CHOICES_MS / 2, easing: SETTLE, fill: "forwards" },
 			);
 		}
-		const target = choices[choices.length - 1];
-		const entering = choices.slice(0, -1);
+		cancel.animate(
+			[
+				{ transform: "rotate(-90deg) scale(0.8)", opacity: 0.6 },
+				{ transform: "none", opacity: 1 },
+			],
+			{ duration: CHOICES_MS / 2, easing: SPRING },
+		);
 		const area = surface.getBoundingClientRect();
-		if (origin) {
-			const end = target.getBoundingClientRect();
-			const ghost = surface.createDiv("th-morph");
-			const frame = (box: { left: number; top: number; width: number; height: number }) => ({
-				left: `${box.left - area.left}px`,
-				top: `${box.top - area.top}px`,
-				width: `${box.width}px`,
-				height: `${box.height}px`,
-			});
-			// The ring and the button are the same shape at the end, so one takes the other's place in a single frame: no fade, no flicker.
-			target.style.visibility = "hidden";
-			const label = target.querySelector<HTMLElement>(".th-choice-pill-text");
-			const land = () => {
-				ghost.remove();
-				target.style.visibility = "";
-				label?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: LABEL_MS, easing: "ease-out" });
-			};
-			ghost.animate([frame(origin), frame(end)], { duration: MORPH_MS, easing: FLIGHT, fill: "forwards" }).finished.then(land, land);
-		}
-		entering.forEach((choice, index) => {
-			const from = area.left - choice.getBoundingClientRect().right - 8;
+		const boxes = choices.map((choice) => choice.getBoundingClientRect());
+		const first = boxes[0];
+		const last = boxes[boxes.length - 1];
+		const span = last.right - first.left;
+		const share = span / choices.length;
+		const color = getComputedStyle(choices[0]).backgroundColor;
+		const half = CHOICES_MS / 2;
+		const blob = surface.createDiv("th-blob");
+		blob.style.background = color;
+		const start = origin ?? first;
+		blob.animate(
+			[
+				{ left: `${start.left - area.left}px`, top: `${start.top - area.top}px`, width: `${start.width}px`, height: `${start.height}px`, borderRadius: `${start.height / 2}px` },
+				{ left: `${first.left - area.left}px`, top: `${first.top - area.top}px`, width: `${span}px`, height: `${first.height}px`, borderRadius: `${first.height / 2}px` },
+			],
+			{ duration: half, easing: SPRING, fill: "forwards" },
+		)
+			.finished.then(() => blob.remove(), () => blob.remove());
+		choices.forEach((choice, index) => {
+			const box = boxes[index];
+			const fromLeft = first.left + share * index;
+			const dx = fromLeft + share / 2 - (box.left + box.width / 2);
+			const radius = box.height / 2;
+			const corners = index === 0 ? `${radius}px 0 0 ${radius}px` : index === choices.length - 1 ? `0 ${radius}px ${radius}px 0` : "0";
+			const own = getComputedStyle(choice);
 			choice.animate(
 				[
-					{ transform: `translateX(${from}px)`, opacity: 0.4 },
-					{ transform: "none", opacity: 1 },
+					{ transform: `translateX(${dx}px) scaleX(${share / box.width})`, borderRadius: corners, backgroundColor: color, boxShadow: "none", opacity: 0 },
+					{ transform: `translateX(${dx}px) scaleX(${share / box.width})`, borderRadius: corners, backgroundColor: color, boxShadow: "none", opacity: 1, offset: 0.5 },
+					{ transform: "none", borderRadius: `${radius}px`, backgroundColor: own.backgroundColor, boxShadow: own.boxShadow, opacity: 1 },
 				],
-				{ duration: ENTER_MS, delay: 90 + (entering.length - 1 - index) * STAGGER_MS, easing: SPRING, fill: "backwards" },
+				{ duration: CHOICES_MS, easing: SPRING, fill: "backwards" },
 			);
+			const label = choice.querySelector<HTMLElement>(".th-choice-pill-text");
+			label?.animate([{ opacity: 0 }, { opacity: 0, offset: 0.6 }, { opacity: 1 }], { duration: CHOICES_MS, fill: "backwards" });
 		});
 	}
 
-	/** Closing the choices without an answer: the row's content slides back in from the right. */
+	/** Closing the choices without an answer: the row's content slides back in. */
 	refold(content: readonly HTMLElement[]): void {
 		if (this.reduced()) return;
 		for (const element of content) {
 			element.animate(
 				[
-					{ transform: "translateX(56px)", opacity: 0 },
+					{ transform: "translateX(24px)", opacity: 0 },
 					{ transform: "none", opacity: 1 },
 				],
-				{ duration: UNFOLD_IN_MS * 0.8, easing: SETTLE },
+				{ duration: CHOICES_MS / 2, easing: SETTLE },
 			);
 		}
 	}

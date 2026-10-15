@@ -543,10 +543,16 @@ button.th-footer-add:active, button.th-footer-link:active { background: var(--ba
  * skip plain. They are as tall as the circle's target, so the row keeps its height.
  */
 .th-row-main.is-choosing { overflow: hidden; }
-.th-row-main.is-choosing.is-steady > :not(.th-row-choices):not(.th-morph) { visibility: hidden; }
-/* The circle on its way to becoming the skip button: the same ring, stretched as it flies. */
-.th-morph { position: absolute; z-index: 2; box-sizing: border-box; border: 2px solid var(--th-habit); border-radius: 999px; pointer-events: none; }
-.th-row-choices { position: absolute; inset: 0 calc(var(--th-gutter) - 8px) 0 calc(var(--th-gutter) - 8px); display: flex; align-items: center; gap: 8px; }
+.th-row-main.is-choosing.is-steady > :not(.th-row-choices):not(.th-blob) { visibility: hidden; }
+/* The capsule spilling out of the circle before it splits into the choices. */
+.th-blob { position: absolute; z-index: 2; pointer-events: none; }
+.th-row-choices { position: absolute; inset: 0 calc(var(--th-gutter) - 8px) 0 calc(var(--th-gutter) - 10px); display: flex; align-items: center; gap: 8px; }
+/* Cancel sits exactly where the tapped circle was, the same size, so it is under the finger. */
+button.th-choices-cancel { flex: 0 0 44px; width: 44px; height: 44px; margin-right: -6px; padding: 0; border: none; border-radius: 22px; box-shadow: none; background: transparent; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.th-choices-cancel-ring { position: relative; box-sizing: border-box; width: var(--th-mark); height: var(--th-mark); border-radius: 50%; corner-shape: round; border: 2px solid var(--text-faint); }
+.th-choices-cancel-ring::before, .th-choices-cancel-ring::after { content: ""; position: absolute; left: 50%; top: 50%; width: 44%; height: 2px; margin: -1px 0 0 -22%; border-radius: 1px; background: var(--text-muted); transform: rotate(45deg); }
+.th-choices-cancel-ring::after { transform: rotate(-45deg); }
+button.th-choices-cancel:active .th-choices-cancel-ring { transform: scale(0.86); }
 button.th-choice-pill { flex: 1 1 0; min-width: 0; height: 34px; padding: 0 10px; border: none; border-radius: 17px; corner-shape: round; box-shadow: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; background: transparent; color: var(--th-habit); font-size: 15px; font-weight: 600; letter-spacing: -0.01em; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform 120ms ease, filter 120ms ease; }
 button.th-choice-pill:active { transform: scale(0.95); }
 .th-choice-pill-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
