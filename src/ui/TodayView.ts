@@ -27,7 +27,7 @@ import { Placement, arrange, groupBySection, visibleEntries } from "./order";
 import { Drop, RowDrag } from "./RowDrag";
 import { SectionNameModal } from "./SectionNameModal";
 import { ScreenChrome } from "./ScreenChrome";
-import { closedDayLine, dayTitle, totalWins, winsLabel, winsSince, offersShrink, todayEntries } from "./today";
+import { closedDayLine, dayTitle, isMore, totalWins, winsLabel, winsSince, offersShrink, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
 
 export const HABITS_VIEW = "tiny-habits-grid";
@@ -93,8 +93,6 @@ export class TodayView extends ItemView {
 	private contextMenu: ContextMenu | null = null;
 	private shelves: readonly Box[] = [];
 	private sheetTop = 0;
-	/** The habit in the card at the top of the sheet, to slide the next one in when it changes. */
-	private focused: string | null = null;
 	private shownWins: number | null = null;
 	private readonly tilt = new TiltSensor((gravity) => this.jar?.setGravity(gravity));
 
@@ -252,9 +250,7 @@ export class TodayView extends ItemView {
 			all.flatMap((entry) => (entry.kind === "ok" ? [entry] : [])),
 			(entry) => entry.habit.section,
 		).flatMap((group) => group.items.filter((item) => habits.some((habit) => habit.path === item.path)));
-		const focus = ordered.find((entry) => open(entry) && (entry.habit.markOn(today) === undefined || this.leaving.has(entry.path) || this.asking === entry.path));
-		if (focus) this.renderFocus(column, focus.path, focus.habit);
-		const shown = ordered.filter((entry) => entry !== focus && (!hideDone || this.showDone || open(entry)));
+		const shown = ordered.filter((entry) => !hideDone || this.showDone || open(entry));
 		let section: string | undefined | null = null;
 		for (const entry of shown) {
 			if (entry.habit.section !== section) {
@@ -443,45 +439,6 @@ export class TodayView extends ItemView {
 		};
 		step("Previous day", "chevron-left", -1, false);
 		step("Next day", "chevron-right", 1, isToday);
-	}
-
-	/**
-	 * The habit to do now, first in the sheet: its name large and three answers, Done the big one. When it is
-	 * answered it stays a moment, then the next habit slides into its place.
-	 */
-	private renderFocus(column: HTMLElement, path: string, habit: Habit): void {
-		const mark = habit.markOn(this.shownDay());
-		const labels = this.ui.labels();
-		const card = column.createDiv({ cls: ["th-focus", "th-habit", colorClass(habit.color)], attr: { "data-focus": path } });
-		card.toggleClass("is-expanded", this.expanded === path);
-		const body = card.createDiv("th-focus-body");
-		body.createDiv({ cls: "th-focus-tag", text: habit.section ?? "Next" });
-		const name = body.createDiv({ cls: "th-focus-name", text: habit.name, attr: { role: "button", "aria-expanded": String(this.expanded === path) } });
-		name.addEventListener("click", () => void this.toggleRecipe(path));
-		if (this.expanded === path) this.renderRecipe(body, path, habit);
-		const actions = body.createDiv("th-focus-actions");
-		const main = actions.createEl("button", { cls: "th-focus-done", attr: { "aria-label": labels.title(habit.hasTiny ? "tiny" : "full") } });
-		main.toggleClass("is-done", isDone(mark));
-		icon(main.createSpan("th-focus-done-check"), "check");
-		main.createSpan({ cls: "th-focus-done-text", text: "Done" });
-		main.addEventListener("click", (event) => {
-			if (isDone(mark)) return void this.answer(path, undefined);
-			void this.answer(path, habit.hasTiny ? TINY : FULL, event);
-		});
-		if (habit.hasTiny) {
-			const full = actions.createEl("button", { cls: "th-focus-side is-full", attr: { "aria-label": labels.title("full"), title: labels.title("full") } });
-			full.toggleClass("is-selected", mark?.kind === "full");
-			icon(full, "spark");
-			full.addEventListener("click", (event) => void this.choose(path, "full", mark, event));
-		}
-		const skip = actions.createEl("button", { cls: "th-focus-side is-skip", attr: { "aria-label": "Skipped", title: "Skipped" } });
-		skip.toggleClass("is-selected", mark?.kind === "missed");
-		icon(skip, "x");
-		skip.addEventListener("click", (event) => void this.choose(path, "skip", mark, event));
-		if (this.asking === path) this.renderReasons(card, path);
-		if (this.shrink === path && mark?.kind === "missed") this.renderShrink(card, path, habit);
-		if (this.focused !== null && this.focused !== path) this.motion.enter(body);
-		this.focused = path;
 	}
 
 	/** A closed day: a ring with an arc per habit, done in its color and skipped in grey. */
@@ -680,8 +637,9 @@ export class TodayView extends ItemView {
 		const circle = button.createSpan("th-mark");
 		if (isDone(mark)) {
 			circle.addClass("is-done");
+			circle.toggleClass("is-more", isMore(habit, mark));
 			if (this.celebrating.has(path)) circle.addClass("is-popping");
-			icon(circle, mark?.kind === "full" ? "spark" : "check");
+			icon(circle, "check");
 		} else if (mark?.kind === "missed") circle.addClass("is-missed");
 		else if (this.asking === path) circle.addClass("is-asking");
 
@@ -728,11 +686,11 @@ export class TodayView extends ItemView {
 		const offTrigger = this.offTrigger && this.canGoOffTrigger(habit);
 		const chosen = (kind: "full" | "tiny") => mark?.kind === kind && isOffTrigger(mark) === offTrigger;
 		const items: ContextMenuItem[] = [];
-		if (habit.hasTiny) items.push({ text: labels.title("tiny"), icon: "check", tinted: true, selected: chosen("tiny"), onClick: (event) => void this.choose(path, "tiny", mark, event) });
-		items.push({ text: labels.title("full"), icon: "sparkle", tinted: true, selected: chosen("full"), onClick: (event) => void this.choose(path, "full", mark, event) });
-		items.push({ text: "Skipped", icon: "x", selected: mark?.kind === "missed", onClick: (event) => void this.choose(path, "skip", mark, event) });
+		if (habit.hasTiny) items.push({ text: labels.title("tiny"), detail: habit.current("tiny"), glyph: "done", selected: chosen("tiny"), onClick: (event) => void this.choose(path, "tiny", mark, event) });
+		items.push({ text: labels.title("full"), detail: habit.current("full"), glyph: habit.hasTiny ? "more" : "done", selected: chosen("full"), onClick: (event) => void this.choose(path, "full", mark, event) });
+		items.push({ text: "Skipped", glyph: "skipped", selected: mark?.kind === "missed", onClick: (event) => void this.choose(path, "skip", mark, event) });
 		items.push({
-			text: "Recipe",
+			text: "Recipe and note",
 			icon: "scroll-text",
 			group: true,
 			onClick: () => {

@@ -128,7 +128,8 @@ button.th-link svg { width: 13px; height: 13px; }
 }
 .th-mark svg { width: 14px; height: 14px; stroke-width: 3.4px; }
 .th-mark.is-done { border: none; background: var(--th-habit); }
-.th-mark.is-missed { border-color: var(--th-faint); background: linear-gradient(135deg, transparent 46%, var(--th-faint) 46%, var(--th-faint) 54%, transparent 54%); }
+.th-mark.is-missed { position: relative; border-color: var(--th-faint); }
+.th-mark.is-missed::after { content: ""; width: 44%; height: 2px; border-radius: 1px; background: var(--th-faint); }
 .th-mark.is-asking { border-style: dashed; border-color: var(--th-faint); }
 .th-mark.is-popping { animation: th-pop 420ms var(--th-ease-pop); }
 button.th-mark-button {
@@ -481,26 +482,6 @@ button.th-card-open { grid-column: 1 / -1; justify-self: start; display: inline-
 .th-sheet-head button.th-head-step:last-child { margin-right: -19px; }
 .th-sheet-head button.th-back { margin-right: 8px; font-size: 17px; color: var(--text-accent); }
 
-/* The habit to do now: a card with its name large and a big Done button. */
-.th-focus { margin: 6px 0 4px; padding: 16px 16px 14px; border-radius: 20px; corner-shape: round; background: var(--background-modifier-hover); }
-.th-focus-tag { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--th-habit); }
-.th-focus-tag::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--th-habit); }
-.th-focus-name { margin-top: 8px; font-size: 26px; line-height: 31px; font-weight: 700; letter-spacing: -0.015em; color: var(--text-normal); cursor: pointer; overflow-wrap: anywhere; }
-.th-focus .th-card-recipe { margin: 10px 0 2px; background: var(--background-primary); }
-.th-focus-actions { display: flex; gap: 10px; margin-top: 16px; }
-button.th-focus-done, button.th-focus-side { height: 50px; border: none; border-radius: 25px; corner-shape: round; box-shadow: none; cursor: pointer; transition: transform 120ms ease, background-color 200ms ease, color 200ms ease; -webkit-tap-highlight-color: transparent; }
-button.th-focus-done { position: relative; flex: 1 1 auto; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--th-habit); color: #ffffff; font-size: 17px; font-weight: 600; }
-.th-focus-done-check { display: none; }
-.th-focus-done-check svg { width: 18px; height: 18px; stroke-width: 3px; }
-button.th-focus-done.is-done .th-focus-done-check { display: inline-flex; animation: th-pop 420ms var(--th-ease-pop); }
-button.th-focus-side { flex: 0 0 50px; width: 50px; padding: 0; display: inline-flex; align-items: center; justify-content: center; background: var(--background-modifier-hover); color: var(--text-muted); }
-button.th-focus-side svg { width: 20px; height: 20px; }
-button.th-focus-side.is-full { color: var(--th-habit); }
-button.th-focus-side.is-selected { background: var(--th-habit); color: #ffffff; }
-button.th-focus-side.is-skip.is-selected { background: var(--text-faint); color: var(--background-primary); }
-button.th-focus-done:active, button.th-focus-side:active { transform: scale(0.94); }
-.th-focus .th-row-extra { padding: 12px 0 0; }
-
 /* The list: Reminders' rows, a circle in the habit's color, the name, a hairline from the name to the edge. */
 .th-sheet .th-group { padding: 22px 0 2px; font-size: 20px; line-height: 25px; font-weight: 700; color: var(--text-normal); }
 .th-row { margin: 0 calc(-1 * var(--th-gutter)); padding: 0; }
@@ -551,15 +532,28 @@ button.th-footer-add:active, button.th-footer-link:active { background: var(--ba
 .th-context-row { position: absolute; border-radius: 14px; corner-shape: round; overflow: hidden; background: var(--background-secondary); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35); transform-origin: 50% 50%; }
 .th-context-row .th-row { margin: 0; }
 .th-context-row .th-row-main { padding-right: 12px; }
-.th-context-menu { position: absolute; width: 260px; border-radius: 14px; corner-shape: round; overflow: hidden; background: color-mix(in srgb, var(--background-secondary) 88%, transparent); -webkit-backdrop-filter: blur(40px) saturate(1.8); backdrop-filter: blur(40px) saturate(1.8); box-shadow: 0 12px 44px rgba(0, 0, 0, 0.4), 0 0 0 0.5px var(--background-modifier-border); }
-button.th-context-item { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; height: 46px; padding: 0 16px 0 12px; border: none; border-radius: 0; box-shadow: none; background: transparent; color: var(--text-normal); font-size: 17px; text-align: left; cursor: pointer; }
+.th-context-menu { position: absolute; width: 290px; max-width: calc(100% - 24px); border-radius: 14px; corner-shape: round; overflow: hidden; background: color-mix(in srgb, var(--background-secondary) 88%, transparent); -webkit-backdrop-filter: blur(40px) saturate(1.8); backdrop-filter: blur(40px) saturate(1.8); box-shadow: 0 12px 44px rgba(0, 0, 0, 0.4), 0 0 0 0.5px var(--background-modifier-border); }
+button.th-context-item { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; height: auto; min-height: 46px; padding: 10px 16px 10px 12px; border: none; border-radius: 0; box-shadow: none; background: transparent; color: var(--text-normal); font-size: 17px; text-align: left; cursor: pointer; }
 button.th-context-item + button.th-context-item::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; transform: scaleY(0.5); transform-origin: top; background: var(--background-modifier-border); }
 button.th-context-item:active, button.th-context-item:hover { background: var(--background-modifier-hover); }
 .th-context-check { display: inline-flex; width: 16px; visibility: hidden; color: var(--text-normal); }
 .th-context-check svg { width: 15px; height: 15px; stroke-width: 2.6px; }
 button.th-context-item.is-selected .th-context-check { visibility: visible; }
-.th-context-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.th-context-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; white-space: normal; text-align: left; }
+.th-context-title { font-size: 17px; line-height: 22px; }
+.th-context-detail { font-size: 13px; line-height: 17px; color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.th-context-glyph.th-mark { flex: 0 0 auto; --th-mark: 22px; }
+.th-context-glyph.th-mark svg { width: 12px; height: 12px; }
 .th-context-icon { display: inline-flex; color: var(--text-muted); }
 .th-context-icon svg { width: 19px; height: 19px; }
-button.th-context-item.is-tinted .th-context-icon { color: var(--th-habit); }
 .th-context-gap { height: 8px; background: rgba(0, 0, 0, 0.22); }
+
+/* The circle says how the day went: empty, filled with a check, a second ring for more than the habit asks, a dash for skipped. */
+.th-mark.is-done { border: none; background: var(--th-habit); color: #ffffff; }
+.th-mark.is-done svg { stroke-width: 3.2px; }
+.th-mark.is-more { box-shadow: 0 0 0 2px var(--background-secondary), 0 0 0 3.5px var(--th-habit); }
+.th-mark.is-popping { animation: th-pop 420ms var(--th-ease-pop); }
+.th-mark.is-popping svg path, .th-mark.is-popping svg polyline { stroke-dasharray: 24; animation: th-draw 280ms 120ms ease-out both; }
+.th-mark.is-popping.is-more { animation: th-pop 420ms var(--th-ease-pop), th-halo 520ms 160ms var(--th-ease-pop) both; }
+@keyframes th-draw { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
+@keyframes th-halo { from { box-shadow: 0 0 0 0 var(--background-secondary), 0 0 0 0 var(--th-habit); } to { box-shadow: 0 0 0 2px var(--background-secondary), 0 0 0 3.5px var(--th-habit); } }

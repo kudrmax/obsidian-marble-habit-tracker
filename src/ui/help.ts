@@ -12,9 +12,8 @@ export interface HelpRow {
 export function helpRows(mobile: boolean, merge: MergeRule): HelpRow[] {
 	const tap = mobile ? "Tap" : "Click";
 	return [
-		{ action: "Done", result: "The card at the top holds the habit to do now. Done marks it — the tiny action if it has one — and the next habit takes its place. ✦ marks the full action, ✕ skips." },
-		{ action: `${tap} the circle`, result: `Marks a habit in the list done. ${tap} again to undo.` },
-		{ action: mobile ? "Hold the circle" : "Right-click or hold the circle", result: "A menu: Tiny action, Action or Skipped, and the recipe." },
+		{ action: `${tap} the circle`, result: `Marks the habit done — the tiny action if it has one. ${tap} again to undo.` },
+		{ action: mobile ? "Hold the circle" : "Right-click or hold the circle", result: "A menu with what each answer means for this habit: the tiny action, the full one, or skipped. The full one on a habit with a tiny version draws a second ring around the circle." },
 		{ action: `${tap} a habit's name`, result: `Opens its recipe, with a link to its note. ${tap} again to close it.` },
 		{ action: mobile ? "Hold and drag a habit" : "Drag a habit", result: "Reorders habits. Drop it on “+ New section” to group them." },
 		{ action: "Drag the sheet", result: "Pull it up to see the whole day; the jar's floor rises with it. Pull it down to bring the jar back." },

@@ -10,7 +10,6 @@ export const LEAVE_MS = LEAVE_HOLD_MS + LEAVE_FOLD_MS;
 const DAY_MS = 260;
 const PUSH_MS = 380;
 const GROW_MS = 300;
-const ENTER_MS = 360;
 const BUMP_MS = 420;
 
 /** Stepping a day back or forward, opening All habits, or going back from it. */
@@ -77,18 +76,6 @@ export class Motion {
 			{ duration: GROW_MS * 0.8, easing: SETTLE, fill: "forwards" },
 		);
 		return animation.finished.then(() => undefined);
-	}
-
-	/** The next thing takes the place of one just finished: it rises into view. */
-	enter(element: HTMLElement): void {
-		if (this.reduced()) return;
-		element.animate(
-			[
-				{ transform: "translateY(18px)", opacity: 0 },
-				{ transform: "none", opacity: 1 },
-			],
-			{ duration: ENTER_MS, easing: SETTLE },
-		);
 	}
 
 	/** A number that just grew swells for a moment, like a counter ticking up. */

@@ -3,14 +3,22 @@ import { SPRING } from "./Motion";
 
 export interface ContextMenuItem {
 	readonly text: string;
-	readonly icon: string;
-	/** Paints the icon in the habit's color, as the answers that count as a win. */
-	readonly tinted?: boolean;
+	/** A second, smaller line: what the answer means for this habit. */
+	readonly detail?: string;
+	/** A Lucide icon on the right, for actions. */
+	readonly icon?: string;
+	/** A circle on the right drawn exactly as the habit's circle looks with this answer: "done", "more" or "skipped". */
+	readonly glyph?: Glyph;
 	readonly selected?: boolean;
 	/** Starts a new group under a gap, as iOS separates kinds of actions. */
 	readonly group?: boolean;
 	onClick(event: MouseEvent): void;
 }
+
+export type Glyph = "done" | "more" | "skipped";
+
+/** The circle's own state classes, so a menu item shows the circle exactly as the answer will leave it. */
+const GLYPHS: Record<Glyph, string[]> = { done: ["is-done"], more: ["is-done", "is-more"], skipped: ["is-missed"] };
 
 const GAP = 8;
 const EDGE = 12;
@@ -53,10 +61,14 @@ export class ContextMenu {
 			if (item.group) menu.createDiv("th-context-gap");
 			const button = menu.createEl("button", { cls: "th-context-item", attr: { role: "menuitem" } });
 			button.toggleClass("is-selected", item.selected === true);
-			button.toggleClass("is-tinted", item.tinted === true);
 			setIcon(button.createSpan("th-context-check"), "check");
-			button.createSpan({ cls: "th-context-text", text: item.text });
-			setIcon(button.createSpan("th-context-icon"), item.icon);
+			const text = button.createSpan("th-context-text");
+			text.createSpan({ cls: "th-context-title", text: item.text });
+			if (item.detail) text.createSpan({ cls: "th-context-detail", text: item.detail });
+			if (item.glyph) {
+				const glyph = button.createSpan({ cls: ["th-context-glyph", "th-mark", ...GLYPHS[item.glyph]] });
+				if (item.glyph !== "skipped") setIcon(glyph, "check");
+			} else if (item.icon) setIcon(button.createSpan("th-context-icon"), item.icon);
 			button.addEventListener("click", (event) => item.onClick(event));
 		}
 		const height = menu.offsetHeight;
