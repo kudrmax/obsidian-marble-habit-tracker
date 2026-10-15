@@ -12,14 +12,14 @@ const PUSH_MS = 380;
 const GROW_MS = 300;
 const BUMP_MS = 420;
 /**
- * The choices rolling into the row: the circle fills into the skip marble, then every marble rolls the same span of
- * time and all of them stop together. The others set off one after another from the left edge, nearest to skip first.
+ * The choices rolling into the row: the circle becomes skip, then every choice rolls the same span of time and all of
+ * them stop together. The others set off one after another from the left edge, nearest to skip first.
  */
-const FILL_MS = 90;
-const ROLL_MS = 440;
-const FIRST_IN_MS = 85;
-const NEXT_IN_MS = 60;
-/** Where an incoming marble starts: just past the row's left edge. */
+const FILL_MS = 70;
+const ROLL_MS = 360;
+const FIRST_IN_MS = 70;
+const NEXT_IN_MS = 50;
+/** Where an incoming choice starts: just past the row's left edge. */
 const OFF_EDGE = 4;
 const REVEAL_MS = 140;
 const REFOLD_MS = 220;
@@ -93,8 +93,8 @@ export class Motion {
 	/**
 	 * The choices roll into place. The circle at `origin` fills into the last choice — skip — which rolls right to its
 	 * place and pushes the name `push` px aside as it goes; the other choices roll in from the row's left edge behind it.
-	 * Each marble turns by the distance it rolls and ends upright, and all of them stop at the same moment. `extras`
-	 * show once the marbles are in. `stop` ends all of it at once and leaves the row as it is drawn.
+	 * Each choice turns by the distance it rolls and ends upright, and all of them stop at the same moment. `extras`
+	 * show once the choices are in. `stop` ends all of it at once and leaves the row as it is drawn.
 	 */
 	rollChoices(choices: readonly HTMLElement[], extras: readonly HTMLElement[], name: HTMLElement | null, push: number, origin: DOMRect | null): { stop(): void } {
 		const running: Animation[] = [];
@@ -103,7 +103,7 @@ export class Motion {
 		const settle = () => {
 			for (const element of [...choices, ...extras, ...(name ? [name] : [])]) element.style.removeProperty("transform");
 			for (const element of [...choices, ...extras]) element.style.removeProperty("visibility");
-			for (const choice of choices) choice.querySelector<HTMLElement>(".th-choice-sign")?.style.removeProperty("transform");
+			for (const choice of choices) choice.querySelector<HTMLElement>(".th-mark")?.style.removeProperty("transform");
 		};
 		const stop = () => {
 			stopped = true;
@@ -122,7 +122,7 @@ export class Motion {
 			const centre = box.left + box.width / 2;
 			const from = choice === skip ? origin.left + origin.width / 2 - centre : -(centre - left + size / 2 + OFF_EDGE);
 			const order = choices.length - 2 - index;
-			return { choice, sign: choice.querySelector<HTMLElement>(".th-choice-sign"), from, enter: choice === skip ? 0 : FIRST_IN_MS + order * NEXT_IN_MS };
+			return { choice, sign: choice.querySelector<HTMLElement>(".th-mark"), from, enter: choice === skip ? 0 : FIRST_IN_MS + order * NEXT_IN_MS };
 		});
 		const out = (t: number) => 1 - (1 - t) ** 3;
 		const place = (roller: (typeof rollers)[number], offset: number) => {

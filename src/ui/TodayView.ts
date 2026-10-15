@@ -623,10 +623,10 @@ export class TodayView extends ItemView {
 	}
 
 	/**
-	 * The answers in the row, as marbles with a sign and no words: cancel where the circle was, under the finger, then
-	 * full in the habit's color, tiny tinted with it, and skip in grey. The name moves aside to make room, and a long one
-	 * runs off the row. They arrive rolling: the circle fills into the skip marble, which rolls right and pushes the name,
-	 * and the others roll in from the left behind it; all of them stop at once. A tap anywhere else brings the row back.
+	 * The answers in the row, each drawn as the circle will look once it is chosen — full, tiny, skip — with no words, and
+	 * cancel where the circle was, under the finger. The name moves aside to make room, and a long one runs off the row.
+	 * They arrive rolling: the circle becomes skip, which rolls right and pushes the name, and the others roll in from
+	 * the left behind it; all of them stop at once. A tap anywhere else brings the row back.
 	 */
 	private renderChoices(main: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
 		const labels = this.ui.labels();
@@ -634,16 +634,17 @@ export class TodayView extends ItemView {
 		const chosen = (kind: "full" | "tiny") => mark?.kind === kind && isOffTrigger(mark) === offTrigger;
 		const origin = main.querySelector<HTMLElement>(".th-mark")?.getBoundingClientRect() ?? null;
 		const bar = main.createDiv("th-row-choices");
-		const marble = (cls: string, label: string, sign: "x" | "check" | "minus", selected: boolean) => {
-			const button = bar.createEl("button", { cls: ["th-choice", cls], attr: { "aria-label": label, title: label, "aria-pressed": String(selected) } });
-			icon(button.createSpan("th-choice-ball").createSpan("th-choice-sign"), sign);
+		const marble = (label: string, look: string[], sign: "x" | "check" | null) => {
+			const button = bar.createEl("button", { cls: "th-choice", attr: { "aria-label": label, title: label } });
+			const face = button.createSpan("th-choice-ball").createSpan({ cls: ["th-mark", ...look] });
+			if (sign) icon(face, sign);
 			return button;
 		};
-		const cancel = marble("is-cancel", "Cancel", "x", false);
-		cancel.removeAttribute("aria-pressed");
+		const cancel = marble("Cancel", ["th-choice-cancel"], "x");
 		cancel.addEventListener("click", () => this.closeChoices());
-		const option = (answer: Answer, label: string, cls: string, sign: "check" | "minus", selected: boolean) => {
-			const button = marble(cls, label, sign, selected);
+		const option = (answer: Answer, label: string, look: string[], sign: "check" | null, selected: boolean) => {
+			const button = marble(label, look, sign);
+			button.setAttr("aria-pressed", String(selected));
 			button.addEventListener("click", (event) => {
 				this.unfolding?.stop();
 				this.unfolding = null;
@@ -652,9 +653,9 @@ export class TodayView extends ItemView {
 				void this.choose(path, answer, mark, event);
 			});
 		};
-		if (habit.hasFull) option("full", labels.title("full"), "is-full", "check", chosen("full"));
-		if (habit.hasTiny) option("tiny", labels.title("tiny"), "is-tiny", "check", chosen("tiny"));
-		option("skip", "Skip", "is-skip", "minus", mark?.kind === "missed");
+		if (habit.hasFull) option("full", labels.title("full"), habit.hasTiny ? ["is-done", "is-more"] : ["is-done"], "check", chosen("full"));
+		if (habit.hasTiny) option("tiny", labels.title("tiny"), ["is-done"], "check", chosen("tiny"));
+		option("skip", "Skip", ["is-missed"], null, mark?.kind === "missed");
 		if (this.canGoOffTrigger(habit)) {
 			const toggle = bar.createEl("button", { cls: "th-choices-toggle", attr: { "aria-pressed": String(this.offTrigger), "aria-label": "Not at trigger", title: "Not at trigger" } });
 			setIcon(toggle, "unlink");
