@@ -12,16 +12,16 @@ const PUSH_MS = 380;
 const GROW_MS = 300;
 const BUMP_MS = 420;
 /** The circle filling into a marble, and the marble rolling across the row and out of it. */
-const FILL_MS = 120;
-const PULL_MS = 520;
-const REVEAL_MS = 180;
+const FILL_MS = 80;
+const PULL_MS = 340;
+const REVEAL_MS = 140;
 const REFOLD_MS = 220;
 /**
  * The liquid the marble pulls the buttons out of: shapes are blurred and cut sharp again, so two close shapes melt
- * together. A neck thicker than NECK_MIN survives the cut; thinner, it breaks.
+ * together, then painted one flat color. A neck thicker than NECK_MIN survives the cut; thinner, it breaks.
  */
 const LIQUID_BLUR = 5;
-const LIQUID_CUT = "1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 30 -14";
+const LIQUID_CUT = "0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 30 -14";
 const NECK = 11;
 const NECK_MIN = 4;
 /** How far behind the marble's centre a button's end trails, and how far past the button the neck holds before it breaks. */
@@ -139,39 +139,51 @@ export class Motion {
 		});
 		for (const element of hidden) element.style.visibility = "hidden";
 
-		stage = surface.createDiv("th-pull");
-		const id = `th-liquid-${++liquids}`;
-		const filter = stage.createSvg("svg", { cls: "th-pull-defs", attr: { "aria-hidden": "true" } }).createSvg("defs").createSvg("filter", { attr: { id } });
-		filter.createSvg("feGaussianBlur", { attr: { in: "SourceGraphic", stdDeviation: String(LIQUID_BLUR) } });
-		filter.createSvg("feColorMatrix", { attr: { mode: "matrix", values: LIQUID_CUT } });
-		const liquid = stage.createDiv("th-pull-liquid");
-		liquid.style.filter = `url(#${id})`;
+		const host = surface.createDiv("th-pull");
+		stage = host;
+		const defs = host.createSvg("svg", { cls: "th-pull-defs", attr: { "aria-hidden": "true" } }).createSvg("defs");
 		const place = (blob: HTMLElement, left: number, top: number, width: number, height: number) =>
 			blob.setCssProps({ left: `${left}px`, top: `${top}px`, width: `${Math.max(0, width)}px`, height: `${Math.max(0, height)}px` });
 		const drop = (blob: HTMLElement) => place(blob, 0, 0, 0, 0);
-		// Under the marble the liquid is a touch larger, so after the cut it is just the marble's size and a neck meets its edge.
-		const under = size + 4;
-		const ball = liquid.createDiv("th-pull-blob");
-		place(ball, start - under / 2, cy - under / 2, under, under);
-		ball.style.opacity = "0";
-		const habit = getComputedStyle(ball).backgroundColor;
-		const marble = stage.createDiv("th-marble is-rolling");
-		marble.setCssProps({ left: `${start - size / 2}px`, top: `${cy - size / 2}px`, width: `${size}px`, height: `${size}px`, background: habit });
-		const spin = marble.createDiv("th-marble-spin");
+		// Under the marble the liquid is the marble's size, so a neck meets its edge and none of it shows around the marble.
+		const under = size;
+		// Each button is pulled in its own color: one pool of liquid per color, each with a drop under the marble for its necks to hold on to.
+		const pools = new Map<string, { liquid: HTMLElement; ball: HTMLElement }>();
+		const pool = (color: string) => {
+			const found = pools.get(color);
+			if (found) return found;
+			const id = `th-liquid-${++liquids}`;
+			const filter = defs.createSvg("filter", { attr: { id } });
+			filter.createSvg("feGaussianBlur", { attr: { in: "SourceGraphic", stdDeviation: String(LIQUID_BLUR), result: "blur" } });
+			filter.createSvg("feColorMatrix", { attr: { in: "blur", mode: "matrix", values: LIQUID_CUT, result: "cut" } });
+			filter.createSvg("feFlood", { attr: { "flood-color": color, result: "paint" } });
+			filter.createSvg("feComposite", { attr: { in: "paint", in2: "cut", operator: "in" } });
+			const liquid = host.createDiv("th-pull-liquid");
+			liquid.style.filter = `url(#${id})`;
+			const ball = liquid.createDiv("th-pull-blob");
+			drop(ball);
+			const made = { liquid, ball };
+			pools.set(color, made);
+			return made;
+		};
 		const pulled = buttons.map((button) => {
+			const { liquid } = pool(button.color);
 			const body = liquid.createDiv("th-pull-blob");
 			const neck = liquid.createDiv("th-pull-blob");
 			drop(body);
 			drop(neck);
 			return { ...button, body, neck, done: false };
 		});
+		const marble = host.createDiv("th-marble is-rolling");
+		const habit = getComputedStyle(marble).getPropertyValue("--th-habit").trim() || colors[0];
+		marble.setCssProps({ left: `${start - size / 2}px`, top: `${cy - size / 2}px`, width: `${size}px`, height: `${size}px`, background: habit });
+		const spin = marble.createDiv("th-marble-spin");
 		const reveal = (button: (typeof pulled)[number]) => {
 			button.done = true;
 			button.body.remove();
 			button.neck.remove();
 			button.choice.style.visibility = "";
-			play(button.choice, [{ backgroundColor: habit }, { backgroundColor: button.color }], { duration: REVEAL_MS });
-			for (const child of Array.from(button.choice.children)) if (child instanceof HTMLElement) play(child, [{ opacity: 0 }, { opacity: 1 }], { duration: REVEAL_MS * 0.8 });
+			for (const child of Array.from(button.choice.children)) if (child instanceof HTMLElement) play(child, [{ opacity: 0 }, { opacity: 1 }], { duration: REVEAL_MS });
 		};
 		const trail = size / 2 + TRAIL;
 		const end = area.width + under;
@@ -181,7 +193,7 @@ export class Motion {
 			if (stopped) return;
 			const t = Math.min(1, (now - begun) / PULL_MS);
 			const x = start + (end - start) * kick(t);
-			place(ball, x - under / 2, cy - under / 2, under, under);
+			for (const { ball } of pools.values()) place(ball, x - under / 2, cy - under / 2, under, under);
 			marble.style.transform = `translateX(${x - start}px)`;
 			spin.style.transform = `rotate(${((x - start) / (Math.PI * size)) * 360}deg)`;
 			for (const button of pulled) {
@@ -214,7 +226,6 @@ export class Motion {
 		play(marble, [{ transform: "scale(0.25)" }, { transform: "scale(1.1)", offset: 0.65 }, { transform: "none" }], { duration: FILL_MS, easing: SETTLE }).finished.then(
 			() => {
 				if (stopped) return;
-				ball.style.opacity = "";
 				frame = requestAnimationFrame((now) => roll(now)(now));
 			},
 			() => undefined,
