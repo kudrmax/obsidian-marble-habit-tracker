@@ -17,6 +17,7 @@ import { HelpModal } from "./HelpModal";
 import { Hsl, parseColor } from "./jar/color";
 import { JarCanvas, JarItem } from "./jar/JarCanvas";
 import { KeyboardWatch } from "./KeyboardWatch";
+import { LEAVE_MS, Motion, Slide } from "./Motion";
 import { Point } from "./jar/JarPhysics";
 import { IN_HAND, TiltSensor } from "./jar/TiltSensor";
 import { Placement, arrange, groupBySection, visibleEntries } from "./order";
@@ -53,7 +54,6 @@ export class TodayView extends ItemView {
 	/** A redraw was asked for while a row was being dragged; it runs on drop. */
 	private stale = false;
 	private menu: string | null = null;
-	/** The "?" in the view's header; it carries a dot until the help was opened once. */
 	/** In the open menu, the next tiny or full answer is marked as done without the anchor. */
 	private offTrigger = false;
 	private asking: string | null = null;
@@ -78,6 +78,15 @@ export class TodayView extends ItemView {
 	private readonly origins = new Map<string, { point: Point; at: number }>();
 	private readonly colors = new Map<string, Hsl>();
 	private readonly haptics = new Haptics(() => this.ui.settings().haptics);
+	private readonly motion = new Motion(() => this.ui.settings().reduceMotion);
+	/** Rows just answered, with when: they stay in the list until they have folded away. */
+	private readonly leaving = new Map<string, number>();
+	/** How the next redraw arrives: from an earlier or later day, or into and out of All habits. */
+	private slide: Slide | null = null;
+	/** The card just opened, to grow its recipe in once. */
+	private opening: string | null = null;
+	private menuOpening = false;
+	private lastProgress: { day: string; value: number } | null = null;
 	private readonly tilt = new TiltSensor((gravity) => this.jar?.setGravity(gravity));
 
 	constructor(
@@ -190,6 +199,8 @@ export class TodayView extends ItemView {
 		}
 		if (this.screen === "all") {
 			this.renderAll(column, all);
+			this.renderFooter(column, false);
+			this.playMotion(column);
 			return;
 		}
 		const today = this.shownDay();
@@ -205,7 +216,11 @@ export class TodayView extends ItemView {
 
 		const hideDone = this.ui.settings().hideDone;
 		const folded = (entry: Extract<HabitEntry, { kind: "ok" }>) =>
-			entry.habit.markOn(today) !== undefined && this.menu !== entry.path && this.asking !== entry.path && this.shrink !== entry.path;
+			entry.habit.markOn(today) !== undefined &&
+			this.menu !== entry.path &&
+			this.asking !== entry.path &&
+			this.shrink !== entry.path &&
+			!this.leaving.has(entry.path);
 		const shown = habits.filter((entry) => !hideDone || this.showDone || !folded(entry));
 		const sections = groupBySection(
 			all.flatMap((entry) => (entry.kind === "ok" ? [entry] : [])),
@@ -219,10 +234,30 @@ export class TodayView extends ItemView {
 		}
 		for (const entry of entries) if (entry.kind === "broken") this.renderBroken(column, entry);
 		this.renderNewSection(column);
+		this.renderFooter(column, true);
 		this.shownRows = this.renderingRows;
+		this.playMotion(column);
+	}
+
+	/** Starts what moves after a redraw: rows folding away, a new day or screen sliding in, a recipe growing open. */
+	private playMotion(column: HTMLElement): void {
+		for (const [path, since] of this.leaving) {
+			const row = column.querySelector<HTMLElement>(`.th-row[data-drag="${CSS.escape(path)}"]`);
+			if (row) this.motion.leave(row, since);
+		}
+		if (this.slide) {
+			this.motion.slide([...column.children].filter((child): child is HTMLElement => child instanceof HTMLElement), this.slide);
+			this.slide = null;
+		}
+		if (this.opening) {
+			const recipe = column.querySelector<HTMLElement>(".th-row.is-expanded .th-card-recipe");
+			if (recipe) this.motion.grow(recipe);
+			this.opening = null;
+		}
 	}
 
 	showAll(): void {
+		this.slide = this.screen === "all" ? null : "push";
 		this.screen = "all";
 		this.menu = null;
 		this.asking = null;
@@ -231,6 +266,7 @@ export class TodayView extends ItemView {
 	}
 
 	private showToday(): void {
+		this.slide = "pop";
 		this.screen = "today";
 		this.wasClosed = null;
 		this.render();
@@ -238,9 +274,7 @@ export class TodayView extends ItemView {
 
 	/** Every habit by section, with its days and wins; archived ones fold away at the bottom. */
 	private renderAll(column: HTMLElement, visible: readonly HabitEntry[]): void {
-		const bar = this.renderToolbar(column, false);
-		const back = bar.createEl("button", { cls: "th-back" });
-		bar.prepend(back);
+		const back = column.createDiv("th-back-nav").createEl("button", { cls: "th-back" });
 		setIcon(back.createSpan("th-back-icon"), "chevron-left");
 		back.appendText("Today");
 		back.addEventListener("click", () => this.showToday());
@@ -288,13 +322,21 @@ export class TodayView extends ItemView {
 		text.createDiv({ cls: "th-row-title", text: habit.name });
 		if (options.sub) text.createDiv({ cls: "th-row-sub", text: options.sub });
 		text.setAttribute("aria-expanded", String(this.expanded === path));
-		text.addEventListener("click", () => {
-			this.expanded = this.expanded === path ? null : path;
-			this.render();
-		});
+		row.toggleClass("is-expanded", this.expanded === path);
+		text.addEventListener("click", () => void this.toggleRecipe(path));
 		options.side?.(main);
 		if (this.expanded === path) this.renderRecipe(row, path, habit);
 		return row;
+	}
+
+	/** Opens a card's recipe, or folds the open one away first; one card is open at a time. */
+	private async toggleRecipe(path: string): Promise<void> {
+		const open = this.columnEl.querySelector<HTMLElement>(".th-row.is-expanded .th-card-recipe");
+		if (open) await this.motion.fold(open);
+		const closing = this.expanded === path;
+		this.expanded = closing ? null : path;
+		this.opening = closing ? null : path;
+		this.render();
 	}
 
 	/** The day Today shows: today, or a past day picked with the arrows. */
@@ -308,7 +350,6 @@ export class TodayView extends ItemView {
 		const today = this.ui.service.today();
 		const shown = this.shownDay();
 		const isToday = shown.equals(today);
-		this.renderToolbar(column, true);
 		const head = column.createDiv("th-head");
 		const line = head.createDiv("th-head-line");
 		line.createEl("h1", { cls: "th-title", text: dayTitle(shown, today) });
@@ -327,7 +368,14 @@ export class TodayView extends ItemView {
 		const sub = head.createDiv("th-head-sub");
 		this.renderFolded(sub, answered);
 		if (this.ui.settings().showWins) sub.createSpan({ cls: "th-head-wins", text: winsLabel(totalWins(all)) });
-		if (progress !== null) head.createDiv("th-progress").createDiv("th-progress-fill").setCssProps({ width: `${progress * 100}%` });
+		if (progress === null) {
+			this.lastProgress = null;
+			return;
+		}
+		const fill = head.createDiv("th-progress").createDiv("th-progress-fill");
+		const key = String(shown);
+		this.motion.progress(fill, this.lastProgress?.day === key ? this.lastProgress.value : null, progress);
+		this.lastProgress = { day: key, value: progress };
 	}
 
 	/** A closed day: a ring with an arc per habit, done in its color and skipped in grey. */
@@ -387,6 +435,8 @@ export class TodayView extends ItemView {
 	}
 
 	private showDay(day: LocalDate): void {
+		this.slide = day.isBefore(this.shownDay()) ? "earlier" : "later";
+		this.leaving.clear();
 		this.day = day.isBefore(this.ui.service.today()) ? day : null;
 		this.menu = null;
 		this.asking = null;
@@ -436,22 +486,31 @@ export class TodayView extends ItemView {
 
 
 
-	/** The screen's own buttons, above its title: Obsidian's header stays Obsidian's. */
-	private renderToolbar(column: HTMLElement, withList: boolean): HTMLElement {
-		const bar = column.createDiv("th-toolbar");
-		const actions = bar.createDiv("th-toolbar-actions");
-		if (withList) iconButton(actions, { icon: "list", label: "All habits", onClick: () => this.showAll() });
-		const help = iconButton(actions, {
-			icon: "help",
-			label: "How it works",
-			onClick: () => {
-				new HelpModal(this.app, helpRows(Platform.isMobile, this.ui.settings().merge)).open();
-				this.ui.markHintsSeen();
-			},
+	/**
+	 * The end of the list, as in Reminders: a row to add a habit, then the rarely used places — All habits and the help —
+	 * as rows that lead on. Obsidian's header stays Obsidian's.
+	 */
+	private renderFooter(column: HTMLElement, onToday: boolean): void {
+		const footer = column.createDiv("th-footer");
+		const add = footer.createEl("button", { cls: "th-footer-add" });
+		setIcon(add.createSpan("th-footer-add-icon"), "plus");
+		add.appendText("New habit");
+		add.addEventListener("click", () => this.ui.newHabit());
+		const links = footer.createDiv("th-footer-links");
+		const link = (text: string, iconName: string, onClick: () => void) => {
+			const button = links.createEl("button", { cls: "th-footer-link" });
+			setIcon(button.createSpan("th-footer-link-icon"), iconName);
+			button.createSpan({ cls: "th-footer-link-text", text });
+			setIcon(button.createSpan("th-footer-chevron"), "chevron-right");
+			button.addEventListener("click", onClick);
+			return button;
+		};
+		if (onToday) link("All habits", "list", () => this.showAll());
+		const help = link("How it works", "circle-help", () => {
+			new HelpModal(this.app, helpRows(Platform.isMobile, this.ui.settings().merge)).open();
+			this.ui.markHintsSeen();
 		});
 		help.toggleClass("th-has-dot", !this.ui.settings().hintsSeen);
-		iconButton(actions, { icon: "plus", label: "New habit", onClick: () => this.ui.newHabit() });
-		return bar;
 	}
 
 	private renderEmpty(column: HTMLElement): void {
@@ -482,15 +541,9 @@ export class TodayView extends ItemView {
 		const row = this.renderCard(column, path, habit, {
 			dimmed: mark !== undefined,
 			attrs: { "data-slot": "row", "data-drag": path, "data-section": habit.section ?? "" },
-			side: (main) => {
-				if (this.menu === path && this.canGoOffTrigger(habit)) {
-					const stack = main.createDiv("th-answer-stack");
-					this.renderAnswers(stack, path, habit, mark);
-					this.renderOffTrigger(stack);
-				} else if (this.menu === path) this.renderAnswers(main, path, habit, mark);
-				else this.renderMark(main, path, habit, mark);
-			},
+			side: (main) => this.renderMark(main, path, habit, mark),
 		});
+		if (this.menu === path) this.renderMenu(row, path, habit, mark);
 		row.toggleClass("is-new", !this.shownRows.has(path));
 		this.renderingRows.add(path);
 		if (this.asking === path) this.renderReasons(row, path);
@@ -555,35 +608,35 @@ export class TodayView extends ItemView {
 		});
 	}
 
-	/** Skipped, full and — when the habit has a tiny version — tiny. */
-	private renderAnswers(parent: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
-		const answers = parent.createDiv("th-answers");
-		const option = (answer: Answer, label: string, iconName: "x" | "spark" | "check", selected: boolean) => {
-			const button = answers.createEl("button", { cls: ["th-answer", `th-answer-${answer}`], attr: { title: label } });
-			button.createSpan({ cls: "th-sr-only", text: label });
-			button.toggleClass("is-selected", selected);
-			icon(button.createSpan("th-answer-circle"), iconName);
-			button.addEventListener("click", (event) => void this.choose(path, answer, mark, event));
-		};
-		const offTrigger = this.offTrigger && this.canGoOffTrigger(habit);
-		answers.toggleClass("is-off-trigger", offTrigger);
-		const chosen = (kind: "full" | "tiny") => mark?.kind === kind && isOffTrigger(mark) === offTrigger;
-		option("skip", "Skipped", "x", mark?.kind === "missed");
+	/** The answers in a menu under the circle, like an iOS pull-down menu: tiny, full and skipped, then "Not at trigger". */
+	private renderMenu(row: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
+		row.addClass("has-menu");
+		const menu = row.createDiv({ cls: "th-menu", attr: { role: "menu" } });
 		const labels = this.ui.labels();
-		option("full", labels.title("full"), "spark", chosen("full"));
-		if (habit.hasTiny) option("tiny", labels.title("tiny"), "check", chosen("tiny"));
-	}
-
-	/** A switch under the answer circles: the tiny or full answer picked next counts as done without the anchor. */
-	private renderOffTrigger(parent: HTMLElement): void {
-		const chip = parent.createEl("button", { cls: "th-chip th-off-trigger", attr: { "aria-pressed": String(this.offTrigger) } });
-		chip.toggleClass("is-on", this.offTrigger);
-		icon(chip.createSpan("th-off-trigger-icon"), "unlink");
-		chip.createSpan({ text: "Not at trigger" });
-		chip.addEventListener("click", () => {
-			this.offTrigger = !this.offTrigger;
-			this.render();
-		});
+		const offTrigger = this.offTrigger && this.canGoOffTrigger(habit);
+		const chosen = (kind: "full" | "tiny") => mark?.kind === kind && isOffTrigger(mark) === offTrigger;
+		const item = (text: string, iconName: "x" | "spark" | "check" | "unlink", cls: string, selected: boolean, onClick: (event: MouseEvent) => void) => {
+			const button = menu.createEl("button", { cls: ["th-menu-item", cls], attr: { role: "menuitem" } });
+			button.toggleClass("is-selected", selected);
+			icon(button.createSpan("th-menu-check"), "check");
+			button.createSpan({ cls: "th-menu-text", text });
+			icon(button.createSpan("th-menu-icon"), iconName);
+			button.addEventListener("click", onClick);
+		};
+		if (habit.hasTiny) item(labels.title("tiny"), "check", "is-tiny", chosen("tiny"), (event) => void this.choose(path, "tiny", mark, event));
+		item(labels.title("full"), "spark", "is-full", chosen("full"), (event) => void this.choose(path, "full", mark, event));
+		item("Skipped", "x", "is-skip", mark?.kind === "missed", (event) => void this.choose(path, "skip", mark, event));
+		if (this.canGoOffTrigger(habit)) {
+			menu.createDiv("th-menu-gap");
+			item("Not at trigger", "unlink", "is-toggle", this.offTrigger, () => {
+				this.offTrigger = !this.offTrigger;
+				this.render();
+			});
+		}
+		if (this.menuOpening) {
+			this.motion.pop(menu);
+			this.menuOpening = false;
+		}
 	}
 
 	private renderReasons(row: HTMLElement, path: string): void {
@@ -630,6 +683,8 @@ export class TodayView extends ItemView {
 	private showMenu(path: string): void {
 		if (this.menu === path) return;
 		this.menu = path;
+		this.menuOpening = true;
+		this.haptics.tap();
 		const entry = this.ui.repository.get(path);
 		this.offTrigger = entry?.kind === "ok" && isOffTrigger(entry.habit.markOn(this.shownDay()));
 		this.render();
@@ -639,7 +694,7 @@ export class TodayView extends ItemView {
 	private closeMenuOutside(event: MouseEvent): void {
 		if (!this.menu && !this.asking) return;
 		const target = event.target as HTMLElement | null;
-		if (target?.closest(".th-answers, .th-mark-button, .th-off-trigger, .th-row-extra")) return;
+		if (target?.closest(".th-menu, .th-mark-button, .th-row-extra")) return;
 		this.menu = null;
 		this.asking = null;
 		this.other = null;
@@ -653,7 +708,7 @@ export class TodayView extends ItemView {
 		const same = (answer === "skip" && current?.kind === "missed") || (answer !== "skip" && current?.kind === answer && isOffTrigger(current) === offTrigger);
 		if (same) return this.answer(path, undefined);
 		if (answer === "skip") {
-			await this.answer(path, SKIPPED);
+			await this.answer(path, SKIPPED, undefined, false);
 			this.asking = path;
 			this.render();
 			return;
@@ -661,7 +716,7 @@ export class TodayView extends ItemView {
 		return this.answer(path, done(answer, offTrigger), event);
 	}
 
-	private async answer(path: string, mark: DayMark | undefined, event?: MouseEvent): Promise<void> {
+	private async answer(path: string, mark: DayMark | undefined, event?: MouseEvent, leave = true): Promise<void> {
 		if (!isDone(mark)) this.origins.delete(path);
 		const target = event?.currentTarget as HTMLElement | null | undefined;
 		if (target && isDone(mark)) {
@@ -675,6 +730,8 @@ export class TodayView extends ItemView {
 			this.other = null;
 			this.otherText = "";
 			this.shrink = mark && offersShrink(habit, mark, this.ui.settings().redesignThreshold, this.ui.settings().shrinkReason) ? path : null;
+			if (mark && leave && this.ui.settings().hideDone && !this.showDone) this.startLeaving(path);
+			else this.leaving.delete(path);
 			if (mark && isDone(mark)) {
 				this.haptics.tap();
 				this.celebrate(path);
@@ -686,6 +743,17 @@ export class TodayView extends ItemView {
 			new Notice(error instanceof Error ? error.message : String(error));
 		}
 		this.render();
+	}
+
+	/** The answered row stays while its circle fills, then folds into the done line. */
+	private startLeaving(path: string): void {
+		const since = Date.now();
+		this.leaving.set(path, since);
+		window.setTimeout(() => {
+			if (this.leaving.get(path) !== since) return;
+			this.leaving.delete(path);
+			this.render();
+		}, LEAVE_MS);
 	}
 
 	private celebrate(path: string): void {

@@ -44,7 +44,6 @@ body {
 .th-color-pink { --th-habit: var(--color-pink); }
 
 @keyframes th-pop { 0% { transform: scale(0.4); } 55% { transform: scale(1.2); } 100% { transform: scale(1); } }
-@keyframes th-fan { from { opacity: 0; transform: translateX(24px) scale(0.5); } to { opacity: 1; transform: none; } }
 @keyframes th-arc { from { stroke-dasharray: 0 var(--th-arc) var(--th-rest) 0; } to { stroke-dasharray: var(--th-arc) 0 var(--th-rest) 0; } }
 @keyframes th-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 
@@ -156,35 +155,8 @@ button.th-mark-button:hover { background: transparent; }
 .tiny-habits button, .th-sheet button { -webkit-tap-highlight-color: transparent; }
 .is-mobile .tiny-habits button:focus-visible, .is-mobile .th-sheet button:focus-visible, button.th-mark-button:focus-visible { box-shadow: none; outline: none; }
 
-.th-answers { display: flex; gap: 0; flex: 0 0 auto; margin-right: -4px; }
-button.th-answer {
-	box-sizing: border-box;
-	width: calc(var(--th-mark) + 8px);
-	height: var(--th-answer);
-	min-height: 0;
-	padding: 0;
-	border: none;
-	box-shadow: none;
-	background: transparent;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	cursor: pointer;
-	animation: th-fan 240ms var(--th-ease-pop) backwards;
-}
-button.th-answer:hover { background: transparent; }
-.th-answer-circle { box-sizing: border-box; width: var(--th-mark); height: var(--th-mark); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-.th-answer-circle svg { width: 14px; height: 14px; }
-button.th-answer:nth-child(2) { animation-delay: 60ms; }
-button.th-answer:nth-child(3) { animation-delay: 120ms; }
-.th-answer-skip .th-answer-circle { border: 1.5px solid var(--th-line); color: var(--th-muted); }
-.th-answer-skip.is-selected .th-answer-circle { border-color: var(--th-faint); background: var(--th-faint); color: var(--th-bg); }
-.th-answer-full .th-answer-circle { border: 1.5px solid color-mix(in srgb, var(--th-habit) 50%, transparent); color: var(--th-habit); }
-.th-answer-full.is-selected .th-answer-circle { border-color: var(--th-habit); background: var(--th-habit); color: #ffffff; }
-.th-answer-tiny .th-answer-circle { background: var(--th-habit); color: #ffffff; }
-
 /* Obsidian 1.14 draws buttons as squircles; every circle here stays a circle. */
-.tiny-habits button, .tiny-habits .th-mark, .th-answer-circle, .th-sheet button.th-day, .th-sheet button.th-swatch { corner-shape: round; }
+.tiny-habits button, .tiny-habits .th-mark, .th-sheet button.th-day, .th-sheet button.th-swatch { corner-shape: round; }
 
 /* Fields */
 .th-field { display: block; padding: 6px 0 10px; }
@@ -269,13 +241,11 @@ button.th-fold[aria-expanded="true"] .th-meta-chevron { transform: rotate(90deg)
 .th-ring-sub { margin-top: 6px; font-size: 14px; color: var(--th-muted); }
 button.th-back { display: inline-flex; align-items: center; gap: 2px; padding: 4px 8px 4px 0; margin-left: -4px; color: var(--th-muted); }
 button.th-back svg { width: 18px; height: 18px; }
-.th-toolbar { display: flex; align-items: center; height: var(--th-button); }
-.th-toolbar-actions { display: flex; margin: 0 -12px 0 auto; }
+.th-back-nav { padding-top: 6px; }
 .th-back-icon { display: inline-flex; }
-.th-toolbar + .th-head { padding-top: 0; }
+.th-back-nav + .th-head { padding-top: 2px; }
 button.th-archived-toggle { display: inline-flex; align-items: center; gap: 8px; margin: 12px 0 10px; padding: 0; color: var(--th-muted); }
-button.th-button.th-has-dot { position: relative; }
-button.th-button.th-has-dot::after { content: ""; position: absolute; top: 9px; right: 9px; width: 7px; height: 7px; border-radius: 50%; background: var(--interactive-accent); pointer-events: none; }
+button.th-footer-link.th-has-dot .th-footer-link-text::after { content: ""; display: inline-block; vertical-align: middle; margin-left: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--interactive-accent); pointer-events: none; }
 .th-progress { height: var(--th-progress); margin-top: 14px; border-radius: var(--th-progress); background: var(--th-line); overflow: hidden; }
 .th-meta-chevron { display: inline-flex; color: var(--th-faint); transition: transform 150ms ease; }
 .th-meta-chevron svg { width: 14px; height: 14px; }
@@ -411,8 +381,8 @@ button.th-style-tile.is-selected { border-color: var(--interactive-accent); }
 .th-habit-panel .th-history-date { color: var(--text-muted); font-size: inherit; padding-top: 0; }
 
 /* Fingers need bigger circles than a mouse: on phones the mark and the three answers grow together. */
-.is-mobile .tiny-habits { --th-mark: 40px; }
-.is-mobile .th-mark svg, .is-mobile .th-answer-circle svg { width: 18px; height: 18px; }
+.is-mobile .tiny-habits { --th-mark: 24px; }
+.is-mobile .th-mark svg { width: 13px; height: 13px; }
 
 /* Screen corner calibration: a band along the screen edge that is equally thin everywhere when the radius is right. */
 .th-calibration { position: fixed; inset: 0; z-index: 10000; background: var(--color-yellow); }
@@ -466,18 +436,6 @@ button.th-disclosure[aria-expanded="true"] .th-disclosure-icon { transform: rota
 .th-segmented button { height: auto; padding: 6px 14px; border: none; box-shadow: none; background: transparent; color: var(--text-muted); font-size: var(--font-ui-small); }
 .th-segmented button.is-selected { background: var(--interactive-normal); color: var(--text-normal); box-shadow: var(--input-shadow); }
 
-/* Not at trigger: a switch under an open menu; while it's on, the tiny and full circles turn dashed. */
-.th-answer-stack { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: 0 0 auto; margin-right: -4px; padding: 8px 0; }
-.th-answer-stack .th-answers { margin-right: 0; }
-.th-answer-stack .th-off-trigger { margin-right: 4px; }
-button.th-chip.th-off-trigger { display: inline-flex; align-items: center; gap: 6px; height: 30px; font-size: var(--th-small-size); color: var(--th-muted); }
-button.th-chip.th-off-trigger.is-on { border-color: var(--th-habit); background: color-mix(in srgb, var(--th-habit) 14%, transparent); color: var(--th-text); }
-.th-off-trigger-icon { display: inline-flex; }
-.th-off-trigger-icon svg { width: 14px; height: 14px; }
-.th-answers.is-off-trigger .th-answer-full .th-answer-circle,
-.th-answers.is-off-trigger .th-answer-tiny .th-answer-circle { border: 1.5px dashed var(--th-habit); }
-.th-answers.is-off-trigger .th-answer-tiny:not(.is-selected) .th-answer-circle { background: transparent; color: var(--th-habit); }
-.th-answers.is-off-trigger .is-selected .th-answer-circle { background: var(--th-habit); color: #ffffff; }
 .th-check { display: flex; align-items: center; gap: 8px; padding: 0 0 12px; font-size: var(--th-small-size); color: var(--th-muted); }
 
 .th-probe { display: none; }
@@ -490,3 +448,95 @@ button.th-card-open { grid-column: 1 / -1; justify-self: start; display: inline-
 .th-card-open-icon { display: inline-flex; }
 .th-card-open-icon svg { width: 15px; height: 15px; }
 .th-row-text { cursor: pointer; }
+
+/*
+ * Today on a phone follows iOS: the system font, Reminders' plain list (hairlines from the text to the screen edge,
+ * 17/22 text, small circles with a 44 pt target), a row that darkens under the finger, and a pull-down menu for answers.
+ */
+.is-mobile .tiny-habits, .is-mobile .th-menu { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-interface); }
+.is-mobile .tiny-habits { --th-title-size: 34px; --th-text-size: 17px; }
+.is-mobile .th-title { line-height: 41px; letter-spacing: 0.01em; }
+.is-mobile .th-head { padding: 0 0 8px; }
+.is-mobile .th-head-line { min-height: 44px; }
+.is-mobile button.th-head-step { width: 44px; height: 44px; border-radius: 22px; }
+.is-mobile button.th-head-step svg { width: 22px; height: 22px; }
+.is-mobile button.th-head-step:last-child { margin-right: -19px; }
+.is-mobile .th-head-sub { min-height: 20px; margin-top: 2px; font-size: 15px; line-height: 20px; }
+.is-mobile .th-progress { height: 4px; margin-top: 12px; }
+.is-mobile .th-group { padding: 24px 0 2px; font-size: 20px; line-height: 25px; font-weight: 700; color: var(--text-normal); }
+
+.th-mark { border-color: color-mix(in srgb, var(--text-normal) 32%, transparent); }
+.th-row { margin: 0 calc(-1 * var(--th-gutter)); padding-left: 0; }
+.th-row::before { left: var(--th-gutter); top: calc((var(--th-row-min) - 20px) / 2); bottom: auto; height: 20px; }
+.th-row-main { gap: 0; min-height: var(--th-row-min); padding: 0 calc(var(--th-gutter) - 10px) 0 calc(var(--th-gutter) + 14px); transition: background-color 120ms ease; }
+.is-mobile .th-row { --th-row-min: 44px; }
+.th-row + .th-row::after { content: ""; position: absolute; top: 0; left: calc(var(--th-gutter) + 14px); right: 0; height: 1px; transform: scaleY(0.5); transform-origin: top; background: var(--background-modifier-border); }
+.th-row-text { padding: 11px 0; }
+.th-row-title { line-height: 22px; font-weight: 400; letter-spacing: -0.01em; }
+.th-row-main:has(.th-row-text:active), .th-row.is-expanded .th-row-main { background: var(--background-modifier-hover); }
+.th-row.is-leaving { overflow: hidden; pointer-events: none; }
+button.th-mark-button { width: 44px; height: 44px; margin: 0; }
+button.th-mark-button:active .th-mark { transform: scale(0.86); transition: transform 90ms ease; }
+.th-card-recipe { margin: 0 var(--th-gutter) 10px calc(var(--th-gutter) + 14px); overflow: hidden; }
+.th-row-extra { padding: 0 var(--th-gutter) 14px calc(var(--th-gutter) + 14px); }
+
+/* Answers: a pull-down menu under the circle, as iOS opens one from a button. */
+.th-row.has-menu { z-index: 6; }
+.th-menu {
+	position: absolute;
+	top: calc(var(--th-row-min) - 4px);
+	right: calc(var(--th-gutter) - 4px);
+	z-index: 6;
+	width: 250px;
+	padding: 0;
+	border-radius: 13px;
+	overflow: hidden;
+	background: color-mix(in srgb, var(--background-secondary) 82%, transparent);
+	-webkit-backdrop-filter: blur(30px) saturate(1.6);
+	backdrop-filter: blur(30px) saturate(1.6);
+	box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35), 0 0 0 0.5px var(--background-modifier-border);
+	transform-origin: calc(100% - 26px) 0;
+}
+button.th-menu-item {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	height: 44px;
+	padding: 0 16px 0 12px;
+	border: none;
+	border-radius: 0;
+	box-shadow: none;
+	background: transparent;
+	color: var(--text-normal);
+	font-size: 17px;
+	text-align: left;
+	cursor: pointer;
+}
+button.th-menu-item + button.th-menu-item::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; transform: scaleY(0.5); background: var(--background-modifier-border); }
+button.th-menu-item:active, button.th-menu-item:hover { background: var(--background-modifier-hover); }
+.th-menu-check { display: inline-flex; width: 16px; color: var(--text-normal); visibility: hidden; }
+.th-menu-check svg { width: 15px; height: 15px; stroke-width: 2.6px; }
+button.th-menu-item.is-selected .th-menu-check { visibility: visible; }
+.th-menu-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.th-menu-icon { display: inline-flex; color: var(--th-habit); }
+.th-menu-icon svg { width: 19px; height: 19px; }
+button.th-menu-item.is-skip .th-menu-icon, button.th-menu-item.is-toggle .th-menu-icon { color: var(--text-muted); }
+.th-menu-gap { height: 8px; background: color-mix(in srgb, var(--background-primary) 55%, transparent); }
+
+/* The end of the list: "New habit" in the accent like Reminders' "New Reminder", then rows that lead on. */
+.th-footer { margin: 8px calc(-1 * var(--th-gutter)) 0; }
+button.th-footer-add, button.th-footer-link { display: flex; align-items: center; width: 100%; height: 44px; padding: 0 var(--th-gutter); border: none; border-radius: 0; box-shadow: none; background: transparent; font-size: var(--th-text-size); cursor: pointer; transition: background-color 120ms ease; }
+button.th-footer-add { gap: 12px; color: var(--text-accent); font-weight: 500; }
+.th-footer-add-icon { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; corner-shape: round; background: var(--interactive-accent); color: var(--text-on-accent); }
+.th-footer-add-icon svg { width: 16px; height: 16px; stroke-width: 3px; }
+.th-footer-links { margin-top: 24px; }
+button.th-footer-link { position: relative; gap: 12px; color: var(--text-normal); }
+button.th-footer-link + button.th-footer-link::before { content: ""; position: absolute; top: 0; left: calc(var(--th-gutter) + 36px); right: 0; height: 1px; transform: scaleY(0.5); transform-origin: top; background: var(--background-modifier-border); }
+.th-footer-link-icon { display: inline-flex; width: 24px; justify-content: center; color: var(--text-muted); }
+.th-footer-link-icon svg { width: 20px; height: 20px; }
+.th-footer-link-text { flex: 1; text-align: left; }
+.th-footer-chevron { display: inline-flex; color: var(--text-faint); margin-right: -4px; }
+.th-footer-chevron svg { width: 18px; height: 18px; }
+button.th-footer-add:active, button.th-footer-link:active { background: var(--background-modifier-hover); }
