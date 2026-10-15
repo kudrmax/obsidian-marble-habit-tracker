@@ -1,6 +1,6 @@
 {
   "name": "obsidian-marble-habit-tracker",
-  "version": "1.21.2",
+  "version": "1.22.0",
   "private": true,
   "main": "main.js",
   "scripts": {
