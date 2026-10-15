@@ -34,11 +34,6 @@ export function winsSince(entries: readonly HabitEntry[], today: LocalDate): str
 	return first.year === today.year ? `wins since ${month}` : `wins since ${month} ${first.year}`;
 }
 
-/** A full answer on a habit that has a tiny version is more than the habit asks: its circle gets a second ring. */
-export function isMore(habit: Habit, mark: DayMark | undefined): boolean {
-	return mark?.kind === "full" && habit.hasTiny;
-}
-
 export function winsLabel(count: number): string {
 	return count === 1 ? "1 win" : `${count} wins`;
 }

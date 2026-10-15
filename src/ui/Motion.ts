@@ -15,10 +15,10 @@ const BUMP_MS = 420;
  * The choices rolling into the row: the circle becomes skip, then every choice rolls the same span of time and all of
  * them stop together. The others set off one after another from the left edge, nearest to skip first.
  */
-const FILL_MS = 70;
-const ROLL_MS = 360;
-const FIRST_IN_MS = 70;
-const NEXT_IN_MS = 50;
+const FILL_MS = 50;
+const ROLL_MS = 280;
+const FIRST_IN_MS = 55;
+const NEXT_IN_MS = 40;
 /** Where an incoming choice starts: just past the row's left edge. */
 const OFF_EDGE = 4;
 const REVEAL_MS = 140;
@@ -93,17 +93,20 @@ export class Motion {
 	/**
 	 * The choices roll into place. The circle at `origin` fills into the last choice — skip — which rolls right to its
 	 * place and pushes the name `push` px aside as it goes; the other choices roll in from the row's left edge behind it.
-	 * Each choice turns by the distance it rolls and ends upright, and all of them stop at the same moment. `extras`
-	 * show once the choices are in. `stop` ends all of it at once and leaves the row as it is drawn.
+	 * Each choice turns by the distance it rolls and ends upright, and all of them stop at the same moment. Only the
+	 * marbles move: every button waits at its place from the first moment, so a tap where the circle was cancels at once.
+	 * `extras` show once the choices are in. `stop` ends all of it at once and leaves the row as it is drawn.
 	 */
 	rollChoices(choices: readonly HTMLElement[], extras: readonly HTMLElement[], name: HTMLElement | null, push: number, origin: DOMRect | null): { stop(): void } {
 		const running: Animation[] = [];
 		let frame = 0;
 		let stopped = false;
+		const balls = choices.map((choice) => choice.querySelector<HTMLElement>(".th-choice-ball") ?? choice);
+		const signs = choices.map((choice) => choice.querySelector<HTMLElement>(".th-mark"));
 		const settle = () => {
-			for (const element of [...choices, ...extras, ...(name ? [name] : [])]) element.style.removeProperty("transform");
-			for (const element of [...choices, ...extras]) element.style.removeProperty("visibility");
-			for (const choice of choices) choice.querySelector<HTMLElement>(".th-mark")?.style.removeProperty("transform");
+			for (const element of [...balls, ...(name ? [name] : [])]) element.style.removeProperty("transform");
+			for (const element of [...balls, ...extras]) element.style.removeProperty("visibility");
+			for (const sign of signs) sign?.style.removeProperty("--th-turn");
 		};
 		const stop = () => {
 			stopped = true;
@@ -111,34 +114,31 @@ export class Motion {
 			for (const animation of running) animation.cancel();
 			settle();
 		};
-		const skip = choices[choices.length - 1];
-		const surface = skip?.parentElement;
-		if (this.reduced() || !origin || !skip || !surface) return { stop };
+		const last = balls.length - 1;
+		const surface = choices[last]?.parentElement;
+		if (this.reduced() || !origin || last < 0 || !surface) return { stop };
 		const left = surface.getBoundingClientRect().left;
-		const ball = (choice: HTMLElement) => (choice.querySelector<HTMLElement>(".th-choice-ball") ?? choice).getBoundingClientRect();
-		const size = ball(skip).width;
-		const rollers = choices.map((choice, index) => {
-			const box = ball(choice);
+		const size = balls[last].getBoundingClientRect().width;
+		const rollers = balls.map((ball, index) => {
+			const box = ball.getBoundingClientRect();
 			const centre = box.left + box.width / 2;
-			const from = choice === skip ? origin.left + origin.width / 2 - centre : -(centre - left + size / 2 + OFF_EDGE);
-			const order = choices.length - 2 - index;
-			return { choice, sign: choice.querySelector<HTMLElement>(".th-mark"), from, enter: choice === skip ? 0 : FIRST_IN_MS + order * NEXT_IN_MS };
+			const isSkip = index === last;
+			const from = isSkip ? origin.left + origin.width / 2 - centre : -(centre - left + size / 2 + OFF_EDGE);
+			return { ball, sign: signs[index], from, enter: isSkip ? 0 : FIRST_IN_MS + (last - 1 - index) * NEXT_IN_MS };
 		});
 		const out = (t: number) => 1 - (1 - t) ** 3;
 		const place = (roller: (typeof rollers)[number], offset: number) => {
-			roller.choice.style.transform = `translateX(${offset}px)`;
-			if (roller.sign) roller.sign.style.transform = `rotate(${(offset / (Math.PI * size)) * 360}deg)`;
+			roller.ball.style.transform = `translateX(${offset}px)`;
+			roller.sign?.style.setProperty("--th-turn", `${(offset / (Math.PI * size)) * 360}deg`);
 		};
 		const pushName = (offset: number) => {
 			if (name) name.style.transform = `translateX(${Math.min(push, Math.max(0, push + offset))}px)`;
 		};
-		for (const roller of rollers) {
-			if (roller.choice !== skip) roller.choice.style.visibility = "hidden";
-		}
+		const skip = rollers[last];
+		for (const roller of rollers) if (roller !== skip) roller.ball.style.visibility = "hidden";
 		for (const element of extras) element.style.visibility = "hidden";
-		const first = rollers[rollers.length - 1];
-		place(first, first.from);
-		pushName(first.from);
+		place(skip, skip.from);
+		pushName(skip.from);
 		const roll = (begun: number) => (now: number) => {
 			if (stopped) return;
 			const elapsed = now - begun;
@@ -146,9 +146,9 @@ export class Motion {
 				if (elapsed < roller.enter) continue;
 				const t = Math.min(1, (elapsed - roller.enter) / (ROLL_MS - roller.enter));
 				const offset = roller.from * (1 - out(t));
-				roller.choice.style.removeProperty("visibility");
+				roller.ball.style.removeProperty("visibility");
 				place(roller, offset);
-				if (roller === first) pushName(offset);
+				if (roller === skip) pushName(offset);
 			}
 			if (elapsed < ROLL_MS) {
 				frame = requestAnimationFrame(roll(begun));
@@ -157,7 +157,7 @@ export class Motion {
 			settle();
 			for (const element of extras) running.push(element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: REVEAL_MS }));
 		};
-		const fill = (first.choice.querySelector<HTMLElement>(".th-choice-ball") ?? first.choice).animate([{ transform: "scale(0.8)" }, { transform: "scale(1.08)", offset: 0.6 }, { transform: "none" }], { duration: FILL_MS, easing: SETTLE });
+		const fill = (skip.sign ?? skip.ball).animate([{ scale: "0.8" }, { scale: "1.08", offset: 0.6 }, { scale: "1" }], { duration: FILL_MS, easing: SETTLE });
 		running.push(fill);
 		fill.finished.then(
 			() => {

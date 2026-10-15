@@ -26,7 +26,7 @@ import { Placement, arrange, groupBySection, visibleEntries } from "./order";
 import { Drop, RowDrag } from "./RowDrag";
 import { SectionNameModal } from "./SectionNameModal";
 import { ScreenChrome } from "./ScreenChrome";
-import { closedDayLine, dayTitle, isMore, totalWins, winsLabel, winsSince, offersShrink, todayEntries } from "./today";
+import { closedDayLine, dayTitle, totalWins, winsLabel, winsSince, offersShrink, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
 
 export const HABITS_VIEW = "tiny-habits-grid";
@@ -653,8 +653,8 @@ export class TodayView extends ItemView {
 				void this.choose(path, answer, mark, event);
 			});
 		};
-		if (habit.hasFull) option("full", labels.title("full"), habit.hasTiny ? ["is-done", "is-more"] : ["is-done"], "check", chosen("full"));
-		if (habit.hasTiny) option("tiny", labels.title("tiny"), ["is-done"], "check", chosen("tiny"));
+		if (habit.hasFull) option("full", labels.title("full"), ["is-done"], "check", chosen("full"));
+		if (habit.hasTiny) option("tiny", labels.title("tiny"), ["is-done", "is-tiny"], "check", chosen("tiny"));
 		option("skip", "Skip", ["is-missed"], null, mark?.kind === "missed");
 		if (this.canGoOffTrigger(habit)) {
 			const toggle = bar.createEl("button", { cls: "th-choices-toggle", attr: { "aria-pressed": String(this.offTrigger), "aria-label": "Not at trigger", title: "Not at trigger" } });
@@ -712,13 +712,13 @@ export class TodayView extends ItemView {
 	private renderMark(parent: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
 		const labels = this.ui.labels();
 		const first = habit.hasTiny ? labels.of("tiny") : "done";
-		const hint = `Choose: ${first}, ${labels.of("full")} or skipped`;
+		const hint = mark ? "Clear the mark" : `Choose: ${first}, ${labels.of("full")} or skipped`;
 		const button = parent.createEl("button", { cls: "th-mark-button", attr: { title: hint } });
 		button.createSpan({ cls: "th-sr-only", text: hint });
 		const circle = button.createSpan("th-mark");
 		if (isDone(mark)) {
 			circle.addClass("is-done");
-			circle.toggleClass("is-more", isMore(habit, mark));
+			circle.toggleClass("is-tiny", mark?.kind === "tiny");
 			if (this.celebrating.has(path)) circle.addClass("is-popping");
 			icon(circle, "check");
 		} else if (mark?.kind === "missed") circle.addClass("is-missed");
@@ -728,7 +728,11 @@ export class TodayView extends ItemView {
 			event.preventDefault();
 			this.showMenu(path);
 		});
-		button.addEventListener("click", () => this.showMenu(path));
+		button.addEventListener("click", () => {
+			if (!mark) return this.showMenu(path);
+			this.haptics.tap();
+			void this.answer(path, undefined);
+		});
 	}
 
 	private renderReasons(row: HTMLElement, path: string): void {

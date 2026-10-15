@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HabitEntry } from "../src/application/ports";
-import { FULL, TINY, missed } from "../src/domain/DayMark";
-import { closedDayLine, dayTitle, totalWins, winsLabel, winsSince, isMore, offersShrink, todayEntries } from "../src/ui/today";
+import { TINY, missed } from "../src/domain/DayMark";
+import { closedDayLine, dayTitle, totalWins, winsLabel, winsSince, offersShrink, todayEntries } from "../src/ui/today";
 import { d } from "./support/dates";
 import { habitNote } from "./support/habits";
 
@@ -26,17 +26,6 @@ describe("winsSince", () => {
 		expect(winsSince([read, floss], today)).toBe("wins since May");
 		expect(winsSince([ok("Old", { done_tiny: ["2025-12-30"] })], today)).toBe("wins since December 2025");
 		expect(winsSince([ok("New")], today)).toBe("wins");
-	});
-});
-
-describe("isMore", () => {
-	it("is the full answer only on a habit that has a tiny version", () => {
-		const both = habitNote("Read");
-		const fullOnly = habitNote("Gym", { action_tiny: [], action: [{ value: "Go to the gym", since: "2026-10-01" }] });
-		expect(isMore(both, FULL)).toBe(true);
-		expect(isMore(both, TINY)).toBe(false);
-		expect(isMore(fullOnly, FULL)).toBe(false);
-		expect(isMore(both, undefined)).toBe(false);
 	});
 });
 
