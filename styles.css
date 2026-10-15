@@ -442,7 +442,8 @@ button.th-disclosure[aria-expanded="true"] .th-disclosure-icon { transform: rota
 .th-probe { display: none; }
 .th-habit-note .metadata-property.th-own-property, .th-habit-note .metadata-container.th-only-own { display: none; }
 
-.th-card-recipe { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 7px 14px; margin: 6px 0 4px; padding: 12px 14px; border-radius: var(--radius-m); background: var(--th-surface); font-size: 14px; line-height: 1.4; }
+.th-card-recipe { margin: 6px 0 4px; }
+.th-card-details { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 7px 14px; padding: 12px 14px; border-radius: 12px; corner-shape: round; background: var(--background-primary); font-size: 14px; line-height: 1.4; }
 .th-card-key { color: var(--th-faint); }
 .th-card-value { color: var(--th-text); overflow-wrap: anywhere; }
 button.th-card-open { grid-column: 1 / -1; justify-self: start; display: inline-flex; align-items: center; gap: 4px; height: auto; margin-top: 2px; padding: 0; border: none; box-shadow: none; background: transparent; color: var(--interactive-accent); font-size: 14px; cursor: pointer; }
@@ -557,3 +558,16 @@ button.th-context-item.is-selected .th-context-check { visibility: visible; }
 .th-mark.is-popping.is-more { animation: th-pop 420ms var(--th-ease-pop), th-halo 520ms 160ms var(--th-ease-pop) both; }
 @keyframes th-draw { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
 @keyframes th-halo { from { box-shadow: 0 0 0 0 var(--background-secondary), 0 0 0 0 var(--th-habit); } to { box-shadow: 0 0 0 2px var(--background-secondary), 0 0 0 3.5px var(--th-habit); } }
+
+/* An opened habit on Today: its answers to pick from, as a choice list in iOS Settings, above the rest of the recipe. */
+.th-choices { margin-bottom: 8px; border-radius: 12px; corner-shape: round; overflow: hidden; background: var(--background-primary); }
+button.th-choice { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; height: auto; min-height: 50px; padding: 9px 14px 9px 12px; border: none; border-radius: 0; box-shadow: none; background: transparent; color: var(--text-normal); text-align: left; white-space: normal; cursor: pointer; transition: background-color 120ms ease; }
+button.th-choice + button.th-choice::before { content: ""; position: absolute; top: 0; left: 46px; right: 0; height: 1px; transform: scaleY(0.5); transform-origin: top; background: var(--background-modifier-border); }
+button.th-choice:active { background: var(--background-modifier-hover); }
+button.th-choice .th-mark { --th-mark: 22px; flex: 0 0 auto; }
+button.th-choice .th-mark svg { width: 12px; height: 12px; }
+.th-choice-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.th-choice-title { font-size: 16px; line-height: 21px; }
+.th-choice-detail { font-size: 13px; line-height: 17px; color: var(--text-muted); }
+.th-choice-check { display: inline-flex; width: 20px; color: var(--text-accent); }
+.th-choice-check svg { width: 18px; height: 18px; stroke-width: 2.6px; }

@@ -39,6 +39,9 @@ const HOLD_MS = 450;
 /** How long the circle of a just-marked habit keeps popping, while its row is still on screen. */
 const POP_MS = 450;
 const CAPTION_MS = 2000;
+/** An opened habit scrolls into view once it has grown, so its answers aren't left under the navbar. */
+const OPEN_SCROLL_MS = 320;
+const REVEAL_GAP = 16;
 const DAY_CHECK_MS = 60_000;
 /** Obsidian re-reads a note a moment after it is written, so the tap point has to wait for the new mark. */
 const ORIGIN_TTL_MS = 4000;
@@ -268,6 +271,15 @@ export class TodayView extends ItemView {
 		this.openMenu(column);
 	}
 
+	/** Scrolls the sheet, and only the sheet, so an element sits above the navbar. */
+	private reveal(element: HTMLElement): void {
+		if (!element.isConnected) return;
+		const inset = parseFloat(this.contentEl.style.getPropertyValue("--th-bottom-inset")) || 0;
+		const visibleBottom = this.scrollEl.getBoundingClientRect().bottom - inset - REVEAL_GAP;
+		const overflow = element.getBoundingClientRect().bottom - visibleBottom;
+		if (overflow > 0) this.scrollEl.scrollBy({ top: overflow, behavior: this.ui.settings().reduceMotion ? "auto" : "smooth" });
+	}
+
 	/** The sheet moved: its top edge is the jar's floor, and the celebration line rides just above it. */
 	private sheetMoved(top: number): void {
 		this.sheetTop = top;
@@ -293,7 +305,10 @@ export class TodayView extends ItemView {
 		}
 		if (this.opening) {
 			const recipe = column.querySelector<HTMLElement>(".th-row.is-expanded .th-card-recipe");
-			if (recipe) this.motion.grow(recipe);
+			if (recipe) {
+				this.motion.grow(recipe);
+				window.setTimeout(() => this.reveal(recipe), OPEN_SCROLL_MS);
+			}
 			this.opening = null;
 		}
 	}
@@ -351,7 +366,7 @@ export class TodayView extends ItemView {
 		column: HTMLElement,
 		path: string,
 		habit: Habit,
-		options: { dimmed: boolean; sub?: string; attrs?: Record<string, string>; lead?: (main: HTMLElement) => void },
+		options: { dimmed: boolean; sub?: string; attrs?: Record<string, string>; lead?: (main: HTMLElement) => void; answers?: boolean },
 	): HTMLElement {
 		const row = column.createDiv({ cls: ["th-row", "th-habit", colorClass(habit.color)], attr: options.attrs ?? {} });
 		row.toggleClass("is-answered", options.dimmed);
@@ -364,7 +379,7 @@ export class TodayView extends ItemView {
 		text.setAttribute("aria-expanded", String(this.expanded === path));
 		row.toggleClass("is-expanded", this.expanded === path);
 		text.addEventListener("click", () => void this.toggleRecipe(path));
-		if (this.expanded === path) this.renderRecipe(row, path, habit);
+		if (this.expanded === path) this.renderRecipe(row, path, habit, options.answers === true);
 		return row;
 	}
 
@@ -602,6 +617,7 @@ export class TodayView extends ItemView {
 			dimmed: mark !== undefined,
 			attrs: { "data-slot": "row", "data-drag": path, "data-section": habit.section ?? "" },
 			lead: (main) => this.renderMark(main, path, habit, mark),
+			answers: true,
 		});
 		row.toggleClass("is-new", !this.shownRows.has(path));
 		this.renderingRows.add(path);
@@ -609,24 +625,51 @@ export class TodayView extends ItemView {
 		if (this.shrink === path && mark?.kind === "missed") this.renderShrink(row, path, habit);
 	}
 
-	/** An opened card: the recipe line by line, and a way to the habit's note. */
-	private renderRecipe(row: HTMLElement, path: string, habit: Habit): void {
+	/**
+	 * An opened card. On Today it starts with the answers, as an iOS list to pick from: the tiny action and the full one,
+	 * each with its own words, and skipped; a check marks the day's answer. Then the rest of the recipe and the note.
+	 */
+	private renderRecipe(row: HTMLElement, path: string, habit: Habit, answers: boolean): void {
 		const labels = this.ui.labels();
 		const recipe = row.createDiv("th-card-recipe");
-		for (const part of ["anchor", "tiny", "full", "celebration"] as const) {
+		const parts: Array<"anchor" | "tiny" | "full" | "celebration"> = answers ? ["anchor", "celebration"] : ["anchor", "tiny", "full", "celebration"];
+		if (answers) this.renderChoices(recipe, path, habit);
+		const details = recipe.createDiv("th-card-details");
+		for (const part of parts) {
 			const value = habit.current(part);
 			if (!value) continue;
-			recipe.createSpan({ cls: "th-card-key", text: labels.title(part) });
-			recipe.createSpan({ cls: "th-card-value", text: value });
+			details.createSpan({ cls: "th-card-key", text: labels.title(part) });
+			details.createSpan({ cls: "th-card-value", text: value });
 		}
-		const open = recipe.createEl("button", { cls: "th-card-open" });
+		const open = details.createEl("button", { cls: "th-card-open" });
 		open.appendText("Open note");
 		setIcon(open.createSpan("th-card-open-icon"), "arrow-up-right");
 		open.addEventListener("click", () => this.ui.openHabit(path, this.leaf));
 	}
 
-
-
+	/** The day's answers as rows with a check, like a choice in iOS Settings; picking the checked one again clears it. */
+	private renderChoices(parent: HTMLElement, path: string, habit: Habit): void {
+		const mark = habit.markOn(this.shownDay());
+		const labels = this.ui.labels();
+		const list = parent.createDiv("th-choices");
+		const choice = (answer: Answer, title: string, detail: string | undefined, glyph: string[], selected: boolean) => {
+			const button = list.createEl("button", { cls: "th-choice", attr: { "aria-pressed": String(selected) } });
+			const circle = button.createSpan({ cls: ["th-mark", ...glyph] });
+			if (answer !== "skip") icon(circle, "check");
+			const text = button.createSpan("th-choice-text");
+			text.createSpan({ cls: "th-choice-title", text: title });
+			if (detail) text.createSpan({ cls: "th-choice-detail", text: detail });
+			const check = button.createSpan("th-choice-check");
+			if (selected) setIcon(check, "check");
+			button.addEventListener("click", (event) => {
+				this.expanded = null;
+				void this.choose(path, answer, mark, event);
+			});
+		};
+		if (habit.hasTiny) choice("tiny", labels.title("tiny"), habit.current("tiny"), ["is-done"], mark?.kind === "tiny");
+		if (habit.hasFull) choice("full", labels.title("full"), habit.current("full"), habit.hasTiny ? ["is-done", "is-more"] : ["is-done"], mark?.kind === "full");
+		choice("skip", "Skipped", undefined, ["is-missed"], mark?.kind === "missed");
+	}
 
 	private renderMark(parent: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
 		const labels = this.ui.labels();
