@@ -11,13 +11,25 @@ const DAY_MS = 260;
 const PUSH_MS = 380;
 const GROW_MS = 300;
 const BUMP_MS = 420;
-/** The marble splitting into the choices: filling, rolling, swelling. */
-const FILL_MS = 200;
-const ROLL_MS = 360;
-const ROLL_STAGGER_MS = 40;
-const SWELL_MS = 300;
-/** The skip marble is grey, as skipped days are. */
-const SKIP_MARBLE = "rgb(142, 142, 147)";
+/** The circle filling into a marble, and the marble rolling across the row and out of it. */
+const FILL_MS = 120;
+const PULL_MS = 520;
+const REVEAL_MS = 180;
+const REFOLD_MS = 220;
+/**
+ * The liquid the marble pulls the buttons out of: shapes are blurred and cut sharp again, so two close shapes melt
+ * together. A neck thicker than NECK_MIN survives the cut; thinner, it breaks.
+ */
+const LIQUID_BLUR = 5;
+const LIQUID_CUT = "1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 30 -14";
+const NECK = 11;
+const NECK_MIN = 4;
+/** How far behind the marble's centre a button's end trails, and how far past the button the neck holds before it breaks. */
+const TRAIL = 9;
+const PINCH = 16;
+/** A button grows taller as it lengthens, from a sliver at its left end. */
+const SLIVER = 12;
+let liquids = 0;
 
 /** Stepping a day back or forward, opening All habits, or going back from it. */
 export type Slide = "earlier" | "later" | "push" | "pop";
@@ -86,69 +98,127 @@ export class Motion {
 	}
 
 	/**
-	 * The choices arrive as the marble splits: the circle at `origin` fills into a marble, the marble splits into three
-	 * of the same size that roll right to their places, and each swells into its button. Every step can be stopped
-	 * half-way: `stop` ends all of it at once and leaves the row as it is drawn.
+	 * The choices arrive pulled by the marble: the circle at `origin` fills into a marble that rolls right across the row.
+	 * Passing each button it pulls it out behind itself through a liquid neck — the button shows at its left end and
+	 * stretches after the marble — and at the button's right end the neck thins and breaks, leaving the button ready.
+	 * After the last one the marble rolls out of the row. `extras` show once all the buttons are out. `stop` ends all of
+	 * it at once and leaves the row as it is drawn.
 	 */
-	splitMarble(surface: HTMLElement, content: readonly HTMLElement[], cancel: HTMLElement, choices: readonly HTMLElement[], origin: DOMRect | null): { stop(): void } {
+	pullChoices(surface: HTMLElement, content: readonly HTMLElement[], cancel: HTMLElement, choices: readonly HTMLElement[], extras: readonly HTMLElement[], origin: DOMRect | null): { stop(): void } {
 		const running: Animation[] = [];
-		const marbles: HTMLElement[] = [];
+		const hidden = [...choices, ...extras];
+		let stage: HTMLElement | null = null;
+		let frame = 0;
 		let stopped = false;
 		const stop = () => {
 			stopped = true;
+			cancelAnimationFrame(frame);
 			for (const animation of running) animation.cancel();
-			for (const marble of marbles) marble.remove();
-			for (const choice of choices) choice.style.visibility = "";
+			stage?.remove();
+			for (const element of hidden) element.style.visibility = "";
 		};
 		if (this.reduced() || !origin || choices.length === 0) return { stop };
 		const play = (element: HTMLElement, keyframes: Keyframe[], options: KeyframeAnimationOptions) => {
 			const animation = element.animate(keyframes, options);
 			running.push(animation);
-			return animation.finished.then(() => !stopped, () => false);
+			return animation;
 		};
 		const area = surface.getBoundingClientRect();
 		const size = origin.width;
-		const cx = origin.left - area.left + size / 2;
+		const start = origin.left - area.left + size / 2;
 		const cy = origin.top - area.top + size / 2;
-		const marble = (color: string) => {
-			const element = surface.createDiv("th-marble");
-			element.setCssProps({ left: `${cx - size / 2}px`, top: `${cy - size / 2}px`, width: `${size}px`, height: `${size}px`, background: color });
-			marbles.push(element);
-			return element;
-		};
 		for (const element of content) {
 			const isCircle = element.querySelector(".th-mark") !== null;
-			void play(element, [{ opacity: isCircle ? 0 : 1 }, { opacity: 0 }], { duration: isCircle ? 1 : FILL_MS, fill: "forwards" });
+			play(element, [{ opacity: isCircle ? 0 : 1 }, { opacity: 0 }], { duration: isCircle ? 1 : FILL_MS, fill: "forwards" });
 		}
-		void play(cancel, [{ opacity: 0, transform: "rotate(-90deg) scale(0.7)" }, { opacity: 1, transform: "none" }], { duration: FILL_MS * 1.6, easing: SETTLE });
+		play(cancel, [{ opacity: 0, transform: "rotate(-90deg) scale(0.7)" }, { opacity: 1, transform: "none" }], { duration: FILL_MS * 1.6, easing: SETTLE });
 		const colors = choices.map((choice) => getComputedStyle(choice).backgroundColor);
-		const habit = colors[0];
-		const marbleColor = (index: number) => (index === choices.length - 1 && choices.length > 1 ? SKIP_MARBLE : habit);
-		for (const choice of choices) choice.style.visibility = "hidden";
-		void (async () => {
-			const whole = marble(habit);
-			if (!(await play(whole, [{ transform: "scale(0.25)" }, { transform: "scale(1.12)", offset: 0.7 }, { transform: "none" }], { duration: FILL_MS, easing: SETTLE }))) return;
-			whole.remove();
-			const boxes = choices.map((choice) => choice.getBoundingClientRect());
-			const balls = choices.map((_, index) => marble(marbleColor(index)));
-			const rolls = balls.map((ball, index) => {
-				const box = boxes[index];
-				const distance = box.left - area.left + box.width / 2 - cx;
-				const turn = (distance / (Math.PI * size)) * 360;
-				return play(ball, [{ transform: "none" }, { transform: `translateX(${distance}px) rotate(${turn}deg)` }], { duration: ROLL_MS, delay: index * ROLL_STAGGER_MS, easing: SETTLE, fill: "forwards" });
-			});
-			if (!(await Promise.all(rolls)).every(Boolean)) return;
-			const swells = choices.map((choice, index) => {
-				const box = boxes[index];
-				const inset = `inset(${(box.height - size) / 2}px ${(box.width - size) / 2}px round ${size / 2}px)`;
-				choice.style.visibility = "";
-				balls[index].remove();
-				const label = choice.querySelector<HTMLElement>(".th-choice-pill-text");
-				if (label) void play(label, [{ opacity: 0 }, { opacity: 0, offset: 0.5 }, { opacity: 1 }], { duration: SWELL_MS, delay: index * 30 });
-				return play(choice, [{ clipPath: inset, backgroundColor: marbleColor(index) }, { clipPath: `inset(0px 0px round ${box.height / 2}px)`, backgroundColor: colors[index] }], { duration: SWELL_MS, delay: index * 30, easing: SPRING });
-			});
-			await Promise.all(swells);
-		})();
+		const buttons = choices.map((choice, index) => {
+			const box = choice.getBoundingClientRect();
+			return { choice, color: colors[index], left: box.left - area.left, width: box.width, height: box.height, middle: box.top - area.top + box.height / 2 };
+		});
+		for (const element of hidden) element.style.visibility = "hidden";
+
+		stage = surface.createDiv("th-pull");
+		const id = `th-liquid-${++liquids}`;
+		const filter = stage.createSvg("svg", { cls: "th-pull-defs", attr: { "aria-hidden": "true" } }).createSvg("defs").createSvg("filter", { attr: { id } });
+		filter.createSvg("feGaussianBlur", { attr: { in: "SourceGraphic", stdDeviation: String(LIQUID_BLUR) } });
+		filter.createSvg("feColorMatrix", { attr: { mode: "matrix", values: LIQUID_CUT } });
+		const liquid = stage.createDiv("th-pull-liquid");
+		liquid.style.filter = `url(#${id})`;
+		const place = (blob: HTMLElement, left: number, top: number, width: number, height: number) =>
+			blob.setCssProps({ left: `${left}px`, top: `${top}px`, width: `${Math.max(0, width)}px`, height: `${Math.max(0, height)}px` });
+		const drop = (blob: HTMLElement) => place(blob, 0, 0, 0, 0);
+		// Under the marble the liquid is a touch larger, so after the cut it is just the marble's size and a neck meets its edge.
+		const under = size + 4;
+		const ball = liquid.createDiv("th-pull-blob");
+		place(ball, start - under / 2, cy - under / 2, under, under);
+		ball.style.opacity = "0";
+		const habit = getComputedStyle(ball).backgroundColor;
+		const marble = stage.createDiv("th-marble is-rolling");
+		marble.setCssProps({ left: `${start - size / 2}px`, top: `${cy - size / 2}px`, width: `${size}px`, height: `${size}px`, background: habit });
+		const spin = marble.createDiv("th-marble-spin");
+		const pulled = buttons.map((button) => {
+			const body = liquid.createDiv("th-pull-blob");
+			const neck = liquid.createDiv("th-pull-blob");
+			drop(body);
+			drop(neck);
+			return { ...button, body, neck, done: false };
+		});
+		const reveal = (button: (typeof pulled)[number]) => {
+			button.done = true;
+			button.body.remove();
+			button.neck.remove();
+			button.choice.style.visibility = "";
+			play(button.choice, [{ backgroundColor: habit }, { backgroundColor: button.color }], { duration: REVEAL_MS });
+			for (const child of Array.from(button.choice.children)) if (child instanceof HTMLElement) play(child, [{ opacity: 0 }, { opacity: 1 }], { duration: REVEAL_MS * 0.8 });
+		};
+		const trail = size / 2 + TRAIL;
+		const end = area.width + under;
+		// Kicked off fast, so the first answer — the one picked most — is ready soonest; it still rolls as it leaves the row.
+		const kick = (t: number) => 0.6 * (1 - (1 - t) ** 2) + 0.4 * t;
+		const roll = (begun: number) => (now: number) => {
+			if (stopped) return;
+			const t = Math.min(1, (now - begun) / PULL_MS);
+			const x = start + (end - start) * kick(t);
+			place(ball, x - under / 2, cy - under / 2, under, under);
+			marble.style.transform = `translateX(${x - start}px)`;
+			spin.style.transform = `rotate(${((x - start) / (Math.PI * size)) * 360}deg)`;
+			for (const button of pulled) {
+				if (button.done) continue;
+				const reach = x - trail;
+				const width = Math.min(button.width, reach - button.left);
+				if (width <= 2) continue;
+				const height = Math.min(button.height, SLIVER + width * 0.6);
+				place(button.body, button.left, button.middle - height / 2, width, height);
+				const past = reach - (button.left + button.width);
+				if (past >= PINCH) {
+					reveal(button);
+					continue;
+				}
+				const neck = past <= 0 ? NECK : NECK - (NECK - NECK_MIN) * (past / PINCH);
+				const right = button.left + width;
+				place(button.neck, right - 8, cy - neck / 2, x - right + 8, neck);
+			}
+			if (t < 1) {
+				frame = requestAnimationFrame(roll(begun));
+				return;
+			}
+			for (const button of pulled) if (!button.done) reveal(button);
+			stage?.remove();
+			for (const element of extras) {
+				element.style.visibility = "";
+				play(element, [{ opacity: 0 }, { opacity: 1 }], { duration: REVEAL_MS });
+			}
+		};
+		play(marble, [{ transform: "scale(0.25)" }, { transform: "scale(1.1)", offset: 0.65 }, { transform: "none" }], { duration: FILL_MS, easing: SETTLE }).finished.then(
+			() => {
+				if (stopped) return;
+				ball.style.opacity = "";
+				frame = requestAnimationFrame((now) => roll(now)(now));
+			},
+			() => undefined,
+		);
 		return { stop };
 	}
 
@@ -161,7 +231,7 @@ export class Motion {
 					{ transform: "translateX(24px)", opacity: 0 },
 					{ transform: "none", opacity: 1 },
 				],
-				{ duration: ROLL_MS * 0.6, easing: SETTLE },
+				{ duration: REFOLD_MS, easing: SETTLE },
 			);
 		}
 	}

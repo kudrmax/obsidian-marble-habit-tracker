@@ -563,3 +563,11 @@ button.th-choices-toggle[aria-pressed="true"] { background: rgba(118, 118, 128, 
 /* A marble on its way from the circle to a button: drawn like the jar's, flat with a darker lower edge and a spark. */
 .th-marble { position: absolute; z-index: 3; border-radius: 50%; corner-shape: round; box-shadow: inset -2px -3px 0 rgba(0, 0, 0, 0.22); pointer-events: none; }
 .th-marble::after { content: ""; position: absolute; right: 24%; top: 22%; width: 16%; height: 16%; border-radius: 50%; background: rgba(255, 255, 255, 0.85); }
+/* The marble pulling the choices out: a liquid layer the buttons stretch from, the marble over it, clipped to the row it rolls out of. */
+.th-pull { position: absolute; inset: 0; z-index: 3; overflow: hidden; pointer-events: none; }
+.th-pull-defs { position: absolute; width: 0; height: 0; }
+.th-pull-liquid { position: absolute; inset: 0; }
+.th-pull-blob { position: absolute; border-radius: 999px; background: var(--th-habit); }
+.th-marble.is-rolling::after { display: none; }
+.th-marble-spin { position: absolute; inset: 0; border-radius: 50%; }
+.th-marble-spin::after { content: ""; position: absolute; right: 24%; top: 22%; width: 16%; height: 16%; border-radius: 50%; background: rgba(255, 255, 255, 0.85); }

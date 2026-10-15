@@ -621,9 +621,9 @@ export class TodayView extends ItemView {
 
 	/**
 	 * The answers in the row, as quiet iOS capsules — full in the habit's color, tiny and skip in the system grey — with
-	 * cancel where the circle was, under the finger. They arrive as the marble splits: the circle fills into a marble,
-	 * the marble splits into three that roll to their places, and each swells into its button. Picking one swells it and folds the others into it before the answer lands;
-	 * a tap anywhere else brings the row back.
+	 * cancel where the circle was, under the finger. They arrive pulled by the marble: the circle fills into a marble
+	 * that rolls across the row, pulls each button out behind itself through a liquid neck, and rolls out of the row.
+	 * A tap anywhere else brings the row back.
 	 */
 	private renderChoices(main: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
 		const labels = this.ui.labels();
@@ -664,7 +664,7 @@ export class TodayView extends ItemView {
 		}
 		this.menuOpening = false;
 		this.bringIntoView(main);
-		this.unfolding = this.motion.splitMarble(main, this.contentOf(main), cancel, [...bar.querySelectorAll<HTMLElement>(".th-choice-pill")], origin);
+		this.unfolding = this.motion.pullChoices(main, this.contentOf(main), cancel, [...bar.querySelectorAll<HTMLElement>(".th-choice-pill")], [...bar.querySelectorAll<HTMLElement>(".th-choices-toggle")], origin);
 	}
 
 	/** Back from the choices to the row; anything still unfolding stops at once, so cancel works mid-animation. */
@@ -678,7 +678,7 @@ export class TodayView extends ItemView {
 
 	/** The row's own content — circle and name — without the choices laid over it. */
 	private contentOf(main: HTMLElement): HTMLElement[] {
-		return [...main.children].filter((child): child is HTMLElement => child instanceof HTMLElement && !child.hasClass("th-row-choices") && !child.hasClass("th-marble"));
+		return [...main.children].filter((child): child is HTMLElement => child instanceof HTMLElement && !child.hasClass("th-row-choices") && !child.hasClass("th-pull"));
 	}
 
 	/** An opened card: the recipe line by line, and a way to the habit's note. */
