@@ -5,8 +5,6 @@ describe("helpRows", () => {
 	const merge = { smallPerMedium: 7, mediumPerBig: 4 };
 
 	it("names the gestures of the device", () => {
-		expect(helpRows(true, merge).map((row) => row.action)).toContain("Hold the circle");
-		expect(helpRows(false, merge).map((row) => row.action)).toContain("Right-click or hold the circle");
 		expect(helpRows(true, merge).map((row) => row.action)).toContain("Tilt the phone");
 		expect(helpRows(false, merge).map((row) => row.action)).toContain("Move the mouse");
 		expect(helpRows(true, merge).map((row) => row.action)).toContain("Tap the circle");

@@ -75,9 +75,12 @@ export class ContextMenu {
 		const below = box.bottom - area.top + GAP;
 		const above = box.top - area.top - GAP - height;
 		const fitsBelow = below + height <= area.height - this.bottomInset() - EDGE;
-		const top = fitsBelow || above < EDGE ? below : above;
+		const opensBelow = fitsBelow || above < EDGE;
+		const top = opensBelow ? below : above;
+		// Opening upwards, iOS turns the menu over so its first item stays nearest the finger.
+		if (!opensBelow) menu.replaceChildren(...[...menu.children].reverse());
 		menu.setCssProps({ top: `${top}px`, left: `${Math.max(EDGE, box.left - area.left + 8)}px` });
-		menu.style.transformOrigin = fitsBelow ? "24px 0" : "24px 100%";
+		menu.style.transformOrigin = opensBelow ? "24px 0" : "24px 100%";
 		if (!fresh || this.reduced()) {
 			layer.addClass("is-open");
 			return;

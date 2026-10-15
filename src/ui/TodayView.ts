@@ -1,6 +1,6 @@
 import { ItemView, Notice, Platform, WorkspaceLeaf, setIcon } from "obsidian";
 import { HabitEntry } from "../application/ports";
-import { DayMark, FULL, SKIPPED, TINY, done, isDone, isOffTrigger, missed } from "../domain/DayMark";
+import { DayMark, SKIPPED, done, isDone, isOffTrigger, missed } from "../domain/DayMark";
 import { Habit } from "../domain/Habit";
 import { LocalDate } from "../domain/LocalDate";
 import { HabitColor } from "../domain/HabitColor";
@@ -35,10 +35,11 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 const RING_RADIUS = 50;
 const RING_GAP = 9;
 
-const HOLD_MS = 450;
 /** How long the circle of a just-marked habit keeps popping, while its row is still on screen. */
 const POP_MS = 450;
 const CAPTION_MS = 2000;
+/** How far a row with an open menu keeps from the sheet's edges. */
+const VIEW_GAP = 12;
 const DAY_CHECK_MS = 60_000;
 /** Obsidian re-reads a note a moment after it is written, so the tap point has to wait for the new mark. */
 const ORIGIN_TTL_MS = 4000;
@@ -74,8 +75,6 @@ export class TodayView extends ItemView {
 	private shownRows = new Set<string>();
 	private renderingRows = new Set<string>();
 	private wasClosed: boolean | null = null;
-	private held = false;
-	private holdTimer = 0;
 	private captionTimer = 0;
 	private readonly celebrating = new Map<string, number>();
 	private readonly origins = new Map<string, { point: Point; at: number }>();
@@ -194,7 +193,6 @@ export class TodayView extends ItemView {
 		this.sheet?.destroy();
 		this.sheet = null;
 		this.contextMenu?.close();
-		window.clearTimeout(this.holdTimer);
 		window.clearTimeout(this.captionTimer);
 		for (const timer of this.celebrating.values()) window.clearTimeout(timer);
 	}
@@ -266,6 +264,17 @@ export class TodayView extends ItemView {
 		this.shownRows = this.renderingRows;
 		this.playMotion(column);
 		this.openMenu(column);
+	}
+
+	/** Scrolls the sheet, and only the sheet, so a row half under the navbar is in full view before its menu opens. */
+	private bringIntoView(element: HTMLElement): void {
+		const inset = parseFloat(this.contentEl.style.getPropertyValue("--th-bottom-inset")) || 0;
+		const visible = this.scrollEl.getBoundingClientRect();
+		const box = element.getBoundingClientRect();
+		const below = box.bottom - (visible.bottom - inset - VIEW_GAP);
+		const above = visible.top + VIEW_GAP - box.top;
+		if (below > 0) this.scrollEl.scrollTop += below;
+		else if (above > 0) this.scrollEl.scrollTop -= above;
 	}
 
 	/** The sheet moved: its top edge is the jar's floor, and the celebration line rides just above it. */
@@ -631,9 +640,9 @@ export class TodayView extends ItemView {
 	private renderMark(parent: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
 		const labels = this.ui.labels();
 		const first = habit.hasTiny ? labels.of("tiny") : "done";
-		const hint = mark ? "Click to undo · hold or right-click to change" : `Click for ${first} · hold or right-click for more`;
+		const hint = `Choose: ${first}, ${labels.of("full")} or skipped`;
 		const button = parent.createEl("button", { cls: "th-mark-button", attr: { title: hint } });
-		button.createSpan({ cls: "th-sr-only", text: mark ? "Undo — hold to change" : `${labels.title(habit.hasTiny ? "tiny" : "full")} — hold for more` });
+		button.createSpan({ cls: "th-sr-only", text: hint });
 		const circle = button.createSpan("th-mark");
 		if (isDone(mark)) {
 			circle.addClass("is-done");
@@ -643,34 +652,17 @@ export class TodayView extends ItemView {
 		} else if (mark?.kind === "missed") circle.addClass("is-missed");
 		else if (this.asking === path) circle.addClass("is-asking");
 
-		const cancel = () => window.clearTimeout(this.holdTimer);
-		button.addEventListener("pointerdown", (event) => {
-			this.held = false;
-			cancel();
-			if (event.button !== 0) return;
-			this.holdTimer = window.setTimeout(() => {
-				this.held = true;
-				this.showMenu(path);
-			}, HOLD_MS);
-		});
-		for (const type of ["pointerup", "pointerleave", "pointercancel"]) button.addEventListener(type, cancel);
 		button.addEventListener("contextmenu", (event) => {
 			event.preventDefault();
-			cancel();
 			this.showMenu(path);
 		});
-		button.addEventListener("click", (event) => {
-			if (this.held) {
-				this.held = false;
-				return;
-			}
-			void this.answer(path, mark ? undefined : habit.hasTiny ? TINY : FULL, event);
-		});
+		button.addEventListener("click", () => this.showMenu(path));
 	}
 
 	/**
-	 * The answers for a held circle as iOS's context menu over a blurred screen: tiny, full and skipped, then the recipe
-	 * and "Not at trigger". It is drawn again after every redraw while it stays open.
+	 * A tap on the circle opens the answers as iOS's context menu over a blurred screen: tiny first, nearest the finger,
+	 * then full and skipped, each drawn as the circle will look; then Clear for a marked day, and "Not at trigger".
+	 * It is drawn again after every redraw while it stays open.
 	 */
 	private openMenu(column: HTMLElement): void {
 		const path = this.menu;
@@ -689,21 +681,12 @@ export class TodayView extends ItemView {
 		if (habit.hasTiny) items.push({ text: labels.title("tiny"), detail: habit.current("tiny"), glyph: "done", selected: chosen("tiny"), onClick: (event) => void this.choose(path, "tiny", mark, event) });
 		items.push({ text: labels.title("full"), detail: habit.current("full"), glyph: habit.hasTiny ? "more" : "done", selected: chosen("full"), onClick: (event) => void this.choose(path, "full", mark, event) });
 		items.push({ text: "Skipped", glyph: "skipped", selected: mark?.kind === "missed", onClick: (event) => void this.choose(path, "skip", mark, event) });
-		items.push({
-			text: "Recipe and note",
-			icon: "scroll-text",
-			group: true,
-			onClick: () => {
-				this.menu = null;
-				this.expanded = path;
-				this.opening = path;
-				this.render();
-			},
-		});
+		if (mark) items.push({ text: "Clear", icon: "rotate-ccw", group: true, onClick: () => void this.answer(path, undefined) });
 		if (this.canGoOffTrigger(habit)) {
 			items.push({
 				text: "Not at trigger",
 				icon: "unlink",
+				group: !mark,
 				selected: this.offTrigger,
 				onClick: () => {
 					this.offTrigger = !this.offTrigger;
@@ -711,6 +694,7 @@ export class TodayView extends ItemView {
 				},
 			});
 		}
+		if (this.menuOpening) this.bringIntoView(row);
 		this.contextMenu?.open(row, items, this.menuOpening, ["th-habit", colorClass(habit.color)]);
 		this.menuOpening = false;
 	}
