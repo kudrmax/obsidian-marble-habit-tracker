@@ -539,23 +539,20 @@ button.th-footer-add:active, button.th-footer-link:active { background: var(--ba
 
 
 /*
- * The answers in the row: its content slides away and iOS capsule buttons take its place, as tall as the circle's
- * target so the row keeps its height. Tiny is filled in the habit's color, full tinted, skipped grey.
+ * The answers in the row, as iOS buttons in the habit's color from strongest to weakest: full filled, tiny tinted,
+ * skip plain. They are as tall as the circle's target, so the row keeps its height.
  */
 .th-row-main.is-choosing > :not(.th-row-choices) { visibility: hidden; }
-.th-row-choices { position: absolute; inset: 0 calc(var(--th-gutter) - 8px) 0 calc(var(--th-gutter) - 6px); display: flex; align-items: center; gap: 6px; }
-button.th-choices-close, button.th-choices-toggle { flex: 0 0 32px; width: 32px; height: 32px; padding: 0; border: none; border-radius: 16px; corner-shape: round; box-shadow: none; display: inline-flex; align-items: center; justify-content: center; background: var(--background-modifier-hover); color: var(--text-muted); cursor: pointer; }
-button.th-choices-close svg, button.th-choices-toggle svg { width: 16px; height: 16px; stroke-width: 2.4px; }
-button.th-choices-toggle[aria-pressed="true"] { background: color-mix(in srgb, var(--th-habit) 22%, transparent); color: var(--th-habit); }
-button.th-choice-pill { flex: 1 1 auto; min-width: 0; height: 36px; padding: 0 12px 0 7px; border: none; border-radius: 18px; corner-shape: round; box-shadow: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 14px; font-weight: 600; letter-spacing: -0.01em; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform 120ms ease, filter 120ms ease; }
+.th-row-choices { position: absolute; inset: 0 calc(var(--th-gutter) - 8px) 0 calc(var(--th-gutter) - 8px); display: flex; align-items: center; gap: 8px; }
+button.th-choice-pill { flex: 1 1 0; min-width: 0; height: 34px; padding: 0 10px; border: none; border-radius: 17px; corner-shape: round; box-shadow: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; background: transparent; color: var(--th-habit); font-size: 15px; font-weight: 600; letter-spacing: -0.01em; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform 120ms ease, filter 120ms ease; }
 button.th-choice-pill:active { transform: scale(0.95); }
 .th-choice-pill-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-button.th-choice-pill .th-mark { --th-mark: 18px; flex: 0 0 auto; }
-button.th-choice-pill .th-mark svg { width: 11px; height: 11px; }
-button.th-choice-pill.is-tiny { background: var(--th-habit); color: #ffffff; }
-button.th-choice-pill.is-tiny .th-mark.is-done { background: rgba(255, 255, 255, 0.95); color: var(--th-habit); }
-button.th-choice-pill.is-full { background: color-mix(in srgb, var(--th-habit) 20%, transparent); color: var(--th-habit); }
-button.th-choice-pill.is-full .th-mark.is-more { box-shadow: 0 0 0 1.5px var(--background-secondary), 0 0 0 3px var(--th-habit); }
-button.th-choice-pill.is-skip { background: var(--background-modifier-hover); color: var(--text-muted); }
-button.th-choice-pill[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--text-normal); }
+.th-choice-pill-check { display: inline-flex; }
+.th-choice-pill-check svg { width: 15px; height: 15px; stroke-width: 3px; }
+button.th-choice-pill.is-full { background: var(--th-habit); color: #ffffff; }
+button.th-choice-pill.is-tiny { background: color-mix(in srgb, var(--th-habit) 20%, transparent); }
+button.th-choice-pill.is-skip { font-weight: 500; opacity: 0.75; }
 button.th-choice-pill.is-picked { filter: brightness(1.15); }
+button.th-choices-toggle { flex: 0 0 34px; width: 34px; height: 34px; padding: 0; border: none; border-radius: 17px; corner-shape: round; box-shadow: none; display: inline-flex; align-items: center; justify-content: center; background: transparent; color: var(--text-faint); cursor: pointer; }
+button.th-choices-toggle svg { width: 16px; height: 16px; stroke-width: 2.4px; }
+button.th-choices-toggle[aria-pressed="true"] { background: color-mix(in srgb, var(--th-habit) 20%, transparent); color: var(--th-habit); }

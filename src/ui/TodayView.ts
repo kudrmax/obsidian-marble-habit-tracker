@@ -618,32 +618,31 @@ export class TodayView extends ItemView {
 	}
 
 	/**
-	 * The answers in the row itself: its circle and name slide away to the left, and in their place a close button and
-	 * the answers as iOS capsule buttons spring in from the right — tiny filled in the habit's color, full tinted with
-	 * the second ring, skipped in grey. Picking one fills it and folds the others into it before the answer lands.
+	 * The answers in the row itself, as iOS buttons in the habit's color from strongest to weakest: full filled, tiny
+	 * tinted, skip plain. The circle stretches into the full button where it stood, the others come out from under it,
+	 * and the name slides off to the right. Picking one swells it and folds the others into it before the answer lands;
+	 * a tap anywhere else brings the row back.
 	 */
 	private renderChoices(main: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
 		const labels = this.ui.labels();
 		const offTrigger = this.offTrigger && this.canGoOffTrigger(habit);
 		const chosen = (kind: "full" | "tiny") => mark?.kind === kind && isOffTrigger(mark) === offTrigger;
+		const circle = main.querySelector<HTMLElement>(".th-mark");
+		const origin = circle?.getBoundingClientRect() ?? null;
 		main.addClass("is-choosing");
 		const bar = main.createDiv("th-row-choices");
-		const close = bar.createEl("button", { cls: "th-choices-close", attr: { "aria-label": "Close" } });
-		setIcon(close, "x");
-		close.addEventListener("click", () => this.closeChoices());
-		const option = (answer: Answer, text: string, glyph: string[], cls: string, selected: boolean) => {
+		const option = (answer: Answer, text: string, cls: string, selected: boolean) => {
 			const button = bar.createEl("button", { cls: ["th-choice-pill", cls], attr: { "aria-pressed": String(selected) } });
-			const circle = button.createSpan({ cls: ["th-mark", ...glyph] });
-			if (answer !== "skip") icon(circle, "check");
+			if (selected) icon(button.createSpan("th-choice-pill-check"), "check");
 			button.createSpan({ cls: "th-choice-pill-text", text });
 			button.addEventListener("click", (event) => {
-				const others = [...bar.querySelectorAll<HTMLElement>(".th-choice-pill, .th-choices-close, .th-choices-toggle")].filter((other) => other !== button);
+				const others = [...bar.querySelectorAll<HTMLElement>(".th-choice-pill, .th-choices-toggle")].filter((other) => other !== button);
 				void this.motion.pick(button, others).then(() => this.choose(path, answer, mark, event));
 			});
 		};
-		if (habit.hasTiny) option("tiny", labels.title("tiny"), ["is-done"], "is-tiny", chosen("tiny"));
-		if (habit.hasFull) option("full", labels.title("full"), habit.hasTiny ? ["is-done", "is-more"] : ["is-done"], habit.hasTiny ? "is-full" : "is-tiny", chosen("full"));
-		option("skip", "Skip", ["is-missed"], "is-skip", mark?.kind === "missed");
+		if (habit.hasFull) option("full", labels.title("full"), "is-full", chosen("full"));
+		if (habit.hasTiny) option("tiny", labels.title("tiny"), "is-tiny", chosen("tiny"));
+		option("skip", "Skip", "is-skip", mark?.kind === "missed");
 		if (this.canGoOffTrigger(habit)) {
 			const toggle = bar.createEl("button", { cls: "th-choices-toggle", attr: { "aria-pressed": String(this.offTrigger), "aria-label": "Not at trigger", title: "Not at trigger" } });
 			setIcon(toggle, "unlink");
@@ -655,18 +654,12 @@ export class TodayView extends ItemView {
 		if (!this.menuOpening) return;
 		this.menuOpening = false;
 		this.bringIntoView(main);
-		this.motion.unfold(this.contentOf(main), [...bar.children] as HTMLElement[]);
+		this.motion.unfold(this.contentOf(main), [...bar.children] as HTMLElement[], origin);
 	}
 
 	/** The row's own content — circle and name — without the choices laid over it. */
 	private contentOf(main: HTMLElement): HTMLElement[] {
 		return [...main.children].filter((child): child is HTMLElement => child instanceof HTMLElement && !child.hasClass("th-row-choices"));
-	}
-
-	private closeChoices(): void {
-		this.closing = this.menu;
-		this.menu = null;
-		this.render();
 	}
 
 	/** An opened card: the recipe line by line, and a way to the habit's note. */
