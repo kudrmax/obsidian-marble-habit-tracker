@@ -54,7 +54,6 @@ export class TodayView extends ItemView {
 	private stale = false;
 	private menu: string | null = null;
 	/** The "?" in the view's header; it carries a dot until the help was opened once. */
-	private helpAction: HTMLElement | null = null;
 	/** In the open menu, the next tiny or full answer is marked as done without the anchor. */
 	private offTrigger = false;
 	private asking: string | null = null;
@@ -133,13 +132,6 @@ export class TodayView extends ItemView {
 			}),
 		);
 		this.registerDomEvent(root, "click", (event) => this.closeMenuOutside(event));
-		// Obsidian puts each new action before the earlier ones: added last, shown first.
-		this.addAction("plus", "New habit", () => this.ui.newHabit());
-		this.helpAction = this.addAction("circle-help", "How it works", () => {
-			new HelpModal(this.app, helpRows(Platform.isMobile, this.ui.settings().merge)).open();
-			this.ui.markHintsSeen();
-		});
-		this.addAction("list", "All habits", () => this.showAll());
 		if (!Platform.isMobile) {
 			this.registerDomEvent(root, "pointermove", (event) => {
 				if (event.pointerType === "mouse" && this.cursorPushEnabled()) this.jar?.setPusher({ x: event.clientX, y: event.clientY });
@@ -189,7 +181,6 @@ export class TodayView extends ItemView {
 		this.stale = false;
 		const column = this.columnEl;
 		column.empty();
-		this.helpAction?.toggleClass("th-has-dot", !this.ui.settings().hintsSeen);
 		this.renderingRows = new Set();
 		const all = visibleEntries(this.ui.repository.list());
 		this.syncJar(all);
@@ -247,8 +238,9 @@ export class TodayView extends ItemView {
 
 	/** Every habit by section, with its days and wins; archived ones fold away at the bottom. */
 	private renderAll(column: HTMLElement, visible: readonly HabitEntry[]): void {
-		const nav = column.createDiv("th-back-nav");
-		const back = nav.createEl("button", { cls: "th-back" });
+		const bar = this.renderToolbar(column, false);
+		const back = bar.createEl("button", { cls: "th-back" });
+		bar.prepend(back);
 		setIcon(back.createSpan("th-back-icon"), "chevron-left");
 		back.appendText("Today");
 		back.addEventListener("click", () => this.showToday());
@@ -316,6 +308,7 @@ export class TodayView extends ItemView {
 		const today = this.ui.service.today();
 		const shown = this.shownDay();
 		const isToday = shown.equals(today);
+		this.renderToolbar(column, true);
 		const head = column.createDiv("th-head");
 		const line = head.createDiv("th-head-line");
 		line.createEl("h1", { cls: "th-title", text: dayTitle(shown, today) });
@@ -442,6 +435,24 @@ export class TodayView extends ItemView {
 
 
 
+
+	/** The screen's own buttons, above its title: Obsidian's header stays Obsidian's. */
+	private renderToolbar(column: HTMLElement, withList: boolean): HTMLElement {
+		const bar = column.createDiv("th-toolbar");
+		const actions = bar.createDiv("th-toolbar-actions");
+		if (withList) iconButton(actions, { icon: "list", label: "All habits", onClick: () => this.showAll() });
+		const help = iconButton(actions, {
+			icon: "help",
+			label: "How it works",
+			onClick: () => {
+				new HelpModal(this.app, helpRows(Platform.isMobile, this.ui.settings().merge)).open();
+				this.ui.markHintsSeen();
+			},
+		});
+		help.toggleClass("th-has-dot", !this.ui.settings().hintsSeen);
+		iconButton(actions, { icon: "plus", label: "New habit", onClick: () => this.ui.newHabit() });
+		return bar;
+	}
 
 	private renderEmpty(column: HTMLElement): void {
 		const empty = column.createDiv("th-empty");

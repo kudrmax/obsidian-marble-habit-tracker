@@ -269,12 +269,13 @@ button.th-fold[aria-expanded="true"] .th-meta-chevron { transform: rotate(90deg)
 .th-ring-sub { margin-top: 6px; font-size: 14px; color: var(--th-muted); }
 button.th-back { display: inline-flex; align-items: center; gap: 2px; padding: 4px 8px 4px 0; margin-left: -4px; color: var(--th-muted); }
 button.th-back svg { width: 18px; height: 18px; }
-.th-back-nav { padding-top: 6px; }
+.th-toolbar { display: flex; align-items: center; height: var(--th-button); }
+.th-toolbar-actions { display: flex; margin: 0 -12px 0 auto; }
 .th-back-icon { display: inline-flex; }
-.th-back-nav + .th-head { padding-top: 2px; }
+.th-toolbar + .th-head { padding-top: 0; }
 button.th-archived-toggle { display: inline-flex; align-items: center; gap: 8px; margin: 12px 0 10px; padding: 0; color: var(--th-muted); }
-.view-action.th-has-dot { position: relative; }
-.view-action.th-has-dot::after { content: ""; position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--interactive-accent); pointer-events: none; }
+button.th-button.th-has-dot { position: relative; }
+button.th-button.th-has-dot::after { content: ""; position: absolute; top: 9px; right: 9px; width: 7px; height: 7px; border-radius: 50%; background: var(--interactive-accent); pointer-events: none; }
 .th-progress { height: var(--th-progress); margin-top: 14px; border-radius: var(--th-progress); background: var(--th-line); overflow: hidden; }
 .th-meta-chevron { display: inline-flex; color: var(--th-faint); transition: transform 150ms ease; }
 .th-meta-chevron svg { width: 14px; height: 14px; }
