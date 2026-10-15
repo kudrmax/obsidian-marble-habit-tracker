@@ -618,40 +618,46 @@ export class TodayView extends ItemView {
 	}
 
 	/**
-	 * The answers in the row itself, as iOS buttons in the habit's color from strongest to weakest: full filled, tiny
-	 * tinted, skip outlined. The tapped circle stays under the finger as the cancel button, and out of it a capsule
-	 * spills to the right and splits into the answers, as the Dynamic Island splits. Picking one swells it and folds the others into it before the answer lands;
+	 * The answers in the row, as a drawer: the row is a lid that slides right in one firm move and uncovers the answers
+	 * lying under it — full filled, tiny tinted, skip outlined, in the habit's color — with cancel where the circle was,
+	 * under the finger. The lid's edge stays in view with the circle; a tap on it, or on cancel, slides it back. Picking one swells it and folds the others into it before the answer lands;
 	 * a tap anywhere else brings the row back.
 	 */
 	private renderChoices(main: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
 		const labels = this.ui.labels();
 		const offTrigger = this.offTrigger && this.canGoOffTrigger(habit);
 		const chosen = (kind: "full" | "tiny") => mark?.kind === kind && isOffTrigger(mark) === offTrigger;
-		const circle = main.querySelector<HTMLElement>(".th-mark");
-		const origin = circle?.getBoundingClientRect() ?? null;
 		main.addClass("is-choosing");
-		const bar = main.createDiv("th-row-choices");
-		const cancel = bar.createEl("button", { cls: "th-choices-cancel", attr: { "aria-label": "Cancel" } });
-		cancel.createSpan("th-choices-cancel-ring");
-		cancel.addEventListener("click", () => {
-			this.closing = this.menu;
+		const under = main.createDiv("th-row-choices");
+		const lid = main.createDiv("th-row-lid");
+		lid.append(...this.contentOf(main).filter((child) => child !== under && child !== lid));
+		const close = () => void this.motion.closeDrawer(lid).then(() => {
+			this.closing = null;
 			this.menu = null;
 			this.render();
 		});
+		lid.addEventListener("click", (event) => {
+			event.stopPropagation();
+			close();
+		}, true);
+		const cancel = under.createEl("button", { cls: "th-choices-cancel", attr: { "aria-label": "Cancel" } });
+		cancel.createSpan("th-choices-cancel-ring");
+		cancel.addEventListener("click", close);
 		const option = (answer: Answer, text: string, cls: string, selected: boolean) => {
-			const button = bar.createEl("button", { cls: ["th-choice-pill", cls], attr: { "aria-pressed": String(selected) } });
+			const button = under.createEl("button", { cls: ["th-choice-pill", cls], attr: { "aria-pressed": String(selected) } });
 			if (selected) icon(button.createSpan("th-choice-pill-check"), "check");
 			button.createSpan({ cls: "th-choice-pill-text", text });
 			button.addEventListener("click", (event) => {
-				const others = [...bar.querySelectorAll<HTMLElement>(".th-choice-pill, .th-choices-toggle, .th-choices-cancel")].filter((other) => other !== button);
-				void this.motion.pick(button, others).then(() => this.choose(path, answer, mark, event));
+				button.addClass("is-picked");
+				this.haptics.tap();
+				void this.motion.closeDrawer(lid).then(() => this.choose(path, answer, mark, event));
 			});
 		};
 		if (habit.hasFull) option("full", labels.title("full"), "is-full", chosen("full"));
 		if (habit.hasTiny) option("tiny", labels.title("tiny"), "is-tiny", chosen("tiny"));
 		option("skip", "Skip", "is-skip", mark?.kind === "missed");
 		if (this.canGoOffTrigger(habit)) {
-			const toggle = bar.createEl("button", { cls: "th-choices-toggle", attr: { "aria-pressed": String(this.offTrigger), "aria-label": "Not at trigger", title: "Not at trigger" } });
+			const toggle = under.createEl("button", { cls: "th-choices-toggle", attr: { "aria-pressed": String(this.offTrigger), "aria-label": "Not at trigger", title: "Not at trigger" } });
 			setIcon(toggle, "unlink");
 			toggle.addEventListener("click", () => {
 				this.offTrigger = !this.offTrigger;
@@ -659,17 +665,17 @@ export class TodayView extends ItemView {
 			});
 		}
 		if (!this.menuOpening) {
-			main.addClass("is-steady");
+			lid.addClass("is-open");
 			return;
 		}
 		this.menuOpening = false;
 		this.bringIntoView(main);
-		this.motion.unfold(main, this.contentOf(main), cancel, [...bar.querySelectorAll<HTMLElement>(".th-choice-pill")], origin);
+		void this.motion.openDrawer(lid).then(() => this.haptics.tap());
 	}
 
 	/** The row's own content — circle and name — without the choices laid over it. */
 	private contentOf(main: HTMLElement): HTMLElement[] {
-		return [...main.children].filter((child): child is HTMLElement => child instanceof HTMLElement && !child.hasClass("th-row-choices") && !child.hasClass("th-morph"));
+		return [...main.children].filter((child): child is HTMLElement => child instanceof HTMLElement && !child.hasClass("th-row-choices") && !child.hasClass("th-row-lid"));
 	}
 
 	/** An opened card: the recipe line by line, and a way to the habit's note. */

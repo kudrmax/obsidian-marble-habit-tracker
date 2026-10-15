@@ -11,9 +11,9 @@ const DAY_MS = 260;
 const PUSH_MS = 380;
 const GROW_MS = 300;
 const BUMP_MS = 420;
-/** From the tap to the last frame of the choices, as tried and timed on the demos. */
-const CHOICES_MS = 480;
-const PICK_MS = 220;
+/** The drawer: firm and without bounce, as heavy things move on iOS. */
+const DRAWER_MS = 380;
+const DRAWER = "cubic-bezier(0.22, 1, 0.36, 1)";
 
 /** Stepping a day back or forward, opening All habits, or going back from it. */
 export type Slide = "earlier" | "later" | "push" | "pop";
@@ -81,67 +81,23 @@ export class Motion {
 		return animation.finished.then(() => undefined);
 	}
 
-	/**
-	 * A row turns into its choices as the Dynamic Island splits: the circle at `origin` stays put and turns into the
-	 * cancel button, a capsule in the habit's color spills out of it to the right across the row, and then pinches into
-	 * the choices, each taking on its own look; the name fades. Half the time to spill, half to split.
-	 */
-	unfold(surface: HTMLElement, content: readonly HTMLElement[], cancel: HTMLElement, choices: readonly HTMLElement[], origin: DOMRect | null): void {
-		if (this.reduced() || choices.length === 0) return;
-		for (const element of content) {
-			const isCircle = element.querySelector(".th-mark") !== null;
-			element.animate(
-				[
-					{ transform: "none", opacity: isCircle ? 0 : 1 },
-					{ transform: isCircle ? "none" : "translateX(24px)", opacity: 0 },
-				],
-				{ duration: isCircle ? 1 : CHOICES_MS / 2, easing: SETTLE, fill: "forwards" },
-			);
-		}
-		cancel.animate(
-			[
-				{ transform: "rotate(-90deg) scale(0.8)", opacity: 0.6 },
-				{ transform: "none", opacity: 1 },
-			],
-			{ duration: CHOICES_MS / 2, easing: SPRING },
-		);
-		const area = surface.getBoundingClientRect();
-		const boxes = choices.map((choice) => choice.getBoundingClientRect());
-		const first = boxes[0];
-		const last = boxes[boxes.length - 1];
-		const span = last.right - first.left;
-		const share = span / choices.length;
-		const color = getComputedStyle(choices[0]).backgroundColor;
-		const half = CHOICES_MS / 2;
-		const blob = surface.createDiv("th-blob");
-		blob.style.background = color;
-		const start = origin ?? first;
-		blob.animate(
-			[
-				{ left: `${start.left - area.left}px`, top: `${start.top - area.top}px`, width: `${start.width}px`, height: `${start.height}px`, borderRadius: `${start.height / 2}px` },
-				{ left: `${first.left - area.left}px`, top: `${first.top - area.top}px`, width: `${span}px`, height: `${first.height}px`, borderRadius: `${first.height / 2}px` },
-			],
-			{ duration: half, easing: SPRING, fill: "forwards" },
-		)
-			.finished.then(() => blob.remove(), () => blob.remove());
-		choices.forEach((choice, index) => {
-			const box = boxes[index];
-			const fromLeft = first.left + share * index;
-			const dx = fromLeft + share / 2 - (box.left + box.width / 2);
-			const radius = box.height / 2;
-			const corners = index === 0 ? `${radius}px 0 0 ${radius}px` : index === choices.length - 1 ? `0 ${radius}px ${radius}px 0` : "0";
-			const own = getComputedStyle(choice);
-			choice.animate(
-				[
-					{ transform: `translateX(${dx}px) scaleX(${share / box.width})`, borderRadius: corners, backgroundColor: color, boxShadow: "none", opacity: 0 },
-					{ transform: `translateX(${dx}px) scaleX(${share / box.width})`, borderRadius: corners, backgroundColor: color, boxShadow: "none", opacity: 1, offset: 0.5 },
-					{ transform: "none", borderRadius: `${radius}px`, backgroundColor: own.backgroundColor, boxShadow: own.boxShadow, opacity: 1 },
-				],
-				{ duration: CHOICES_MS, easing: SPRING, fill: "backwards" },
-			);
-			const label = choice.querySelector<HTMLElement>(".th-choice-pill-text");
-			label?.animate([{ opacity: 0 }, { opacity: 0, offset: 0.6 }, { opacity: 1 }], { duration: CHOICES_MS, fill: "backwards" });
-		});
+	/** The row's lid slides right in one firm move, no bounce, and stays open; resolves when it has landed. */
+	openDrawer(lid: HTMLElement): Promise<void> {
+		lid.addClass("is-open");
+		if (this.reduced()) return Promise.resolve();
+		return lid
+			.animate([{ transform: "none" }, { transform: openTransform(lid) }], { duration: DRAWER_MS, easing: DRAWER })
+			.finished.then(() => undefined, () => undefined);
+	}
+
+	/** The lid slides back over the answers; resolves once it covers them again. */
+	closeDrawer(lid: HTMLElement): Promise<void> {
+		const from = openTransform(lid);
+		lid.removeClass("is-open");
+		if (this.reduced()) return Promise.resolve();
+		return lid
+			.animate([{ transform: from }, { transform: "none" }], { duration: DRAWER_MS * 0.75, easing: DRAWER, fill: "forwards" })
+			.finished.then(() => undefined, () => undefined);
 	}
 
 	/** Closing the choices without an answer: the row's content slides back in. */
@@ -153,27 +109,9 @@ export class Motion {
 					{ transform: "translateX(24px)", opacity: 0 },
 					{ transform: "none", opacity: 1 },
 				],
-				{ duration: CHOICES_MS / 2, easing: SETTLE },
+				{ duration: DRAWER_MS * 0.6, easing: SETTLE },
 			);
 		}
-	}
-
-	/** The picked choice swells and lights up while the others shrink into it; resolves when the row can take the answer. */
-	pick(picked: HTMLElement, others: readonly HTMLElement[]): Promise<void> {
-		if (this.reduced()) return Promise.resolve();
-		picked.addClass("is-picked");
-		for (const other of others) {
-			other.animate(
-				[
-					{ transform: "none", opacity: 1 },
-					{ transform: "scale(0.6)", opacity: 0 },
-				],
-				{ duration: PICK_MS, easing: SETTLE, fill: "forwards" },
-			);
-		}
-		return picked
-			.animate([{ transform: "scale(1)" }, { transform: "scale(1.06)", offset: 0.45 }, { transform: "scale(1)" }], { duration: PICK_MS + 60, easing: SPRING })
-			.finished.then(() => undefined);
 	}
 
 	/** A number that just grew swells for a moment, like a counter ticking up. */
@@ -181,4 +119,13 @@ export class Motion {
 		if (this.reduced()) return;
 		element.animate([{ transform: "scale(1)" }, { transform: "scale(1.08)" }, { transform: "scale(1)" }], { duration: BUMP_MS, easing: SPRING });
 	}
+}
+
+/** Where the open lid stands, read from its own style so the distance lives in CSS alone. */
+function openTransform(lid: HTMLElement): string {
+	const open = lid.hasClass("is-open");
+	if (!open) lid.addClass("is-open");
+	const transform = getComputedStyle(lid).transform;
+	if (!open) lid.removeClass("is-open");
+	return transform === "none" ? "none" : transform;
 }
