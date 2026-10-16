@@ -200,6 +200,10 @@ export class TodayView extends ItemView {
 		this.render();
 	}
 
+	/**
+	 * Redraws the list where it stands. While the column is rebuilt it is briefly shorter, and anything that measures
+	 * mid-way lets the browser pull the scroll up, so the scroll is put back once the column is whole again.
+	 */
 	private render(): void {
 		if (!this.columnEl) return;
 		if (this.rowDrag?.active) {
@@ -207,7 +211,12 @@ export class TodayView extends ItemView {
 			return;
 		}
 		this.stale = false;
-		const column = this.columnEl;
+		const scrolled = this.scrollEl.scrollTop;
+		this.draw(this.columnEl);
+		this.scrollEl.scrollTop = scrolled;
+	}
+
+	private draw(column: HTMLElement): void {
 		column.empty();
 		this.renderingRows = new Set();
 		const all = visibleEntries(this.ui.repository.list());
