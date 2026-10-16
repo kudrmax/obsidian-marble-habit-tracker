@@ -535,15 +535,16 @@ button.th-mark-button { width: 44px; height: 40px; margin: 0; }
 button.th-mark-button:active .th-mark { transform: scale(0.84); transition: transform 90ms ease; }
 .th-mark-slot { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 44px; height: 40px; }
 /*
- * The open card hangs from its habit: the field icons and the note link start where the habit's name starts, and the
- * card sits close under the name and further from the next habit. The icon's box is 4 px wider than its glyph's.
+ * The open card hangs from its habit, on the panel's own background as in the note: the field icons and the note link
+ * start where the habit's name starts, the background reaches the list's right edge (it stands 12 px out from the panel,
+ * as Obsidian draws it), and it keeps 12 px from the name above and from the note link below. The icon's box is 4 px
+ * wider than its glyph's.
  */
-.th-today .th-card-recipe { display: block; margin: -16px var(--th-gutter) 16px calc(var(--th-gutter) + 34px); padding: 0; border-radius: 0; background: transparent; overflow: hidden; }
+.th-today .th-card-recipe { display: block; margin: 2px calc(var(--th-gutter) + 12px) 16px calc(var(--th-gutter) + 34px); padding: 0; border-radius: 0; background: transparent; clip-path: inset(0 -16px); }
 /* The recipe rows of the habit's own panel from its note, as they are there. */
 /* Its sizes follow the font around it, so it gets the note's font to come out the same as in the note. */
-.th-today .th-card-recipe .th-habit-panel { margin-bottom: 0; background: transparent; font-family: var(--font-text); font-size: var(--font-text-size); line-height: var(--line-height-normal); }
-.th-today .th-card-recipe .th-habit-panel .metadata-content { background: transparent; }
-.th-today .th-card-recipe button.th-card-open { margin: 2px 0 0 4px; }
+.th-today .th-card-recipe .th-habit-panel { margin-bottom: 0; font-family: var(--font-text); font-size: var(--font-text-size); line-height: var(--line-height-normal); }
+.th-today .th-card-recipe button.th-card-open { margin: 12px 0 0 4px; }
 .th-row-extra { padding: 0 var(--th-gutter) 14px calc(var(--th-gutter) + 38px); }
 
 /* The end of the list: "New habit" in the accent like Reminders' "New Reminder", then rows that lead on. */
