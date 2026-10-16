@@ -13,10 +13,9 @@ const GROW_MS = 300;
 const BUMP_MS = 420;
 /**
  * The choices sliding into the row from past its left edge, and the circle and name fading where they are. Leaving,
- * they go back the same way: the same span, the same curve run backwards, and the circle and name fade in at the end.
+ * they slide back out on the same curve, quick from the first frame, while the circle and the name fade straight in.
  */
 const SLIDE_MS = 320;
-const SLIDE_BACK = "cubic-bezier(0.8, 0, 0.8, 0.2)";
 const FADE_MS = 160;
 /** How far past the row's left edge the choices wait. */
 const OFF_EDGE = 4;
@@ -114,9 +113,9 @@ export class Motion {
 	}
 
 	/**
-	 * Closing the choices without an answer, the way they came in reversed: `choices`, a copy of them as they stood, slides
-	 * from there back past the row's left edge, and the circle and the name fade in as it goes. Without a copy, they just
-	 * fade in.
+	 * Closing the choices without an answer: `choices`, a copy of them as they stood, slides from there back past the
+	 * row's left edge, moving from the first frame, and the circle and the name fade in at once. Without a copy, they
+	 * just fade in.
 	 */
 	refold(surface: HTMLElement, content: readonly HTMLElement[], choices: HTMLElement | null): void {
 		if (this.reduced()) return;
@@ -131,8 +130,8 @@ export class Motion {
 		const from = new DOMMatrix(choices.style.transform).m41;
 		const distance = last ? last.offsetLeft + last.offsetWidth + OFF_EDGE : 0;
 		const duration = distance > 0 ? SLIDE_MS * ((distance + from) / distance) : 0;
-		for (const element of content) element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: FADE_MS, delay: Math.max(0, duration - FADE_MS), fill: "backwards" });
-		const leave = choices.animate([{ transform: `translateX(${from}px)` }, { transform: `translateX(${-distance}px)` }], { duration, easing: SLIDE_BACK, fill: "forwards" });
+		for (const element of content) element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: FADE_MS });
+		const leave = choices.animate([{ transform: `translateX(${from}px)` }, { transform: `translateX(${-distance}px)` }], { duration, easing: SETTLE, fill: "forwards" });
 		leave.finished.then(
 			() => {
 				choices.remove();
