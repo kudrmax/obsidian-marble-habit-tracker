@@ -10,6 +10,7 @@ import { chip, icon, iconButton } from "./components";
 import { recipeDays } from "./format";
 import { computeStats } from "../domain/Stats";
 import { DayWatcher } from "./DayWatcher";
+import { DragScroll } from "./DragScroll";
 import { EditSheet } from "./EditSheet";
 import { Haptics } from "./Haptics";
 import { helpRows } from "./help";
@@ -105,8 +106,11 @@ export class TodayView extends ItemView {
 	/** The choices as they stood when closed without an answer, to slide back out past the row's left edge. */
 	private leavingChoices: HTMLElement | null = null;
 	private shelves: readonly Box[] = [];
-	/** The day the strip was last scrolled to, so it only scrolls again when the shown day changes. */
-	private stripDay: string | null = null;
+	/** Whether the strip has been brought to today once; from then on only its user scrolls it. */
+	private stripPlaced = false;
+	/** Where the strip was last scrolled. */
+	private stripScroll = 0;
+	private dragScroll: DragScroll | null = null;
 	/** Whether the sheet is pulled down far enough to show the days. */
 	private stripOpen = false;
 	private readonly tilt = new TiltSensor((gravity) => this.jar?.setGravity(gravity));
@@ -145,6 +149,8 @@ export class TodayView extends ItemView {
 			() => this.haptics.tap(),
 		);
 		this.sheet = sheet;
+		this.dragScroll = new DragScroll(sheet.days);
+		this.registerDomEvent(sheet.days, "scroll", () => (this.stripScroll = sheet.days.scrollLeft));
 		this.scrollEl = sheet.scroll;
 		this.columnEl = this.scrollEl.createDiv("th-column");
 		this.rowDrag = new RowDrag(
@@ -201,6 +207,8 @@ export class TodayView extends ItemView {
 		this.jar = null;
 		this.sheet?.destroy();
 		this.sheet = null;
+		this.dragScroll?.destroy();
+		this.dragScroll = null;
 		window.clearTimeout(this.captionTimer);
 		window.clearTimeout(this.stylesTimer);
 		for (const timer of this.celebrating.values()) window.clearTimeout(timer);
@@ -309,10 +317,14 @@ export class TodayView extends ItemView {
 	/** The sheet moved: the day columns stretch to its edge, and the shown day's count keeps where it can be read. */
 	private sheetMoved(top: number): void {
 		const strip = this.sheet?.days;
-		// Each time the days come into sight they open on the shown day; Obsidian may have reset their scroll meanwhile.
 		const shown = strip ? top - strip.offsetTop : 0;
 		const open = shown > 2;
-		if (open && !this.stripOpen) this.scrollToShownDay();
+		// The days open on today the first time; after that the strip stays where it was scrolled, and only gets that
+		// place back if Obsidian reset it while it was out of sight.
+		if (open && !this.stripOpen && strip) {
+			if (!this.stripPlaced) this.placeStrip();
+			else if (strip.scrollLeft === 0 && this.stripScroll > 0) strip.scrollLeft = this.stripScroll;
+		}
 		this.stripOpen = open;
 		// Hidden while the sheet is up, or its labels would show in the sheet's rounded corners.
 		strip?.style.setProperty("opacity", String(Math.min(1, Math.max(0, shown / DAYS_FADE_IN))));
@@ -430,8 +442,8 @@ export class TodayView extends ItemView {
 
 	/**
 	 * The days under the sheet, one column each: how much of the day was done fills it from the bottom, and the column
-	 * reaches under the sheet's edge so it stretches as the sheet is pulled down. A tap shows that day. The strip keeps
-	 * where it was scrolled, and moves only to bring a newly shown day into view.
+	 * reaches under the sheet's edge so it stretches as the sheet is pulled down. A tap shows that day below and leaves
+	 * the strip where it is: only its user scrolls it.
 	 */
 	private renderDays(all: readonly HabitEntry[]): void {
 		const strip = this.sheet?.days;
@@ -441,24 +453,19 @@ export class TodayView extends ItemView {
 		const today = this.ui.service.today();
 		const shown = this.shownDay();
 		const row = strip.createDiv("th-days-row");
-		let selected: HTMLElement | null = null;
-		for (const day of dayStrip(all, today)) {
-			const button = this.renderDay(row, day, day.date.equals(shown), day.date.equals(today));
-			if (day.date.equals(shown)) selected = button;
-		}
+		for (const day of dayStrip(all, today)) this.renderDay(row, day, day.date.equals(shown), day.date.equals(today));
 		strip.scrollLeft = scrolled;
-		if (selected && this.stripDay !== shown.toString()) this.scrollToShownDay();
 		this.placeDayValue();
 	}
 
 	/** Brings the shown day into view, a little right of the middle; waits until the strip has a width to scroll in. */
-	private scrollToShownDay(): void {
+	private placeStrip(): void {
 		const strip = this.sheet?.days;
 		const selected = strip?.querySelector<HTMLElement>(".th-day.is-selected");
 		// Before Obsidian has laid the view out, the strip can have a width while its days still sit at zero.
 		if (!strip || !selected || strip.clientWidth === 0 || (selected.offsetLeft === 0 && selected.previousElementSibling)) return;
 		strip.scrollLeft = selected.offsetLeft - (strip.clientWidth - selected.offsetWidth) * 0.6;
-		this.stripDay = this.shownDay().toString();
+		this.stripPlaced = true;
 	}
 
 	private renderDay(row: HTMLElement, day: StripDay, selected: boolean, today: boolean): HTMLElement {
