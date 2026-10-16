@@ -39,8 +39,6 @@ const POP_MS = 450;
 const CAPTION_MS = 2000;
 /** How far a row with an open menu keeps from the sheet's edges. */
 const VIEW_GAP = 12;
-/** How far a name moved aside by the choices keeps from the last of them. */
-const NAME_GAP = 12;
 /** The word on each answer: short and the same whatever the recipe's fields are called. */
 const CHOICE_WORDS: Record<Answer, string> = { full: "Full", tiny: "Tiny", skip: "Skip" };
 const DAY_CHECK_MS = 60_000;
@@ -94,9 +92,8 @@ export class TodayView extends ItemView {
 	private sheet: TodaySheet | null = null;
 	/** The choices' arrival while it plays, so a cancel mid-way stops it. */
 	private unfolding: { stop(): void } | null = null;
-	/** The row whose choices just closed, to slide its content back in, and how far its name had moved aside. */
+	/** The row whose choices just closed, to bring its circle and name back. */
 	private closing: string | null = null;
-	private push = 0;
 	private shelves: readonly Box[] = [];
 	private sheetTop = 0;
 	private shownWins: number | null = null;
@@ -617,7 +614,7 @@ export class TodayView extends ItemView {
 		const main = row.querySelector<HTMLElement>(".th-row-main");
 		if (main && this.menu === path) this.renderChoices(main, path, habit, mark);
 		if (main && this.closing === path) {
-			this.motion.refold(this.contentOf(main), this.push);
+			this.motion.refold(this.contentOf(main));
 			this.closing = null;
 		}
 		if (this.asking === path) this.renderReasons(row, path);
@@ -626,16 +623,14 @@ export class TodayView extends ItemView {
 
 	/**
 	 * The answers in the row as capsules: the circle as it will look once chosen — full, tiny, skip — with the answer's
-	 * word beside it, and cancel where the circle was, under the finger. The name moves aside to make room, and a long one
-	 * runs off the row. They arrive rolling: the circle becomes skip, which rolls right and pushes the name, and the
-	 * others roll in from the left behind it; all of them stop at once and open into their words. A tap anywhere else
-	 * brings the row back.
+	 * word beside it, and cancel where the circle was, under the finger. They wait ready past the row's left edge and
+	 * slide in together in one move while the circle and the name fade where they are. A tap anywhere else brings the
+	 * row back.
 	 */
 	private renderChoices(main: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
 		const labels = this.ui.labels();
 		const offTrigger = this.offTrigger && this.canGoOffTrigger(habit);
 		const chosen = (kind: "full" | "tiny") => mark?.kind === kind && isOffTrigger(mark) === offTrigger;
-		const origin = main.querySelector<HTMLElement>(".th-mark")?.getBoundingClientRect() ?? null;
 		const bar = main.createDiv("th-row-choices");
 		const marble = (label: string, look: string[], sign: "x" | "check" | null, word?: string) => {
 			const button = bar.createEl("button", { cls: "th-choice", attr: { "aria-label": label, title: label } });
@@ -673,16 +668,11 @@ export class TodayView extends ItemView {
 				this.render();
 			});
 		}
-		const name = main.querySelector<HTMLElement>(".th-row-text");
-		const last = bar.lastElementChild as HTMLElement;
-		const edge = (last.querySelector<HTMLElement>(".th-choice-ball") ?? last).getBoundingClientRect().right;
-		this.push = name ? Math.max(0, edge + NAME_GAP - name.getBoundingClientRect().left) : 0;
-		main.setCssProps({ "--th-push": `${this.push}px` });
 		main.addClass("is-choosing");
 		if (!this.menuOpening) return;
 		this.menuOpening = false;
 		this.bringIntoView(main);
-		this.unfolding = this.motion.rollChoices([...bar.querySelectorAll<HTMLElement>(".th-choice")], [...bar.querySelectorAll<HTMLElement>(".th-choices-toggle")], name, this.push, origin);
+		this.unfolding = this.motion.slideChoices(bar, this.contentOf(main));
 	}
 
 	/** Back from the choices to the row; anything still unfolding stops at once, so cancel works mid-animation. */
