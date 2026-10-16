@@ -632,7 +632,8 @@ export class TodayView extends ItemView {
 		const chosen = (kind: "full" | "tiny") => mark?.kind === kind && isOffTrigger(mark) === offTrigger;
 		const bar = main.createDiv("th-row-choices");
 		const marble = (label: string, look: string[], sign: "x" | "check" | null, word?: string) => {
-			const button = bar.createEl("button", { cls: "th-choice", attr: { "aria-label": label, title: label } });
+			// A button that shows its word needs no tooltip saying it again.
+			const button = bar.createEl("button", { cls: "th-choice", attr: word ? { "aria-label": label } : { "aria-label": label, title: label } });
 			const ball = button.createSpan("th-choice-ball");
 			const face = ball.createSpan({ cls: ["th-mark", ...look] });
 			if (sign) icon(face, sign);
