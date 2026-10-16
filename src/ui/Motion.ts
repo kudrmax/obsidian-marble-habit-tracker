@@ -110,6 +110,7 @@ export class Motion {
 			for (const element of [...balls, ...(name ? [name] : [])]) element.style.removeProperty("transform");
 			for (const element of [...balls, ...extras]) element.style.removeProperty("visibility");
 			for (const ball of balls) ball.style.removeProperty("--th-open");
+			for (const sign of signs) sign?.style.removeProperty("--th-home");
 			for (const sign of signs) sign?.style.removeProperty("--th-turn");
 		};
 		const stop = () => {
@@ -128,12 +129,15 @@ export class Motion {
 			const centre = box.left + size / 2;
 			const isSkip = index === last;
 			const from = isSkip ? origin.left + origin.width / 2 - centre : -(centre - left + size / 2 + OFF_EDGE);
-			return { ball, sign: signs[index], from, rest: box.width - size, enter: isSkip ? 0 : FIRST_IN_MS + (last - 1 - index) * NEXT_IN_MS };
+			// A sign that sits beside its word starts at the capsule's left end, where the marble is, and moves over as it opens.
+			const home = (signs[index]?.getBoundingClientRect().left ?? box.left) - box.left;
+			return { ball, sign: signs[index], from, home, rest: box.width - size, enter: isSkip ? 0 : FIRST_IN_MS + (last - 1 - index) * NEXT_IN_MS };
 		});
 		const out = (t: number) => 1 - (1 - t) ** 3;
 		const place = (roller: (typeof rollers)[number], offset: number, open: number) => {
 			roller.ball.style.transform = `translateX(${offset}px)`;
 			roller.ball.style.setProperty("--th-open", String(open));
+			roller.sign?.style.setProperty("--th-home", `${-roller.home * (1 - open)}px`);
 			roller.sign?.style.setProperty("--th-turn", `${(offset / (Math.PI * size)) * 360}deg`);
 		};
 		// The name keeps clear of skip's right edge, which is its marble while it rolls and its capsule once it opens.
