@@ -37,8 +37,6 @@ const RING_GAP = 9;
 /** How long the circle of a just-marked habit keeps popping, while its row is still on screen. */
 const POP_MS = 450;
 const CAPTION_MS = 2000;
-/** How far a row with an open menu keeps from the sheet's edges. */
-const VIEW_GAP = 12;
 /** The word on each answer: short and the same whatever the recipe's fields are called. */
 const CHOICE_WORDS: Record<Answer, string> = { full: "Full", tiny: "Tiny", skip: "Skip" };
 const DAY_CHECK_MS = 60_000;
@@ -261,17 +259,6 @@ export class TodayView extends ItemView {
 		this.renderFooter(column, true);
 		this.shownRows = this.renderingRows;
 		this.playMotion(column);
-	}
-
-	/** Scrolls the sheet, and only the sheet, so a row half under the navbar is in full view while it shows its choices. */
-	private bringIntoView(element: HTMLElement): void {
-		const inset = parseFloat(this.contentEl.style.getPropertyValue("--th-bottom-inset")) || 0;
-		const visible = this.scrollEl.getBoundingClientRect();
-		const box = element.getBoundingClientRect();
-		const below = box.bottom - (visible.bottom - inset - VIEW_GAP);
-		const above = visible.top + VIEW_GAP - box.top;
-		if (below > 0) this.scrollEl.scrollTop += below;
-		else if (above > 0) this.scrollEl.scrollTop -= above;
 	}
 
 	/** The sheet moved: its top edge is the jar's floor, and the celebration line rides just above it. */
@@ -674,7 +661,6 @@ export class TodayView extends ItemView {
 		main.addClass("is-choosing");
 		if (!this.menuOpening) return;
 		this.menuOpening = false;
-		this.bringIntoView(main);
 		this.unfolding = this.motion.slideChoices(bar, this.contentOf(main));
 	}
 
