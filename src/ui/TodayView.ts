@@ -4,6 +4,7 @@ import { DayMark, SKIPPED, done, isDone, isOffTrigger, missed } from "../domain/
 import { Habit } from "../domain/Habit";
 import { LocalDate } from "../domain/LocalDate";
 import { HabitColor } from "../domain/HabitColor";
+import { HabitBlock } from "./HabitBlock";
 import { buildJar } from "../domain/Jar";
 import { colorClass } from "./colors";
 import { chip, icon, iconButton } from "./components";
@@ -153,6 +154,7 @@ export class TodayView extends ItemView {
 		this.registerDomEvent(sheet.days, "scroll", () => (this.stripScroll = sheet.days.scrollLeft));
 		this.scrollEl = sheet.scroll;
 		this.columnEl = this.scrollEl.createDiv("th-column");
+		this.registerDomEvent(this.columnEl, "focusout", () => window.setTimeout(() => this.stale && this.render()));
 		this.rowDrag = new RowDrag(
 			this.columnEl,
 			() => this.haptics.tap(),
@@ -227,7 +229,7 @@ export class TodayView extends ItemView {
 	 */
 	private render(): void {
 		if (!this.columnEl) return;
-		if (this.rowDrag?.active) {
+		if (this.rowDrag?.active || this.isEditing()) {
 			this.stale = true;
 			return;
 		}
@@ -235,6 +237,12 @@ export class TodayView extends ItemView {
 		const scrolled = this.scrollEl.scrollTop;
 		this.draw(this.columnEl);
 		this.scrollEl.scrollTop = scrolled;
+	}
+
+	/** A value in an open card's panel is being typed: a redraw now would throw the unsaved text away. */
+	private isEditing(): boolean {
+		const active = document.activeElement;
+		return active instanceof HTMLElement && active.isContentEditable && !!this.columnEl?.contains(active);
 	}
 
 	private draw(column: HTMLElement): void {
@@ -420,7 +428,7 @@ export class TodayView extends ItemView {
 		text.setAttribute("aria-expanded", String(this.expanded === path));
 		row.toggleClass("is-expanded", this.expanded === path);
 		text.addEventListener("click", () => void this.toggleRecipe(path));
-		if (this.expanded === path) this.renderRecipe(row, path, habit);
+		if (this.expanded === path) this.renderRecipe(row, path);
 		return row;
 	}
 
@@ -800,23 +808,17 @@ export class TodayView extends ItemView {
 	}
 
 	/** An opened card: the recipe line by line, and a way to the habit's note. */
-	private renderRecipe(row: HTMLElement, path: string, habit: Habit): void {
-		const labels = this.ui.labels();
+	/** A card opens onto the recipe rows of the habit's own panel, the one in its note, with the way to the note under it. */
+	private renderRecipe(row: HTMLElement, path: string): void {
 		const recipe = row.createDiv("th-card-recipe");
-		for (const part of ["anchor", "tiny", "full", "celebration"] as const) {
-			const value = habit.current(part);
-			if (!value) continue;
-			recipe.createSpan({ cls: "th-card-key", text: labels.title(part) });
-			recipe.createSpan({ cls: "th-card-value", text: value });
-		}
+		const panel = new HabitBlock(this.app, this.ui, path, "recipe");
+		panel.render();
+		recipe.appendChild(panel.el);
 		const open = recipe.createEl("button", { cls: "th-card-open" });
 		open.appendText("Open note");
 		setIcon(open.createSpan("th-card-open-icon"), "arrow-up-right");
 		open.addEventListener("click", () => this.ui.openHabit(path, this.leaf));
 	}
-
-
-
 
 	private renderMark(parent: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
 		const labels = this.ui.labels();

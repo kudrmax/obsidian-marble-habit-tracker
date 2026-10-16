@@ -21,6 +21,9 @@ const SECTION_ICON = "layers";
 const folded = new Set<string>();
 const openHistory = new Set<string>();
 
+/** What the panel shows: everything, in the habit's note, or just the filled recipe fields, in Today's open card. */
+export type HabitBlockView = "full" | "recipe";
+
 /** The habit's own panel in its note, next to Properties: recipe, progress and history, above the note's text. */
 export class HabitBlock {
 	readonly el: HTMLElement;
@@ -31,6 +34,7 @@ export class HabitBlock {
 		private readonly app: App,
 		private readonly ui: UiContext,
 		private path: string,
+		private readonly view: HabitBlockView = "full",
 	) {
 		this.el = createDiv();
 		this.el.setAttribute("contenteditable", "false");
@@ -65,6 +69,10 @@ export class HabitBlock {
 		const entry = this.ui.repository.get(this.path);
 		const habit = entry?.kind === "ok" ? entry.habit : undefined;
 		if (habit) panel.addClasses(["th-habit", colorClass(habit.color)]);
+		if (this.view === "recipe") {
+			if (habit) this.renderRecipeFields(panel.createDiv("metadata-content").createDiv("metadata-properties"), habit, true);
+			return;
+		}
 		this.renderHeading(panel);
 		if (folded.has(this.path)) return;
 		const content = panel.createDiv("metadata-content");
@@ -110,11 +118,8 @@ export class HabitBlock {
 	}
 
 	private renderRecipe(rows: HTMLElement, habit: Habit): void {
-		const text = (part: TextPart) => habit.current(part);
 		const labels = this.ui.labels();
-		for (const part of ["anchor", "tiny", "full", "celebration"] as const) {
-			this.editable(this.property(rows, RECIPE_ICONS[part], labels.of(part)), text(part) ?? "", (next) => (next ? this.ui.service.replaceText(this.path, part, next) : this.ui.service.clearText(this.path, part)));
-		}
+		this.renderRecipeFields(rows, habit, false);
 		const days = this.property(rows, RECIPE_ICONS.schedule, labels.of("schedule")).createDiv({ cls: "metadata-input-longtext th-habit-days", text: recipeDays(habit.currentSchedule) });
 		days.addEventListener("click", () => new EditSheet(this.app, this.ui.service, this.path, habit, "schedule", labels).open());
 		this.editable(this.property(rows, SECTION_ICON, "section"), habit.section ?? "", (next) => this.ui.service.setSection(this.path, next));
@@ -122,6 +127,16 @@ export class HabitBlock {
 		const anytime = this.property(rows, "unlink", "not at trigger").createEl("input", { cls: "metadata-input-checkbox", type: "checkbox", attr: { title: "Can also be done without the trigger" } });
 		anytime.checked = habit.anytime;
 		anytime.addEventListener("change", () => void this.run(() => this.ui.service.setAnytime(this.path, anytime.checked)));
+	}
+
+	/** The recipe's text parts as editable rows; `filledOnly` leaves out the empty ones. */
+	private renderRecipeFields(rows: HTMLElement, habit: Habit, filledOnly: boolean): void {
+		const labels = this.ui.labels();
+		for (const part of ["anchor", "tiny", "full", "celebration"] as const satisfies readonly TextPart[]) {
+			const value = habit.current(part) ?? "";
+			if (filledOnly && !value) continue;
+			this.editable(this.property(rows, RECIPE_ICONS[part], labels.of(part)), value, (next) => (next ? this.ui.service.replaceText(this.path, part, next) : this.ui.service.clearText(this.path, part)));
+		}
 	}
 
 	/** A value edited in place like a text property, saved when the field loses focus. */
