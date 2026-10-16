@@ -1,12 +1,10 @@
 import { SETTLE } from "./Motion";
 
-/** Where the sheet rests: halfway, with the jar on show above it, or pulled up, with the jar squeezed into a strip. */
-export type Detent = "half" | "full";
+/** Where the sheet rests: up, covering the days, or pulled down to show them. */
+export type Detent = "up" | "down";
 
-/** The share of the screen above the sheet when it rests halfway. */
-const HALF = 0.46;
-/** How much of the jar stays in sight above a pulled-up sheet, under the number. */
-const FULL_STAGE = 128;
+/** How far the sheet drops to show the days above it. */
+const DOWN_BY = 250;
 /** A flick faster than this, in px per ms, picks the detent it heads to whatever the position. */
 const FLICK = 0.45;
 /** Past a detent the sheet follows the finger at this fraction, like iOS rubber-banding. */
@@ -14,19 +12,20 @@ const RUBBER = 0.35;
 const SETTLE_MS = 420;
 
 /**
- * Today's two layers, as in Maps or Find My: a stage on top with the number and the jar, and a sheet over it that
- * holds the day. The sheet is dragged by its grip between two detents; its top edge is the jar's floor, so pulling it
- * up pushes the marbles up. Everything that depends on the sheet's position hears about it through `onMove`.
+ * Today's two layers: the days on the stage, and a sheet over them that holds the habits. The sheet rests up, so the
+ * habits come first; dragged down by its grip it shows the days, whose columns reach under its edge and stretch with
+ * it. Everything that depends on the sheet's position hears about it through `onMove`.
  */
 export class TodaySheet {
 	readonly stage: HTMLElement;
-	readonly hero: HTMLElement;
+	/** The strip of days, one column each, under the sheet. */
+	readonly days: HTMLElement;
 	readonly sheet: HTMLElement;
 	readonly grip: HTMLElement;
-	/** The sheet's own header under the grabber, redrawn with the day; dragging it moves the sheet too. */
+	/** The sheet's own header under the grabber, used by All habits; dragging it moves the sheet too. */
 	readonly head: HTMLElement;
 	readonly scroll: HTMLElement;
-	private detent: Detent = "half";
+	private detent: Detent = "up";
 	private top = 0;
 	private drag: { pointer: number; startY: number; startTop: number; lastY: number; lastAt: number; speed: number } | null = null;
 	private settleFrame = 0;
@@ -38,7 +37,7 @@ export class TodaySheet {
 		private readonly onSnap: (detent: Detent) => void,
 	) {
 		this.stage = root.createDiv("th-stage");
-		this.hero = this.stage.createDiv("th-hero");
+		this.days = this.stage.createDiv("th-days");
 		this.sheet = root.createDiv("th-sheet");
 		this.grip = this.sheet.createDiv("th-sheet-grip");
 		this.grip.createDiv("th-sheet-grabber");
@@ -48,10 +47,9 @@ export class TodaySheet {
 		this.grip.addEventListener("pointermove", (event) => this.follow(event));
 		this.grip.addEventListener("pointerup", (event) => this.release(event));
 		this.grip.addEventListener("pointercancel", (event) => this.release(event));
-		this.grabber().addEventListener("click", () => this.snap(this.detent === "half" ? "full" : "half"));
+		this.grabber().addEventListener("click", () => this.snap(this.detent === "up" ? "down" : "up"));
 		this.resizer = new ResizeObserver(() => this.place(this.detentTop(this.detent)));
 		this.resizer.observe(root);
-		// Placed at once, not on the observer's first call, so the jar never sees a screen without its floor.
 		if (root.clientHeight > 0) this.place(this.detentTop(this.detent));
 	}
 
@@ -72,11 +70,8 @@ export class TodaySheet {
 	}
 
 	private detentTop(detent: Detent): number {
-		const height = this.root.clientHeight;
-		const heroTop = this.hero.offsetTop;
-		const full = heroTop + FULL_STAGE;
-		const half = Math.max(full + 120, Math.round(height * HALF));
-		return detent === "full" ? full : half;
+		const up = this.days.offsetTop;
+		return detent === "down" ? up + DOWN_BY : up;
 	}
 
 	private start(event: PointerEvent): void {
@@ -94,11 +89,11 @@ export class TodaySheet {
 		drag.speed = (event.clientY - drag.lastY) / elapsed;
 		drag.lastY = event.clientY;
 		drag.lastAt = event.timeStamp;
-		const full = this.detentTop("full");
-		const half = this.detentTop("half");
+		const up = this.detentTop("up");
+		const down = this.detentTop("down");
 		let top = drag.startTop + event.clientY - drag.startY;
-		if (top < full) top = full - (full - top) * RUBBER;
-		if (top > half) top = half + (top - half) * RUBBER;
+		if (top < up) top = up - (up - top) * RUBBER;
+		if (top > down) top = down + (top - down) * RUBBER;
 		this.place(top);
 	}
 
@@ -107,16 +102,16 @@ export class TodaySheet {
 		if (!drag || event.pointerId !== drag.pointer) return;
 		this.drag = null;
 		if (Math.abs(event.clientY - drag.startY) < 4) return;
-		const full = this.detentTop("full");
-		const half = this.detentTop("half");
+		const up = this.detentTop("up");
+		const down = this.detentTop("down");
 		let detent: Detent;
-		if (drag.speed < -FLICK) detent = "full";
-		else if (drag.speed > FLICK) detent = "half";
-		else detent = this.top - full < half - this.top ? "full" : "half";
+		if (drag.speed < -FLICK) detent = "up";
+		else if (drag.speed > FLICK) detent = "down";
+		else detent = this.top - up < down - this.top ? "up" : "down";
 		this.snap(detent);
 	}
 
-	/** Moves the sheet with iOS's settling curve, reporting its position every frame so the marbles move with it. */
+	/** Moves the sheet with iOS's settling curve, reporting its position every frame so the days stretch with it. */
 	private settle(top: number): void {
 		cancelAnimationFrame(this.settleFrame);
 		if (Math.abs(top - this.top) < 1) {
@@ -129,8 +124,8 @@ export class TodaySheet {
 		const until = performance.now() + SETTLE_MS + 40;
 		const report = () => {
 			const now = this.sheet.getBoundingClientRect().top - this.root.getBoundingClientRect().top;
+			this.root.style.setProperty("--th-sheet-now", `${now}px`);
 			this.onMove(now);
-			this.root.style.setProperty("--th-sheet-p", String(this.progress(now)));
 			if (performance.now() < until) this.settleFrame = requestAnimationFrame(report);
 			else this.sheet.removeClass("is-settling");
 		};
@@ -141,14 +136,7 @@ export class TodaySheet {
 		this.top = top;
 		this.root.style.setProperty("--th-sheet-top", `${top}px`);
 		if (!report) return;
-		this.root.style.setProperty("--th-sheet-p", String(this.progress(top)));
+		this.root.style.setProperty("--th-sheet-now", `${top}px`);
 		this.onMove(top);
-	}
-
-	/** 0 with the sheet halfway, 1 pulled up: how far the number has shrunk. */
-	private progress(top: number): number {
-		const full = this.detentTop("full");
-		const half = this.detentTop("half");
-		return Math.min(1, Math.max(0, (half - top) / Math.max(1, half - full)));
 	}
 }

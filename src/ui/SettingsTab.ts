@@ -152,7 +152,7 @@ export class SettingsTab extends PluginSettingTab {
 			});
 		new Setting(containerEl)
 			.setName("Fold answered habits")
-			.setDesc("Done and skipped habits fold into one line under the list, which you can open.")
+			.setDesc("Done and skipped habits leave the list; the ✓ button above it says how many and shows them again.")
 			.addToggle((toggle) => toggle.setValue(settings.hideDone).onChange((value) => void this.save((next) => (next.hideDone = value))));
 		new Setting(containerEl)
 			.setName("Celebration line")
@@ -160,10 +160,6 @@ export class SettingsTab extends PluginSettingTab {
 			.addToggle((toggle) =>
 				toggle.setValue(settings.celebrationLine).onChange((value) => void this.save((next) => (next.celebrationLine = value))),
 			);
-		new Setting(containerEl)
-			.setName("Total wins")
-			.setDesc("Show how many habits you've ever done under today's progress.")
-			.addToggle((toggle) => toggle.setValue(settings.showWins).onChange((value) => void this.save((next) => (next.showWins = value))));
 	}
 
 	private skipped(containerEl: HTMLElement): void {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HabitEntry } from "../src/application/ports";
 import { TINY, missed } from "../src/domain/DayMark";
-import { closedDayLine, dayTitle, totalWins, winsLabel, winsSince, offersShrink, todayEntries } from "../src/ui/today";
+import { closedDayLine, dayStrip, dayTitle, totalWins, winsLabel, winsSince, offersShrink, todayEntries } from "../src/ui/today";
 import { d } from "./support/dates";
 import { habitNote } from "./support/habits";
 
@@ -42,6 +42,33 @@ describe("dayTitle", () => {
 		expect(dayTitle(today, today)).toBe("Today");
 		expect(dayTitle(d("2026-10-14"), today)).toBe("Yesterday");
 		expect(dayTitle(d("2026-10-12"), today)).toBe("Mon, Oct 12");
+	});
+});
+
+describe("dayStrip", () => {
+	const thursday = d("2026-10-15");
+
+	it("runs from two weeks back to the end of this week, oldest first", () => {
+		const days = dayStrip([ok("Read")], thursday);
+		expect(days[0].date.toString()).toBe("2026-10-02");
+		expect(days[days.length - 1].date.toString()).toBe("2026-10-18");
+		expect(days.filter((day) => day.future).map((day) => day.date.day)).toEqual([16, 17, 18]);
+	});
+
+	it("reaches back to the first mark when that is earlier", () => {
+		const days = dayStrip([ok("Read", { done_tiny: ["2026-09-20"] })], thursday);
+		expect(days[0].date.toString()).toBe("2026-09-20");
+	});
+
+	it("counts the habits due each day and the ones done, skips not counted as done", () => {
+		const read = ok("Read", { done_full: ["2026-10-14"], done_tiny: ["2026-10-15"] });
+		const floss = ok("Floss", { missed: [{ date: "2026-10-15", reason: "Forgot" }] });
+		const weekend = ok("Hike", { schedule: [{ value: ["sat", "sun"], since: "2026-10-01" }] });
+		const days = dayStrip([read, floss, weekend], thursday);
+		const on = (text: string) => days.find((day) => day.date.toString() === text);
+		expect(on("2026-10-15")).toMatchObject({ due: 2, done: 1, future: false });
+		expect(on("2026-10-14")).toMatchObject({ due: 2, done: 1 });
+		expect(on("2026-10-18")).toMatchObject({ due: 3, done: 0, future: true });
 	});
 });
 

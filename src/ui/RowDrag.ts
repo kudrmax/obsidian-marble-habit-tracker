@@ -84,7 +84,8 @@ export class RowDrag {
 		if (event.button !== 0 || this.dragging) return;
 		const target = event.target instanceof Element ? event.target : null;
 		const row = target?.closest(ROW_HANDLE)?.closest<HTMLElement>('[data-slot="row"]');
-		const header = target?.closest<HTMLElement>('[data-slot="header"]');
+		// The buttons that ride on a header's line are tapped, never dragged.
+		const header = target?.closest("button") ? null : target?.closest<HTMLElement>('[data-slot="header"]');
 		const element = row ?? header;
 		if (!element) return;
 		const mouse = event.pointerType === "mouse";

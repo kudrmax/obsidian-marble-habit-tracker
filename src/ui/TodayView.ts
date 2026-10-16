@@ -26,7 +26,8 @@ import { Placement, arrange, groupBySection, visibleEntries } from "./order";
 import { Drop, RowDrag } from "./RowDrag";
 import { SectionNameModal } from "./SectionNameModal";
 import { ScreenChrome } from "./ScreenChrome";
-import { closedDayLine, dayTitle, totalWins, winsLabel, winsSince, offersShrink, todayEntries } from "./today";
+import { StripDay, closedDayLine, dayStrip, dayTitle, winsLabel, offersShrink, todayEntries } from "./today";
+import { weekdayShort } from "./format";
 import { UiContext } from "./UiContext";
 
 export const HABITS_VIEW = "tiny-habits-grid";
@@ -40,6 +41,12 @@ const CAPTION_MS = 2000;
 /** The word on each answer: short and the same whatever the recipe's fields are called. */
 const CHOICE_WORDS: Record<Answer, string> = { full: "Full", tiny: "Tiny", skip: "Skip" };
 const DAY_CHECK_MS = 60_000;
+/** How far a day's column reaches under the sheet; matches `--th-day-under` in the styles. */
+const DAY_UNDER = 40;
+/** How far the sheet drops before the days are fully in sight. */
+const DAYS_FADE_IN = 48;
+/** The height a day's fill needs to hold its count inside. */
+const DAY_VALUE_ROOM = 32;
 /** Obsidian re-reads a note a moment after it is written, so the tap point has to wait for the new mark. */
 const ORIGIN_TTL_MS = 4000;
 const FALLBACK_COLOR: Hsl = { h: 258, s: 88, l: 66 };
@@ -95,8 +102,10 @@ export class TodayView extends ItemView {
 	/** The choices as they stood when closed without an answer, to slide back out past the row's left edge. */
 	private leavingChoices: HTMLElement | null = null;
 	private shelves: readonly Box[] = [];
-	private sheetTop = 0;
-	private shownWins: number | null = null;
+	/** The day the strip was last scrolled to, so it only scrolls again when the shown day changes. */
+	private stripDay: string | null = null;
+	/** Whether the sheet is pulled down far enough to show the days. */
+	private stripOpen = false;
 	private readonly tilt = new TiltSensor((gravity) => this.jar?.setGravity(gravity));
 
 	constructor(
@@ -236,14 +245,24 @@ export class TodayView extends ItemView {
 		const habits = entries.flatMap((entry) => (entry.kind === "ok" ? [entry] : []));
 		const answeredHabits = habits.filter((entry) => entry.habit.markOn(today) !== undefined);
 		const closed = habits.length > 0 && answeredHabits.length === habits.length && this.leaving.size === 0;
-		this.renderHero(all, habits.length, answeredHabits.filter((entry) => isDone(entry.habit.markOn(today))).length);
+		this.renderDays(all);
 		this.renderHead();
-		if (closed) this.renderRing(column, habits.map((entry) => entry.habit), this.wasClosed === false);
-		this.wasClosed = closed;
-		if (habits.length === 0) column.createDiv("th-ring-block").createEl("h2", { cls: "th-title", text: "Nothing for today" });
-
+		const chipLine = this.renderDayChip(column);
 		const hideDone = this.ui.settings().hideDone;
-		const open = (entry: Extract<HabitEntry, { kind: "ok" }>) =>
+		const hidden = hideDone && !this.showDone ? answeredHabits.filter((entry) => !this.leaving.has(entry.path)).length : 0;
+		const tools = () => this.renderTools(hidden, hideDone && answeredHabits.length > 0);
+		const place = (element: HTMLElement) => (chipLine ? chipLine.appendChild(element) : column.appendChild(this.toolsLine(element)));
+		if (closed) {
+			place(tools());
+			this.renderRing(column, habits.map((entry) => entry.habit), this.wasClosed === false);
+		}
+		this.wasClosed = closed;
+		if (habits.length === 0) {
+			place(tools());
+			column.createDiv("th-ring-block").createEl("h2", { cls: "th-title", text: "Nothing for today" });
+		}
+
+		const open =(entry: Extract<HabitEntry, { kind: "ok" }>) =>
 			entry.habit.markOn(today) === undefined ||
 			this.menu === entry.path ||
 			this.asking === entry.path ||
@@ -254,35 +273,51 @@ export class TodayView extends ItemView {
 			(entry) => entry.habit.section,
 		).flatMap((group) => group.items.filter((item) => habits.some((habit) => habit.path === item.path)));
 		const shown = ordered.filter((entry) => !hideDone || this.showDone || open(entry));
+		// The buttons sit on the first header's line, so the habits start as high as they can.
+		let pending: HTMLElement | null = closed || habits.length === 0 ? null : tools();
+		if (pending && chipLine) {
+			chipLine.appendChild(pending);
+			pending = null;
+		}
 		let section: string | undefined | null = null;
 		for (const entry of shown) {
 			if (entry.habit.section !== section) {
 				section = entry.habit.section;
-				if (section !== undefined) this.renderSection(column, section);
+				if (section !== undefined) {
+					const header = this.renderSection(column, section);
+					if (pending) header.appendChild(pending);
+					pending = null;
+				}
+			}
+			if (pending) {
+				column.appendChild(this.toolsLine(pending));
+				pending = null;
 			}
 			this.renderRow(column, entry.path, entry.habit);
 		}
+		if (pending) column.appendChild(this.toolsLine(pending));
 		for (const entry of entries) if (entry.kind === "broken") this.renderBroken(column, entry);
 		this.renderNewSection(column);
-		this.renderFolded(column, answeredHabits.filter((entry) => !this.leaving.has(entry.path)));
-		this.renderFooter(column, true);
 		this.shownRows = this.renderingRows;
 		this.playMotion(column);
 	}
 
-	/** The sheet moved: its top edge is the jar's floor, and the celebration line rides just above it. */
+	/** The sheet moved: the day columns stretch to its edge, and the shown day's count keeps where it can be read. */
 	private sheetMoved(top: number): void {
-		const first = this.sheetTop <= 0 && top > 0;
-		this.sheetTop = top;
-		this.updateFloor();
-		if (first) this.syncJar(visibleEntries(this.ui.repository.list()));
+		const strip = this.sheet?.days;
+		// Each time the days come into sight they open on the shown day; Obsidian may have reset their scroll meanwhile.
+		const shown = strip ? top - strip.offsetTop : 0;
+		const open = shown > 2;
+		if (open && !this.stripOpen) this.scrollToShownDay();
+		this.stripOpen = open;
+		// Hidden while the sheet is up, or its labels would show in the sheet's rounded corners.
+		strip?.style.setProperty("opacity", String(Math.min(1, Math.max(0, shown / DAYS_FADE_IN))));
+		this.placeDayValue();
 	}
 
+	/** The marbles fall to the bottom of the screen, over the sheet, and lie on Obsidian's bars there. */
 	private updateFloor(): void {
-		const width = this.contentEl.clientWidth;
-		const height = this.contentEl.clientHeight;
-		const floor: Box = { left: -width, top: this.sheetTop, right: 2 * width, bottom: height + this.sheetTop, radius: 0 };
-		this.jar?.setObstacles(this.sheetTop > 0 ? [...this.shelves, floor] : this.shelves);
+		this.jar?.setObstacles(this.shelves);
 	}
 
 	/** Starts what moves after a redraw: rows folding away, a new day or screen sliding in, a recipe growing open. */
@@ -303,6 +338,7 @@ export class TodayView extends ItemView {
 	}
 
 	showAll(): void {
+		this.sheet?.snap("up");
 		this.slide = this.screen === "all" ? null : "push";
 		this.screen = "all";
 		this.menu = null;
@@ -389,60 +425,129 @@ export class TodayView extends ItemView {
 	}
 
 	/**
-	 * The stage above the sheet: the wins as one big number with a small line under it, and the day's count on the
-	 * right. The number pops when it grows.
+	 * The days under the sheet, one column each: how much of the day was done fills it from the bottom, and the column
+	 * reaches under the sheet's edge so it stretches as the sheet is pulled down. A tap shows that day. The strip keeps
+	 * where it was scrolled, and moves only to bring a newly shown day into view.
 	 */
-	private renderHero(all: readonly HabitEntry[], due: number, done: number): void {
-		const hero = this.sheet?.hero;
-		if (!hero) return;
-		hero.empty();
+	private renderDays(all: readonly HabitEntry[]): void {
+		const strip = this.sheet?.days;
+		if (!strip) return;
+		const scrolled = strip.scrollLeft;
+		strip.empty();
 		const today = this.ui.service.today();
-		const wins = totalWins(all);
-		const main = hero.createDiv("th-hero-main");
-		if (this.ui.settings().showWins) {
-			const number = main.createDiv({ cls: "th-hero-number", text: String(wins) });
-			if (this.shownWins !== null && wins > this.shownWins) this.motion.bump(number);
-			main.createDiv({ cls: "th-hero-caption", text: winsSince(all, today) });
+		const shown = this.shownDay();
+		const row = strip.createDiv("th-days-row");
+		let selected: HTMLElement | null = null;
+		for (const day of dayStrip(all, today)) {
+			const button = this.renderDay(row, day, day.date.equals(shown), day.date.equals(today));
+			if (day.date.equals(shown)) selected = button;
 		}
-		this.shownWins = wins;
-		if (due === 0) return;
-		const side = hero.createDiv("th-hero-side");
-		const count = side.createDiv("th-hero-count");
-		count.createSpan({ text: String(done) });
-		count.createSpan({ cls: "th-hero-of", text: `/${due}` });
-		side.createDiv({ cls: "th-hero-caption", text: dayTitle(this.shownDay(), today).toLowerCase() });
+		strip.scrollLeft = scrolled;
+		if (selected && this.stripDay !== shown.toString()) this.scrollToShownDay();
+		this.placeDayValue();
 	}
 
-	/** The sheet's header: the day with arrows to step through past days, or All habits with the way back. */
+	/** Brings the shown day into view, a little right of the middle; waits until the strip has a width to scroll in. */
+	private scrollToShownDay(): void {
+		const strip = this.sheet?.days;
+		const selected = strip?.querySelector<HTMLElement>(".th-day.is-selected");
+		// Before Obsidian has laid the view out, the strip can have a width while its days still sit at zero.
+		if (!strip || !selected || strip.clientWidth === 0 || (selected.offsetLeft === 0 && selected.previousElementSibling)) return;
+		strip.scrollLeft = selected.offsetLeft - (strip.clientWidth - selected.offsetWidth) * 0.6;
+		this.stripDay = this.shownDay().toString();
+	}
+
+	private renderDay(row: HTMLElement, day: StripDay, selected: boolean, today: boolean): HTMLElement {
+		const share = day.due === 0 ? 0 : day.done / day.due;
+		const button = row.createEl("button", { cls: "th-day", attr: { "aria-label": dayTitle(day.date, this.ui.service.today()), "aria-pressed": String(selected) } });
+		button.toggleClass("is-selected", selected);
+		button.toggleClass("is-today", today);
+		button.toggleClass("is-future", day.future);
+		button.style.setProperty("--th-share", String(share));
+		button.createSpan({ cls: "th-day-dow", text: weekdayShort(day.date.weekday()) });
+		button.createSpan({ cls: "th-day-num", text: String(day.date.day) });
+		const fill = button.createSpan("th-day-pill").createSpan("th-day-fill");
+		if (selected && day.due > 0) fill.createSpan({ cls: "th-day-value", text: `${day.done}/${day.due}` });
+		button.disabled = day.future;
+		button.addEventListener("click", () => this.showDay(day.date));
+		return button;
+	}
+
+	/** The shown day's count sits at the top of its fill, or just above it when the fill is too short to hold it. */
+	private placeDayValue(): void {
+		const day = this.sheet?.days.querySelector<HTMLElement>(".th-day.is-selected");
+		const fill = day?.querySelector<HTMLElement>(".th-day-fill");
+		if (!day || !fill) return;
+		const visible = fill.getBoundingClientRect().height - DAY_UNDER;
+		day.toggleClass("is-low", visible < DAY_VALUE_ROOM);
+	}
+
+	/** On a past day, a chip at the top says which one, and its cross goes back to today. */
+	private renderDayChip(column: HTMLElement): HTMLElement | null {
+		const today = this.ui.service.today();
+		const shown = this.shownDay();
+		if (shown.equals(today)) return null;
+		const line = column.createDiv("th-day-chip-line");
+		const chip = line.createEl("button", { cls: "th-day-chip", attr: { "aria-label": "Back to today" } });
+		chip.createSpan({ text: dayTitle(shown, today) });
+		setIcon(chip.createSpan("th-day-chip-x"), "x");
+		chip.addEventListener("click", () => this.showDay(today));
+		return line;
+	}
+
+	/**
+	 * Today's buttons, small and round: how many answered habits are hidden (a tap shows them), All habits, a new
+	 * habit, and the help. They ride on the first section header's line.
+	 */
+	private renderTools(hidden: number, foldable: boolean): HTMLElement {
+		const tools = createDiv("th-tools");
+		if (foldable) {
+			const count = this.showDone ? "" : String(hidden);
+			const done = tools.createEl("button", { cls: "th-tool th-tool-done", attr: { "aria-label": this.showDone ? "Hide answered" : "Show answered", "aria-pressed": String(this.showDone) } });
+			setIcon(done.createSpan("th-tool-icon"), this.showDone ? "eye-off" : "check");
+			if (count) done.createSpan({ cls: "th-tool-count", text: count });
+			done.addEventListener("click", () => {
+				this.showDone = !this.showDone;
+				this.render();
+			});
+		}
+		const button = (label: string, iconName: string, onClick: () => void) => {
+			const element = tools.createEl("button", { cls: "th-tool", attr: { "aria-label": label } });
+			setIcon(element.createSpan("th-tool-icon"), iconName);
+			element.addEventListener("click", onClick);
+			return element;
+		};
+		button("All habits", "list", () => this.showAll());
+		button("New habit", "plus", () => this.ui.newHabit());
+		const help = tools.createEl("button", { cls: "th-tool th-tool-help", text: "?", attr: { "aria-label": "How it works" } });
+		help.toggleClass("th-has-dot", !this.ui.settings().hintsSeen);
+		help.addEventListener("click", () => {
+			new HelpModal(this.app, helpRows(Platform.isMobile, this.ui.settings().merge)).open();
+			this.ui.markHintsSeen();
+		});
+		return tools;
+	}
+
+	/** The buttons on a line of their own, when no section header starts the list. */
+	private toolsLine(tools: HTMLElement): HTMLElement {
+		const line = createDiv("th-tools-line");
+		line.appendChild(tools);
+		return line;
+	}
+
+	/** The sheet's header holds All habits' way back; on Today it stays empty, the habits come first. */
 	private renderHead(): void {
 		const head = this.sheet?.head;
 		if (!head) return;
 		head.empty();
+		this.sheet?.days.toggleClass("is-hidden", this.screen === "all");
+		if (this.screen !== "all") return;
 		const line = head.createDiv("th-head-line");
-		if (this.screen === "all") {
-			const back = line.createEl("button", { cls: "th-back" });
-			setIcon(back.createSpan("th-back-icon"), "chevron-left");
-			back.appendText("Today");
-			back.addEventListener("click", () => this.showToday());
-			line.createEl("h2", { cls: "th-sheet-title", text: "All habits" });
-			return;
-		}
-		const today = this.ui.service.today();
-		const shown = this.shownDay();
-		const isToday = shown.equals(today);
-		line.createEl("h2", { cls: "th-sheet-title", text: dayTitle(shown, today) });
-		if (!isToday) {
-			const back = line.createEl("button", { cls: "th-head-today", text: "Today", attr: { title: "Back to today" } });
-			back.addEventListener("click", () => this.showDay(today));
-		}
-		const step = (label: string, iconName: string, days: number, disabled: boolean) => {
-			const button = line.createEl("button", { cls: "th-head-step", attr: { "aria-label": label, title: label } });
-			setIcon(button, iconName);
-			button.disabled = disabled;
-			button.addEventListener("click", () => this.showDay(shown.addDays(days)));
-		};
-		step("Previous day", "chevron-left", -1, false);
-		step("Next day", "chevron-right", 1, isToday);
+		const back = line.createEl("button", { cls: "th-back" });
+		setIcon(back.createSpan("th-back-icon"), "chevron-left");
+		back.appendText("Today");
+		back.addEventListener("click", () => this.showToday());
+		line.createEl("h2", { cls: "th-sheet-title", text: "All habits" });
 	}
 
 	/** A closed day: a ring with an arc per habit, done in its color and skipped in grey. */
@@ -476,26 +581,6 @@ export class TodayView extends ItemView {
 		block.createEl("h2", { cls: "th-title", text: "Day closed" });
 		block.createDiv({ cls: "th-ring-sub", text: closedDayLine(habits.length - done) });
 		if (justClosed) this.haptics.merge();
-	}
-
-	/** The answered habits folded into one row at the end of the list, "3 done · 1 skipped", which opens them. */
-	private renderFolded(column: HTMLElement, answered: readonly Extract<HabitEntry, { kind: "ok" }>[]): void {
-		if (answered.length === 0 || !this.ui.settings().hideDone) return;
-		const day = this.shownDay();
-		const done = answered.filter((entry) => isDone(entry.habit.markOn(day)));
-		const skipped = answered.length - done.length;
-		const toggle = column.createEl("button", { cls: "th-fold", attr: { "aria-expanded": String(this.showDone) } });
-		const dots = toggle.createSpan("th-done-dots");
-		for (const entry of answered) {
-			const color = isDone(entry.habit.markOn(day)) ? ["th-habit", colorClass(entry.habit.color)] : ["is-skipped"];
-			dots.createSpan({ cls: ["th-done-dot", ...color] });
-		}
-		toggle.createSpan({ cls: "th-fold-text", text: [done.length ? `${done.length} done` : "", skipped ? `${skipped} skipped` : ""].filter(Boolean).join(" · ") });
-		toggle.createSpan({ cls: "th-fold-action", text: this.showDone ? "Hide" : "Show" });
-		toggle.addEventListener("click", () => {
-			this.showDone = !this.showDone;
-			this.render();
-		});
 	}
 
 	private showDay(day: LocalDate): void {
@@ -583,8 +668,10 @@ export class TodayView extends ItemView {
 		iconButton(empty, { icon: "plus", label: "New habit", primary: true, large: true, onClick: () => this.ui.newHabit() });
 	}
 
-	private renderSection(column: HTMLElement, section: string): void {
-		column.createDiv({ cls: "th-group", text: section, attr: { "data-slot": "header", "data-section": section } });
+	private renderSection(column: HTMLElement, section: string): HTMLElement {
+		const header = column.createDiv({ cls: "th-group", attr: { "data-slot": "header", "data-section": section } });
+		header.createSpan({ cls: "th-group-name", text: section });
+		return header;
 	}
 
 	private renderNewSection(column: HTMLElement): void {
@@ -883,8 +970,7 @@ export class TodayView extends ItemView {
 	}
 
 	private syncJar(entries: readonly HabitEntry[]): void {
-		// Until the sheet has its place there is no floor; marbles laid out now would be shot up when it appears.
-		if (!this.jar || this.sheetTop <= 0) return;
+		if (!this.jar) return;
 		const today = this.ui.service.today();
 		const names = new Map<string, Habit>();
 		const items: JarItem[] = entries.flatMap((entry) => {

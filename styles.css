@@ -451,44 +451,69 @@ button.th-card-open { grid-column: 1 / -1; justify-self: start; display: inline-
 .th-row-text { cursor: pointer; }
 
 /*
- * Today is two layers, as in Maps or Find My: a stage with one big number and the jar, and a sheet over it with the
- * day. The sheet's top edge is the jar's floor. On a phone it all follows iOS: the system font, Reminders' plain list
- * with circles in each habit's color, a big Done button, and a context menu over a blurred screen.
+ * Today is two layers: the days on a stage, and a sheet over them with the habits. The sheet rests up, so the habits
+ * come first; pulled down, it shows the days, whose columns reach under its edge and stretch with it. The marbles fall
+ * over everything to the bottom of the screen. On a phone it all follows iOS: the system font and Reminders' plain list.
  */
-.tiny-habits.th-today { --th-sheet-top: 46%; --th-sheet-p: 0; }
+.tiny-habits.th-today { --th-sheet-top: 0px; --th-sheet-now: 0px; --th-day-under: 40px; --th-days-top: calc(var(--th-top-inset, 0px) + 6px); }
 .is-mobile .tiny-habits { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-interface); }
-.th-jar { z-index: 2; }
+.th-today .th-jar { z-index: 5; }
+.th-today .th-caption { z-index: 6; }
 
 .th-stage { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
-.th-hero { position: absolute; top: calc(var(--th-top-inset, 0px) + 6px); left: var(--th-gutter); right: var(--th-gutter); display: flex; align-items: flex-start; justify-content: space-between; }
-.th-hero-number { font-size: 96px; line-height: 88px; height: 88px; font-weight: 700; letter-spacing: -0.045em; font-variant-numeric: tabular-nums; color: var(--text-normal); transform-origin: 0 0; transform: scale(calc(1 - 0.55 * var(--th-sheet-p))); }
-.th-hero-main .th-hero-caption { transform: translateY(calc(-48px * var(--th-sheet-p))); }
-.th-hero-caption { margin-top: 8px; font-size: 11px; line-height: 13px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-muted); }
-.th-hero-side { padding-top: 10px; text-align: right; }
-.th-hero-count { font-size: 22px; line-height: 26px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-normal); }
-.th-hero-of { color: var(--text-faint); font-weight: 600; }
-.th-hero-side .th-hero-caption { margin-top: 3px; }
+.th-days { position: absolute; left: 0; right: 0; top: var(--th-days-top); height: calc(var(--th-sheet-now) - var(--th-days-top) + var(--th-day-under)); overflow-x: auto; overflow-y: hidden; pointer-events: auto; scrollbar-width: none; overscroll-behavior-x: contain; -webkit-mask-image: linear-gradient(to right, transparent, #000 34px, #000 calc(100% - 34px), transparent); mask-image: linear-gradient(to right, transparent, #000 34px, #000 calc(100% - 34px), transparent); }
+.th-days::-webkit-scrollbar { display: none; }
+.th-days.is-hidden { display: none; }
+.th-days-row { display: flex; gap: 8px; width: max-content; height: 100%; padding: 0 34px; }
+button.th-day { flex: 0 0 46px; width: 46px; height: 100%; padding: 0; border: none; border-radius: 0; box-shadow: none; background: transparent; display: flex; flex-direction: column; align-items: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button.th-day:hover { background: transparent; }
+button.th-day:disabled { cursor: default; opacity: 1; }
+.th-day-dow { font-size: 10px; line-height: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+.th-day-num { margin-top: 1px; font-size: 16px; line-height: 20px; font-weight: 500; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.th-day-pill { position: relative; flex: 1 1 auto; width: 100%; margin-top: 8px; border-radius: 23px; corner-shape: round; overflow: hidden; background: color-mix(in srgb, var(--text-normal) 5%, var(--background-primary)); }
+.th-day-fill { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--th-day-under) + var(--th-share) * (100% - var(--th-day-under) - 6px)); border-radius: 23px; corner-shape: round; background: color-mix(in srgb, var(--text-normal) 14%, var(--background-primary)); }
+.th-day-value { position: absolute; top: 9px; left: 0; right: 0; text-align: center; font-size: 12px; line-height: 14px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-on-accent); }
+.th-day.is-low .th-day-value { top: -20px; color: var(--text-accent); }
+.th-day.is-low .th-day-fill { overflow: visible; }
+.th-day.is-selected .th-day-dow, .th-day.is-selected .th-day-num { color: var(--text-accent); font-weight: 700; }
+.th-day.is-selected .th-day-pill { background: color-mix(in srgb, var(--interactive-accent) 10%, var(--background-primary)); }
+.th-day.is-selected .th-day-fill { background: var(--interactive-accent); }
+.th-day.is-future .th-day-dow, .th-day.is-future .th-day-num { color: var(--text-faint); }
+.th-day.is-future .th-day-fill { display: none; }
 
-.th-sheet { position: absolute; left: 0; right: 0; top: var(--th-sheet-top); bottom: 0; z-index: 4; display: flex; flex-direction: column; border-radius: 26px 26px 0 0; corner-shape: round; background: var(--background-secondary); box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.28), 0 -0.5px 0 var(--background-modifier-border); }
+.th-sheet { position: absolute; left: 0; right: 0; top: var(--th-sheet-top); bottom: 0; z-index: 4; display: flex; flex-direction: column; border-radius: 24px 24px 0 0; corner-shape: round; background: var(--background-secondary); box-shadow: 0 -0.5px 0 var(--background-modifier-border); }
 .th-sheet.is-settling { transition: top var(--th-settle); }
 .th-sheet-grip { flex: 0 0 auto; padding: 0 var(--th-gutter); touch-action: none; cursor: grab; -webkit-user-select: none; user-select: none; }
 .th-sheet-grabber { width: 36px; height: 5px; margin: 6px auto 4px; border-radius: 3px; background: var(--text-faint); opacity: 0.6; }
 .th-sheet .th-today-scroll { position: relative; inset: auto; flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
-.th-sheet .th-column { padding: 4px var(--th-gutter) calc(var(--th-bottom-inset, 0px) + 32px); }
+.th-sheet .th-column { padding: 4px var(--th-gutter) calc(var(--th-bottom-inset, 0px) + 140px); }
 .th-sheet-head .th-head-line { display: flex; align-items: center; min-height: 44px; }
 .th-sheet-title { flex: 1; min-width: 0; margin: 0; font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: -0.01em; color: var(--text-normal); }
-.th-sheet-head button.th-head-step { width: 44px; height: 44px; border-radius: 22px; }
-.th-sheet-head button.th-head-step svg { width: 22px; height: 22px; }
-.th-sheet-head button.th-head-step:last-child { margin-right: -19px; }
 .th-sheet-head button.th-back { margin-right: 8px; font-size: 17px; color: var(--text-accent); }
 
+/* Today's buttons ride on the first header's line: answered count, All habits, new habit, help. */
+.th-tools { display: flex; align-items: center; gap: 8px; margin: -3px 0 -2px auto; }
+.th-tools-line { display: flex; padding: 15px 0 8px; }
+button.th-tool { position: relative; flex: none; width: 30px; height: 30px; padding: 0; border: none; border-radius: 15px; corner-shape: round; box-shadow: none; background: rgba(118, 118, 128, 0.12); color: var(--text-muted); display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 14px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button.th-tool:hover { background: rgba(118, 118, 128, 0.18); }
+.th-tool-icon { display: inline-flex; }
+.th-tool-icon svg { width: 16px; height: 16px; stroke-width: 2.3px; }
+button.th-tool-done { width: auto; padding: 0 11px 0 9px; }
+button.th-tool-help { font-size: 15px; font-weight: 700; }
+button.th-tool.th-has-dot::after { content: ""; position: absolute; top: -1px; right: -1px; width: 8px; height: 8px; border-radius: 50%; background: var(--interactive-accent); box-shadow: 0 0 0 2px var(--background-secondary); }
+.th-day-chip-line { display: flex; align-items: center; padding: 12px 0 0; }
+.th-day-chip-line + .th-group { padding-top: 14px; }
+button.th-day-chip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 6px 0 12px; border: none; border-radius: 15px; corner-shape: round; box-shadow: none; background: hsla(var(--interactive-accent-hsl), 0.14); color: var(--text-accent); font-size: 14px; font-weight: 600; cursor: pointer; }
+.th-day-chip-x { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: hsla(var(--interactive-accent-hsl), 0.2); }
+.th-day-chip-x svg { width: 10px; height: 10px; stroke-width: 3.2px; }
+
 /* The list: Reminders' rows, a circle in the habit's color, the name, a hairline from the name to the edge. */
-.th-sheet .th-group { padding: 22px 0 2px; font-size: 20px; line-height: 25px; font-weight: 700; color: var(--text-normal); }
+.th-sheet .th-group { display: flex; align-items: center; padding: 26px 0 8px; font-size: 20px; line-height: 25px; font-weight: 700; color: var(--text-normal); }
+.th-sheet .th-column > .th-group:first-child { padding-top: 15px; }
 .th-row { margin: 0 calc(-1 * var(--th-gutter)); padding: 0; }
 .th-row::before { display: none; }
-.th-row-main { gap: 4px; min-height: 48px; padding: 0 var(--th-gutter) 0 calc(var(--th-gutter) - 10px); transition: background-color 120ms ease; }
-.th-row + .th-row::after { content: ""; position: absolute; top: 0; left: calc(var(--th-gutter) + 38px); right: 0; height: 1px; transform: scaleY(0.5); transform-origin: top; background: var(--background-modifier-border); }
-.th-row-text { padding: 13px 0; }
+.th-row-main { gap: 4px; min-height: 40px; padding: 0 var(--th-gutter) 0 calc(var(--th-gutter) - 10px); transition: background-color 120ms ease; }
+.th-row-text { padding: 9px 0; }
 .th-row-title { font-size: 17px; line-height: 22px; font-weight: 400; letter-spacing: -0.01em; }
 .th-row.is-answered .th-row-title { color: var(--text-faint); }
 .th-row-main:has(.th-row-text:active) { background: var(--background-modifier-hover); }
@@ -497,16 +522,11 @@ button.th-card-open { grid-column: 1 / -1; justify-self: start; display: inline-
 .th-mark { border-width: 2px; border-color: var(--th-habit); }
 .th-mark.is-missed { border-color: var(--text-faint); }
 .is-mobile .th-mark svg { width: 13px; height: 13px; }
-button.th-mark-button { width: 44px; height: 44px; margin: 0; }
+button.th-mark-button { width: 44px; height: 40px; margin: 0; }
 button.th-mark-button:active .th-mark { transform: scale(0.84); transition: transform 90ms ease; }
-.th-mark-slot { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 44px; height: 44px; }
+.th-mark-slot { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 44px; height: 40px; }
 .th-card-recipe { margin: 0 var(--th-gutter) 12px calc(var(--th-gutter) + 38px); overflow: hidden; }
 .th-row-extra { padding: 0 var(--th-gutter) 14px calc(var(--th-gutter) + 38px); }
-
-/* The answered habits, folded into one row at the end. */
-button.th-fold { display: flex; align-items: center; gap: 10px; width: 100%; height: 48px; margin-top: 10px; padding: 0; border: none; border-radius: 0; box-shadow: none; background: transparent; color: var(--text-muted); font-size: 15px; cursor: pointer; }
-.th-fold-text { flex: 1; text-align: left; }
-.th-fold-action { color: var(--text-accent); }
 
 /* The end of the list: "New habit" in the accent like Reminders' "New Reminder", then rows that lead on. */
 .th-footer { margin: 8px calc(-1 * var(--th-gutter)) 0; }
@@ -524,8 +544,6 @@ button.th-footer-link + button.th-footer-link::before { content: ""; position: a
 .th-footer-chevron svg { width: 18px; height: 18px; }
 button.th-footer-add:active, button.th-footer-link:active { background: var(--background-modifier-hover); }
 
-/* The celebration line rides just above the sheet. */
-.th-caption { top: calc(var(--th-sheet-top) - 44px); bottom: auto; z-index: 5; }
 
 /*
  * The circle says how the day went, flat: the habit's color with a check for the full action, a tint of it for the
