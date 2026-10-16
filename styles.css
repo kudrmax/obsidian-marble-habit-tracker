@@ -471,7 +471,7 @@ button.th-day:disabled { cursor: default; opacity: 1; }
 .th-day-dow { font-size: 10px; line-height: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
 .th-day-num { margin-top: 1px; font-size: 16px; line-height: 20px; font-weight: 500; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; color: var(--text-muted); }
 .th-day-pill { position: relative; flex: 1 1 auto; width: 100%; margin-top: 8px; border-radius: 23px; corner-shape: round; overflow: hidden; background: color-mix(in srgb, var(--text-normal) 5%, var(--background-primary)); }
-.th-day-fill { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--th-day-under) + var(--th-share) * (100% - var(--th-day-under) - 6px)); border-radius: 23px; corner-shape: round; background: color-mix(in srgb, var(--text-normal) 14%, var(--background-primary)); }
+.th-day-fill { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--th-day-under) + var(--th-share) * (100% - var(--th-day-under))); border-radius: 23px; corner-shape: round; background: color-mix(in srgb, var(--text-normal) 14%, var(--background-primary)); }
 .th-day-value { position: absolute; top: 9px; left: 0; right: 0; text-align: center; font-size: 12px; line-height: 14px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-on-accent); }
 .th-day.is-low .th-day-value { top: -20px; color: var(--text-accent); }
 .th-day.is-low .th-day-fill { overflow: visible; }
