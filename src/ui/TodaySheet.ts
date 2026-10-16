@@ -1,20 +1,23 @@
 import { SETTLE } from "./Motion";
 
-/** Where the sheet rests: up, covering the days, or pulled down to show them. */
+/** Where the sheet heads on a tap of its grabber: up, covering the days, or down to show them. */
 export type Detent = "up" | "down";
 
-/** How far the sheet drops to show the days above it. */
+/** How far the sheet drops to show the days above it on a tap of the grabber. */
 const DOWN_BY = 250;
-/** A flick faster than this, in px per ms, picks the detent it heads to whatever the position. */
+/** How much of the sheet stays in sight at the lowest it can rest. */
+const MIN_SHEET = 220;
+/** A flick faster than this, in px per ms, carries the sheet all the way up, or down to the days. */
 const FLICK = 0.45;
-/** Past a detent the sheet follows the finger at this fraction, like iOS rubber-banding. */
+/** Past its range the sheet follows the finger at this fraction, like iOS rubber-banding. */
 const RUBBER = 0.35;
 const SETTLE_MS = 420;
 
 /**
  * Today's two layers: the days on the stage, and a sheet over them that holds the habits. The sheet rests up, so the
- * habits come first; dragged down by its grip it shows the days, whose columns reach under its edge and stretch with
- * it. Everything that depends on the sheet's position hears about it through `onMove`.
+ * habits come first; dragged by its grip it stays wherever it is let go, between up and low enough to keep some
+ * habits in sight, and the day columns reach under its edge and stretch with it. Everything that depends on the
+ * sheet's position hears about it through `onMove`.
  */
 export class TodaySheet {
 	readonly stage: HTMLElement;
@@ -27,6 +30,8 @@ export class TodaySheet {
 	readonly scroll: HTMLElement;
 	private detent: Detent = "up";
 	private top = 0;
+	/** Where the sheet was let go, as a distance below its top position, kept across resizes. */
+	private rest = 0;
 	private drag: { pointer: number; startY: number; startTop: number; lastY: number; lastAt: number; speed: number } | null = null;
 	private settleFrame = 0;
 	private readonly resizer: ResizeObserver;
@@ -48,9 +53,9 @@ export class TodaySheet {
 		this.grip.addEventListener("pointerup", (event) => this.release(event));
 		this.grip.addEventListener("pointercancel", (event) => this.release(event));
 		this.grabber().addEventListener("click", () => this.snap(this.detent === "up" ? "down" : "up"));
-		this.resizer = new ResizeObserver(() => this.place(this.detentTop(this.detent)));
+		this.resizer = new ResizeObserver(() => this.place(this.restTop()));
 		this.resizer.observe(root);
-		if (root.clientHeight > 0) this.place(this.detentTop(this.detent));
+		if (root.clientHeight > 0) this.place(this.restTop());
 	}
 
 	destroy(): void {
@@ -59,19 +64,34 @@ export class TodaySheet {
 	}
 
 	snap(detent: Detent): void {
-		const changed = detent !== this.detent;
+		this.rest = detent === "down" ? DOWN_BY : 0;
+		this.settleAt(this.restTop());
+	}
+
+	/** Lets the sheet rest at `top`, kept within its range, and says when it has gone up or come down from up. */
+	private settleAt(top: number): void {
+		const clamped = Math.min(this.lowest(), Math.max(this.highest(), top));
+		this.rest = clamped - this.highest();
+		const detent: Detent = this.rest < 1 ? "up" : "down";
+		if (detent !== this.detent) this.onSnap(detent);
 		this.detent = detent;
-		this.settle(this.detentTop(detent));
-		if (changed) this.onSnap(detent);
+		this.settle(clamped);
+	}
+
+	private restTop(): number {
+		return Math.min(this.lowest(), this.highest() + this.rest);
 	}
 
 	private grabber(): HTMLElement {
 		return this.grip.firstElementChild as HTMLElement;
 	}
 
-	private detentTop(detent: Detent): number {
-		const up = this.days.offsetTop;
-		return detent === "down" ? up + DOWN_BY : up;
+	private highest(): number {
+		return this.days.offsetTop;
+	}
+
+	private lowest(): number {
+		return Math.max(this.highest(), this.root.clientHeight - MIN_SHEET);
 	}
 
 	private start(event: PointerEvent): void {
@@ -89,11 +109,11 @@ export class TodaySheet {
 		drag.speed = (event.clientY - drag.lastY) / elapsed;
 		drag.lastY = event.clientY;
 		drag.lastAt = event.timeStamp;
-		const up = this.detentTop("up");
-		const down = this.detentTop("down");
+		const up = this.highest();
+		const low = this.lowest();
 		let top = drag.startTop + event.clientY - drag.startY;
 		if (top < up) top = up - (up - top) * RUBBER;
-		if (top > down) top = down + (top - down) * RUBBER;
+		if (top > low) top = low + (top - low) * RUBBER;
 		this.place(top);
 	}
 
@@ -102,13 +122,10 @@ export class TodaySheet {
 		if (!drag || event.pointerId !== drag.pointer) return;
 		this.drag = null;
 		if (Math.abs(event.clientY - drag.startY) < 4) return;
-		const up = this.detentTop("up");
-		const down = this.detentTop("down");
-		let detent: Detent;
-		if (drag.speed < -FLICK) detent = "up";
-		else if (drag.speed > FLICK) detent = "down";
-		else detent = this.top - up < down - this.top ? "up" : "down";
-		this.snap(detent);
+		const down = this.highest() + DOWN_BY;
+		if (drag.speed < -FLICK) this.settleAt(this.highest());
+		else if (drag.speed > FLICK && this.top < down) this.settleAt(down);
+		else this.settleAt(this.top);
 	}
 
 	/** Moves the sheet with iOS's settling curve, reporting its position every frame so the days stretch with it. */
