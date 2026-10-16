@@ -50,6 +50,8 @@ const DAY_VALUE_ROOM = 32;
 /** Obsidian re-reads a note a moment after it is written, so the tap point has to wait for the new mark. */
 const ORIGIN_TTL_MS = 4000;
 const FALLBACK_COLOR: Hsl = { h: 258, s: 88, l: 66 };
+/** How long to wait for the plugin's stylesheet before reading the colors again. */
+const STYLES_RETRY_MS = 200;
 
 type Answer = "skip" | "full" | "tiny";
 
@@ -82,6 +84,7 @@ export class TodayView extends ItemView {
 	private renderingRows = new Set<string>();
 	private wasClosed: boolean | null = null;
 	private captionTimer = 0;
+	private stylesTimer = 0;
 	private readonly celebrating = new Map<string, number>();
 	private readonly origins = new Map<string, { point: Point; at: number }>();
 	private readonly colors = new Map<string, Hsl>();
@@ -199,6 +202,7 @@ export class TodayView extends ItemView {
 		this.sheet?.destroy();
 		this.sheet = null;
 		window.clearTimeout(this.captionTimer);
+		window.clearTimeout(this.stylesTimer);
 		for (const timer of this.celebrating.values()) window.clearTimeout(timer);
 	}
 
@@ -1052,7 +1056,11 @@ export class TodayView extends ItemView {
 		const key = color ?? "accent";
 		const cached = this.colors.get(key);
 		if (cached) return cached;
-		const resolved = this.probe(["th-habit", colorClass(color)], "var(--th-habit)") ?? FALLBACK_COLOR;
+		const resolved = this.probe(["th-habit", colorClass(color)], "var(--th-habit)");
+		if (!resolved) {
+			this.waitForStyles();
+			return FALLBACK_COLOR;
+		}
 		this.colors.set(key, resolved);
 		return resolved;
 	}
@@ -1061,13 +1069,29 @@ export class TodayView extends ItemView {
 		return this.probe([], `var(${name})`) ?? { h: 0, s: 0, l: 12 };
 	}
 
+	/**
+	 * Reads a color off a hidden probe. Right after the plugin loads its stylesheet may not be in yet: the probe then
+	 * isn't hidden and only inherits the text color, which would paint every marble black; that read gives nothing.
+	 */
 	private probe(classes: string[], color: string): Hsl | null {
 		const probe = this.contentEl.createSpan({ cls: classes });
 		probe.addClass("th-probe");
 		probe.setCssProps({ color });
-		const value = getComputedStyle(probe).color;
+		const style = getComputedStyle(probe);
+		const styled = style.display === "none";
+		const value = style.color;
 		probe.remove();
-		return parseColor(value);
+		return styled ? parseColor(value) : null;
+	}
+
+	/** Reads the colors again once the stylesheet has had a moment to arrive. */
+	private waitForStyles(): void {
+		if (this.stylesTimer) return;
+		this.stylesTimer = window.setTimeout(() => {
+			this.stylesTimer = 0;
+			this.colors.clear();
+			this.refresh();
+		}, STYLES_RETRY_MS);
 	}
 }
 
