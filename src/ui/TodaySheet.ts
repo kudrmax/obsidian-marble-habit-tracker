@@ -11,6 +11,8 @@ const MIN_SHEET = 220;
 const MAX_DOWN = 340;
 /** A finger has to move this far on the list before it is clear whether it scrolls the list or moves the sheet. */
 const TOUCH_SLOP = 6;
+/** Movement under this on a pull is a tap's tremble, not a pull. */
+const TAP_TREMBLE = 4;
 /** A flick faster than this, in px per ms, carries the sheet all the way up, or down to the days. */
 const FLICK = 0.45;
 /** Past its top the sheet follows the finger at this fraction, like iOS rubber-banding; past its bottom, less. */
@@ -39,7 +41,7 @@ export class TodaySheet {
 	private rest = 0;
 	private drag: { pointer: number; startY: number; startTop: number; lastY: number; lastAt: number; speed: number } | null = null;
 	/** A finger on the list; `sheet` once it is moving the sheet rather than scrolling. */
-	private touch: { id: number; startY: number; startTop: number; lastY: number; lastAt: number; speed: number; mode: "sheet" | "scroll" | null } | null = null;
+	private touch: { id: number; originY: number; startY: number; startTop: number; lastY: number; lastAt: number; speed: number; mode: "sheet" | "scroll" | null } | null = null;
 	private settleFrame = 0;
 	private readonly resizer: ResizeObserver;
 
@@ -140,7 +142,7 @@ export class TodaySheet {
 
 	private readonly touchStart = (event: TouchEvent) => {
 		const finger = event.touches.length === 1 ? event.touches[0] : null;
-		this.touch = finger ? { id: finger.identifier, startY: finger.clientY, startTop: this.top, lastY: finger.clientY, lastAt: event.timeStamp, speed: 0, mode: null } : null;
+		this.touch = finger ? { id: finger.identifier, originY: finger.clientY, startY: finger.clientY, startTop: this.top, lastY: finger.clientY, lastAt: event.timeStamp, speed: 0, mode: null } : null;
 	};
 
 	private readonly touchMove = (event: TouchEvent) => {
@@ -149,7 +151,11 @@ export class TodaySheet {
 		if (!touch || !finger) return;
 		if (touch.mode === null) {
 			const dy = finger.clientY - touch.startY;
-			if (Math.abs(dy) < TOUCH_SLOP) return;
+			if (dy === 0) return;
+			// A pull down on a list already at its top is the sheet's from the first pixel: iOS starts its own bounce at
+			// once, and after that the move can no longer be taken over. Any other direction waits to be sure.
+			const pullAtTop = dy > 0 && this.scroll.scrollTop <= 0;
+			if (!pullAtTop && Math.abs(dy) < TOUCH_SLOP) return;
 			touch.mode = this.listMovesSheet(dy) ? "sheet" : "scroll";
 			if (touch.mode === "sheet") {
 				cancelAnimationFrame(this.settleFrame);
@@ -161,6 +167,8 @@ export class TodaySheet {
 		if (touch.mode !== "sheet") return;
 		event.preventDefault();
 		event.stopPropagation();
+		// A finger that only trembles on a tap leaves the sheet where it is.
+		if (Math.abs(finger.clientY - touch.originY) < TAP_TREMBLE) return;
 		touch.speed = (finger.clientY - touch.lastY) / Math.max(1, event.timeStamp - touch.lastAt);
 		touch.lastY = finger.clientY;
 		touch.lastAt = event.timeStamp;
@@ -172,6 +180,7 @@ export class TodaySheet {
 		this.touch = null;
 		if (touch?.mode !== "sheet") return;
 		event.stopPropagation();
+		if (Math.abs(touch.lastY - touch.originY) < TAP_TREMBLE) return;
 		this.letGo(touch.speed);
 	};
 

@@ -494,7 +494,7 @@ button.th-day:disabled { cursor: default; opacity: 1; }
 /* Once the list scrolls, it fades out under the sheet's top edge instead of being cut. */
 .th-sheet.is-scrolled .th-today-scroll { -webkit-mask-image: linear-gradient(to bottom, transparent, #000 26px); mask-image: linear-gradient(to bottom, transparent, #000 26px); }
 .th-sheet-grabber { width: 36px; height: 5px; margin: 6px auto 4px; border-radius: 3px; background: var(--text-faint); opacity: 0.6; }
-.th-sheet .th-today-scroll { position: relative; inset: auto; flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.th-sheet .th-today-scroll { position: relative; inset: auto; flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: none; }
 .th-sheet .th-column { padding: 4px var(--th-gutter) calc(var(--th-bottom-inset, 0px) + 140px); }
 .th-sheet-head .th-head-line { display: flex; align-items: center; min-height: 44px; }
 .th-sheet-title { flex: 1; min-width: 0; margin: 0; font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: -0.01em; color: var(--text-normal); }
