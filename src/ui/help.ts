@@ -12,7 +12,7 @@ export interface HelpRow {
 export function helpRows(mobile: boolean, merge: MergeRule): HelpRow[] {
 	const tap = mobile ? "Tap" : "Click";
 	return [
-		{ action: `${tap} the circle`, result: `The answers roll in as marbles and push the name aside: the habit's color with a check for the full action, a tint of it with a check for the tiny one, grey with a dash for skip — the circle itself becomes skip. ${tap} one and the circle stays looking like that answer as the habit moves into the done line; ✕, where the circle was, brings the row back at any moment. ${tap} the circle of a marked habit to clear the mark.` },
+		{ action: `${tap} the circle`, result: `The answers slide in from the left as buttons with a word — Full, Tiny, Skip — and take the row while the name fades: the habit's color with a check for the full action, a tint of it with a check for the tiny one, grey with a dash for skip. ${tap} one and the circle stays looking like that answer as the habit moves into the done line; ✕, where the circle was, brings the row back at any moment. ${tap} the circle of a marked habit to clear the mark.` },
 		{ action: `${tap} a habit's name`, result: `Opens its recipe, with a link to its note. ${tap} again to close it.` },
 		{ action: mobile ? "Hold and drag a habit" : "Drag a habit", result: "Reorders habits. Drop it on “+ New section” to group them." },
 		{ action: "Drag the sheet", result: "Pull it up to see the whole day; the jar's floor rises with it. Pull it down to bring the jar back." },

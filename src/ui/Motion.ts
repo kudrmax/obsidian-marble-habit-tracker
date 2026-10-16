@@ -11,17 +11,11 @@ const DAY_MS = 260;
 const PUSH_MS = 380;
 const GROW_MS = 300;
 const BUMP_MS = 420;
-/**
- * The choices rolling into the row: the circle becomes skip, then every choice rolls the same span of time and all of
- * them stop together. The others set off one after another from the left edge, nearest to skip first.
- */
-const FILL_MS = 50;
-const ROLL_MS = 280;
-const FIRST_IN_MS = 55;
-const NEXT_IN_MS = 40;
-/** Where an incoming choice starts: just past the row's left edge. */
+/** The choices sliding into the row from past its left edge, and the circle and name fading where they are. */
+const SLIDE_MS = 320;
+const FADE_MS = 160;
+/** How far past the row's left edge the choices wait. */
 const OFF_EDGE = 4;
-const REVEAL_MS = 140;
 const REFOLD_MS = 220;
 
 /** Stepping a day back or forward, opening All habits, or going back from it. */
@@ -91,93 +85,38 @@ export class Motion {
 	}
 
 	/**
-	 * The choices roll into place. The circle at `origin` fills into the last choice — skip — which rolls right to its
-	 * place and pushes the name `push` px aside as it goes; the other choices roll in from the row's left edge behind it.
-	 * Each choice turns by the distance it rolls and ends upright, and all of them stop at the same moment. Only the
-	 * marbles move: every button waits at its place from the first moment, so a tap where the circle was cancels at once.
-	 * `extras` show once the choices are in. `stop` ends all of it at once and leaves the row as it is drawn.
+	 * The choices slide in ready-made: `bar` starts just past the row's left edge and moves into place in one move, while
+	 * `content` — the circle and the name — fades where it is. Until the choices are in, a tap goes through them to the
+	 * row, which brings the row back, so nothing passing under the finger gets picked. `stop` ends all of it at once and
+	 * leaves the row as it is drawn.
 	 */
-	rollChoices(choices: readonly HTMLElement[], extras: readonly HTMLElement[], name: HTMLElement | null, push: number, origin: DOMRect | null): { stop(): void } {
+	slideChoices(bar: HTMLElement, content: readonly HTMLElement[]): { stop(): void } {
 		const running: Animation[] = [];
-		let frame = 0;
-		let stopped = false;
-		const balls = choices.map((choice) => choice.querySelector<HTMLElement>(".th-choice-ball") ?? choice);
-		const signs = choices.map((choice) => choice.querySelector<HTMLElement>(".th-mark"));
-		const settle = () => {
-			for (const element of [...balls, ...(name ? [name] : [])]) element.style.removeProperty("transform");
-			for (const element of [...balls, ...extras]) element.style.removeProperty("visibility");
-			for (const sign of signs) sign?.style.removeProperty("--th-turn");
-		};
 		const stop = () => {
-			stopped = true;
-			cancelAnimationFrame(frame);
 			for (const animation of running) animation.cancel();
-			settle();
+			bar.removeClass("is-arriving");
 		};
-		const last = balls.length - 1;
-		const surface = choices[last]?.parentElement;
-		if (this.reduced() || !origin || last < 0 || !surface) return { stop };
-		const left = surface.getBoundingClientRect().left;
-		const size = balls[last].getBoundingClientRect().width;
-		const rollers = balls.map((ball, index) => {
-			const box = ball.getBoundingClientRect();
-			const centre = box.left + box.width / 2;
-			const isSkip = index === last;
-			const from = isSkip ? origin.left + origin.width / 2 - centre : -(centre - left + size / 2 + OFF_EDGE);
-			return { ball, sign: signs[index], from, enter: isSkip ? 0 : FIRST_IN_MS + (last - 1 - index) * NEXT_IN_MS };
-		});
-		const out = (t: number) => 1 - (1 - t) ** 3;
-		const place = (roller: (typeof rollers)[number], offset: number) => {
-			roller.ball.style.transform = `translateX(${offset}px)`;
-			roller.sign?.style.setProperty("--th-turn", `${(offset / (Math.PI * size)) * 360}deg`);
-		};
-		const pushName = (offset: number) => {
-			if (name) name.style.transform = `translateX(${Math.min(push, Math.max(0, push + offset))}px)`;
-		};
-		const skip = rollers[last];
-		for (const roller of rollers) if (roller !== skip) roller.ball.style.visibility = "hidden";
-		for (const element of extras) element.style.visibility = "hidden";
-		place(skip, skip.from);
-		pushName(skip.from);
-		const roll = (begun: number) => (now: number) => {
-			if (stopped) return;
-			const elapsed = now - begun;
-			for (const roller of rollers) {
-				if (elapsed < roller.enter) continue;
-				const t = Math.min(1, (elapsed - roller.enter) / (ROLL_MS - roller.enter));
-				const offset = roller.from * (1 - out(t));
-				roller.ball.style.removeProperty("visibility");
-				place(roller, offset);
-				if (roller === skip) pushName(offset);
-			}
-			if (elapsed < ROLL_MS) {
-				frame = requestAnimationFrame(roll(begun));
-				return;
-			}
-			settle();
-			for (const element of extras) running.push(element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: REVEAL_MS }));
-		};
-		const fill = (skip.sign ?? skip.ball).animate([{ scale: "0.8" }, { scale: "1.08", offset: 0.6 }, { scale: "1" }], { duration: FILL_MS, easing: SETTLE });
-		running.push(fill);
-		fill.finished.then(
-			() => {
-				if (stopped) return;
-				frame = requestAnimationFrame((now) => roll(now)(now));
-			},
+		const last = bar.lastElementChild;
+		if (this.reduced() || !last) return { stop };
+		const distance = last.getBoundingClientRect().right - bar.getBoundingClientRect().left + OFF_EDGE;
+		bar.addClass("is-arriving");
+		const slide = bar.animate([{ transform: `translateX(${-distance}px)` }, { transform: "none" }], { duration: SLIDE_MS, easing: SETTLE });
+		running.push(slide);
+		for (const element of content) running.push(element.animate([{ opacity: 1 }, { opacity: 0 }], { duration: FADE_MS }));
+		slide.finished.then(
+			() => bar.removeClass("is-arriving"),
 			() => undefined,
 		);
 		return { stop };
 	}
 
-	/** Closing the choices without an answer: the name slides back from where the choices pushed it, the circle shows again. */
-	refold(content: readonly HTMLElement[], push: number): void {
+	/** Closing the choices without an answer: the circle and the name fade back in where they were. */
+	refold(content: readonly HTMLElement[]): void {
 		if (this.reduced()) return;
 		for (const element of content) {
 			const isCircle = element.querySelector(".th-mark") !== null;
 			element.animate(
-				isCircle
-					? [{ transform: "scale(0.6)", opacity: 0 }, { transform: "none", opacity: 1 }]
-					: [{ transform: `translateX(${push}px)` }, { transform: "none" }],
+				isCircle ? [{ transform: "scale(0.6)", opacity: 0 }, { transform: "none", opacity: 1 }] : [{ opacity: 0 }, { opacity: 1 }],
 				{ duration: REFOLD_MS, easing: SETTLE },
 			);
 		}

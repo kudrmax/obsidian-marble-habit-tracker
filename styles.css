@@ -528,30 +528,28 @@ button.th-footer-add:active, button.th-footer-link:active { background: var(--ba
 .th-caption { top: calc(var(--th-sheet-top) - 44px); bottom: auto; z-index: 5; }
 
 /*
- * The circle says how the day went, drawn like a marble: the habit's color with a check for the full action, a tint
- * of it for the tiny one, grey with a dash for skipped. Today's answer buttons are these same circles, and what turns
- * as they roll in is the sign, so the shade stays below.
+ * The circle says how the day went, flat: the habit's color with a check for the full action, a tint of it for the
+ * tiny one, grey with a dash for skipped. Today's answer buttons carry these same circles.
  */
-.th-mark.is-done, .th-mark.is-missed, .th-mark.th-choice-cancel { border: none; box-shadow: inset -2px -2.5px 0 rgba(0, 0, 0, 0.22); }
+.th-mark.is-done, .th-mark.is-missed, .th-mark.th-choice-cancel { border: none; }
 .th-mark.is-done { background: var(--th-habit); color: #ffffff; }
 .th-mark.is-done.is-tiny { background: color-mix(in srgb, var(--th-habit) 30%, var(--background-secondary)); color: var(--th-habit); }
 .th-mark.is-done svg { stroke-width: 3.2px; }
 .th-mark.is-missed { background: rgb(142, 142, 147); }
 .th-mark.is-missed::after { background: #ffffff; }
 .th-mark.th-choice-cancel { background: color-mix(in srgb, rgb(118, 118, 128) 30%, var(--background-secondary)); color: var(--text-muted); }
-.th-mark > svg, .th-mark::after { rotate: var(--th-turn, 0deg); }
 .th-mark.is-popping { animation: th-pop 420ms var(--th-ease-pop); }
 .th-mark.is-popping svg path, .th-mark.is-popping svg polyline { stroke-dasharray: 24; animation: th-draw 280ms 120ms ease-out both; }
 @keyframes th-draw { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
 
 
 /*
- * The answers in the row, as marbles with a sign and no words, a fingertip apart: cancel exactly on the circle, then
- * full, tiny and skip, each the circle it leaves behind. The name moves aside past them and a long one runs off the row.
+ * The answers in the row: cancel exactly on the circle, then full, tiny and skip as capsules of one width, each the
+ * circle it leaves behind with its word beside it. They take the whole row; the circle and the name fade away.
  */
 .th-row-main.is-choosing { overflow: hidden; }
-.th-row-main.is-choosing .th-mark-button { visibility: hidden; }
-.th-row-main.is-choosing .th-row-text { transform: translateX(var(--th-push, 0px)); }
+.th-row-main.is-choosing .th-mark-button, .th-row-main.is-choosing .th-row-text { opacity: 0; pointer-events: none; }
+.th-row-choices.is-arriving { pointer-events: none; }
 .th-row-choices { position: absolute; inset: 0; display: flex; align-items: center; padding: 0 var(--th-gutter) 0 calc(var(--th-gutter) - 10px); }
 button.th-choice { flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border: none; border-radius: 22px; box-shadow: none; background: transparent; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 button.th-choice:hover { background: transparent; }
@@ -560,6 +558,15 @@ button.th-choice:active .th-choice-ball { scale: 0.84; }
 .th-choice-ball .th-mark { width: calc(var(--th-mark) + 6px); height: calc(var(--th-mark) + 6px); }
 .th-choice-ball .th-mark svg { width: 15px; height: 15px; }
 button.th-choice.is-picked .th-choice-ball { filter: brightness(1.2); }
+/* The sign and the word sit together in the middle of the capsule. */
+button.th-choice.has-word { flex: 0 0 auto; width: auto; margin-right: 8px; }
+.th-choice-ball.is-word { width: 92px; height: calc(var(--th-mark) + 6px); align-items: center; justify-content: center; border-radius: 999px; corner-shape: round; }
+.th-choice-ball.is-word.is-done { background: var(--th-habit); color: #ffffff; }
+.th-choice-ball.is-word.is-done.is-tiny { background: color-mix(in srgb, var(--th-habit) 30%, var(--background-secondary)); color: var(--th-habit); }
+.th-choice-ball.is-word.is-missed { background: rgb(142, 142, 147); color: #ffffff; }
+.th-choice-ball.is-word .th-mark { flex: none; }
+.th-choice-word { flex: none; padding-right: 8px; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; }
+button.th-choice.has-word:active .th-choice-ball { scale: 0.94; }
 button.th-choices-toggle { flex: 0 0 32px; width: 32px; height: 32px; margin: 0 6px; padding: 0; border: none; border-radius: 16px; corner-shape: round; box-shadow: none; display: inline-flex; align-items: center; justify-content: center; background: transparent; color: var(--text-faint); cursor: pointer; }
 button.th-choices-toggle svg { width: 16px; height: 16px; stroke-width: 2.4px; }
 button.th-choices-toggle[aria-pressed="true"] { background: rgba(118, 118, 128, 0.24); color: var(--th-habit); }
