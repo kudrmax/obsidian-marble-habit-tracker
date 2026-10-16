@@ -21,6 +21,8 @@ const FIRST_IN_MS = 55;
 const NEXT_IN_MS = 40;
 /** Where an incoming choice starts: just past the row's left edge. */
 const OFF_EDGE = 4;
+/** How far into its roll a choice with a word starts opening from its marble into the whole capsule. */
+const OPEN_FROM = 0.55;
 const REVEAL_MS = 140;
 const REFOLD_MS = 220;
 
@@ -93,8 +95,9 @@ export class Motion {
 	/**
 	 * The choices roll into place. The circle at `origin` fills into the last choice — skip — which rolls right to its
 	 * place and pushes the name `push` px aside as it goes; the other choices roll in from the row's left edge behind it.
-	 * Each choice turns by the distance it rolls and ends upright, and all of them stop at the same moment. Only the
-	 * marbles move: every button waits at its place from the first moment, so a tap where the circle was cancels at once.
+	 * Each choice turns by the distance it rolls and ends upright, and all of them stop at the same moment; a choice with
+	 * a word rolls as its marble alone and opens into the whole capsule as it comes to rest. Only the marbles move:
+	 * every button waits at its place from the first moment, so a tap where the circle was cancels at once.
 	 * `extras` show once the choices are in. `stop` ends all of it at once and leaves the row as it is drawn.
 	 */
 	rollChoices(choices: readonly HTMLElement[], extras: readonly HTMLElement[], name: HTMLElement | null, push: number, origin: DOMRect | null): { stop(): void } {
@@ -106,6 +109,7 @@ export class Motion {
 		const settle = () => {
 			for (const element of [...balls, ...(name ? [name] : [])]) element.style.removeProperty("transform");
 			for (const element of [...balls, ...extras]) element.style.removeProperty("visibility");
+			for (const ball of balls) ball.style.removeProperty("--th-open");
 			for (const sign of signs) sign?.style.removeProperty("--th-turn");
 		};
 		const stop = () => {
@@ -118,27 +122,29 @@ export class Motion {
 		const surface = choices[last]?.parentElement;
 		if (this.reduced() || !origin || last < 0 || !surface) return { stop };
 		const left = surface.getBoundingClientRect().left;
-		const size = balls[last].getBoundingClientRect().width;
+		const size = balls[last].getBoundingClientRect().height;
 		const rollers = balls.map((ball, index) => {
 			const box = ball.getBoundingClientRect();
-			const centre = box.left + box.width / 2;
+			const centre = box.left + size / 2;
 			const isSkip = index === last;
 			const from = isSkip ? origin.left + origin.width / 2 - centre : -(centre - left + size / 2 + OFF_EDGE);
-			return { ball, sign: signs[index], from, enter: isSkip ? 0 : FIRST_IN_MS + (last - 1 - index) * NEXT_IN_MS };
+			return { ball, sign: signs[index], from, rest: box.width - size, enter: isSkip ? 0 : FIRST_IN_MS + (last - 1 - index) * NEXT_IN_MS };
 		});
 		const out = (t: number) => 1 - (1 - t) ** 3;
-		const place = (roller: (typeof rollers)[number], offset: number) => {
+		const place = (roller: (typeof rollers)[number], offset: number, open: number) => {
 			roller.ball.style.transform = `translateX(${offset}px)`;
+			roller.ball.style.setProperty("--th-open", String(open));
 			roller.sign?.style.setProperty("--th-turn", `${(offset / (Math.PI * size)) * 360}deg`);
 		};
-		const pushName = (offset: number) => {
-			if (name) name.style.transform = `translateX(${Math.min(push, Math.max(0, push + offset))}px)`;
+		// The name keeps clear of skip's right edge, which is its marble while it rolls and its capsule once it opens.
+		const pushName = (offset: number, open: number) => {
+			if (name) name.style.transform = `translateX(${Math.min(push, Math.max(0, push + offset - skip.rest * (1 - open)))}px)`;
 		};
 		const skip = rollers[last];
 		for (const roller of rollers) if (roller !== skip) roller.ball.style.visibility = "hidden";
 		for (const element of extras) element.style.visibility = "hidden";
-		place(skip, skip.from);
-		pushName(skip.from);
+		place(skip, skip.from, 0);
+		pushName(skip.from, 0);
 		const roll = (begun: number) => (now: number) => {
 			if (stopped) return;
 			const elapsed = now - begun;
@@ -146,9 +152,10 @@ export class Motion {
 				if (elapsed < roller.enter) continue;
 				const t = Math.min(1, (elapsed - roller.enter) / (ROLL_MS - roller.enter));
 				const offset = roller.from * (1 - out(t));
+				const open = out(Math.max(0, (t - OPEN_FROM) / (1 - OPEN_FROM)));
 				roller.ball.style.removeProperty("visibility");
-				place(roller, offset);
-				if (roller === skip) pushName(offset);
+				place(roller, offset, open);
+				if (roller === skip) pushName(offset, open);
 			}
 			if (elapsed < ROLL_MS) {
 				frame = requestAnimationFrame(roll(begun));

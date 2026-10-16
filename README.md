@@ -2,7 +2,7 @@
 
 A habit tracker for [Obsidian](https://obsidian.md) where every win drops a marble into a jar.
 
-- **Close the day.** One list of today's habits. Tap the circle and the answers roll into the row — full, tiny or skip, with a reason for a skip. Tap a marked circle to clear it.
+- **Close the day.** One list of today's habits. Tap the circle and the answers roll into the row as buttons — Full, Tiny or Skip, with a reason for a skip. Tap a marked circle to clear it.
 - **Watch the jar fill.** Every done day is a marble in the habit's colour. Seven marbles of one habit merge into a bigger one, four of those into the biggest.
 - **Tilt to roll.** On a phone the marbles roll with the tilt of the device, with a light vibration.
 - **Tiny is a win.** Built on BJ Fogg's Tiny Habits recipe: after I …, I will … — the tiny version counts as fully done.

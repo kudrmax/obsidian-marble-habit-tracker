@@ -41,6 +41,8 @@ const CAPTION_MS = 2000;
 const VIEW_GAP = 12;
 /** How far a name moved aside by the choices keeps from the last of them. */
 const NAME_GAP = 12;
+/** The word on each answer: short and the same whatever the recipe's fields are called. */
+const CHOICE_WORDS: Record<Answer, string> = { full: "Full", tiny: "Tiny", skip: "Skip" };
 const DAY_CHECK_MS = 60_000;
 /** Obsidian re-reads a note a moment after it is written, so the tap point has to wait for the new mark. */
 const ORIGIN_TTL_MS = 4000;
@@ -623,10 +625,11 @@ export class TodayView extends ItemView {
 	}
 
 	/**
-	 * The answers in the row, each drawn as the circle will look once it is chosen — full, tiny, skip — with no words, and
-	 * cancel where the circle was, under the finger. The name moves aside to make room, and a long one runs off the row.
-	 * They arrive rolling: the circle becomes skip, which rolls right and pushes the name, and the others roll in from
-	 * the left behind it; all of them stop at once. A tap anywhere else brings the row back.
+	 * The answers in the row as capsules: the circle as it will look once chosen — full, tiny, skip — with the answer's
+	 * word beside it, and cancel where the circle was, under the finger. The name moves aside to make room, and a long one
+	 * runs off the row. They arrive rolling: the circle becomes skip, which rolls right and pushes the name, and the
+	 * others roll in from the left behind it; all of them stop at once and open into their words. A tap anywhere else
+	 * brings the row back.
 	 */
 	private renderChoices(main: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
 		const labels = this.ui.labels();
@@ -634,16 +637,22 @@ export class TodayView extends ItemView {
 		const chosen = (kind: "full" | "tiny") => mark?.kind === kind && isOffTrigger(mark) === offTrigger;
 		const origin = main.querySelector<HTMLElement>(".th-mark")?.getBoundingClientRect() ?? null;
 		const bar = main.createDiv("th-row-choices");
-		const marble = (label: string, look: string[], sign: "x" | "check" | null) => {
+		const marble = (label: string, look: string[], sign: "x" | "check" | null, word?: string) => {
 			const button = bar.createEl("button", { cls: "th-choice", attr: { "aria-label": label, title: label } });
-			const face = button.createSpan("th-choice-ball").createSpan({ cls: ["th-mark", ...look] });
+			const ball = button.createSpan("th-choice-ball");
+			const face = ball.createSpan({ cls: ["th-mark", ...look] });
 			if (sign) icon(face, sign);
+			if (word) {
+				button.addClass("has-word");
+				ball.addClasses(["is-word", ...look]);
+				ball.createSpan({ cls: "th-choice-word", text: word });
+			}
 			return button;
 		};
 		const cancel = marble("Cancel", ["th-choice-cancel"], "x");
 		cancel.addEventListener("click", () => this.closeChoices());
 		const option = (answer: Answer, label: string, look: string[], sign: "check" | null, selected: boolean) => {
-			const button = marble(label, look, sign);
+			const button = marble(label, look, sign, CHOICE_WORDS[answer]);
 			button.setAttr("aria-pressed", String(selected));
 			button.addEventListener("click", (event) => {
 				this.unfolding?.stop();
