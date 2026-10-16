@@ -549,7 +549,8 @@ button.th-footer-add:active, button.th-footer-link:active { background: var(--ba
  */
 .th-row-main.is-choosing { overflow: hidden; }
 .th-row-main.is-choosing .th-mark-button, .th-row-main.is-choosing .th-row-text { opacity: 0; pointer-events: none; }
-.th-row-choices.is-arriving { pointer-events: none; }
+.th-row-choices.is-arriving, .th-row-choices.is-leaving { pointer-events: none; }
+.th-row-main.is-refolding { overflow: hidden; }
 .th-row-choices { position: absolute; inset: 0; display: flex; align-items: center; padding: 0 var(--th-gutter) 0 calc(var(--th-gutter) - 10px); }
 button.th-choice { flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border: none; border-radius: 22px; box-shadow: none; background: transparent; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 button.th-choice:hover { background: transparent; }
