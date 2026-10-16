@@ -37,8 +37,6 @@ const RING_GAP = 9;
 /** How long the circle of a just-marked habit keeps popping, while its row is still on screen. */
 const POP_MS = 450;
 const CAPTION_MS = 2000;
-/** How far a row with an open menu keeps from the sheet's edges. */
-const VIEW_GAP = 12;
 /** The word on each answer: short and the same whatever the recipe's fields are called. */
 const CHOICE_WORDS: Record<Answer, string> = { full: "Full", tiny: "Tiny", skip: "Skip" };
 const DAY_CHECK_MS = 60_000;
@@ -94,6 +92,8 @@ export class TodayView extends ItemView {
 	private unfolding: { stop(): void } | null = null;
 	/** The row whose choices just closed, to bring its circle and name back. */
 	private closing: string | null = null;
+	/** The choices as they stood when closed without an answer, to slide back out past the row's left edge. */
+	private leavingChoices: HTMLElement | null = null;
 	private shelves: readonly Box[] = [];
 	private sheetTop = 0;
 	private shownWins: number | null = null;
@@ -200,6 +200,10 @@ export class TodayView extends ItemView {
 		this.render();
 	}
 
+	/**
+	 * Redraws the list where it stands. While the column is rebuilt it is briefly shorter, and anything that measures
+	 * mid-way lets the browser pull the scroll up, so the scroll is put back once the column is whole again.
+	 */
 	private render(): void {
 		if (!this.columnEl) return;
 		if (this.rowDrag?.active) {
@@ -207,7 +211,12 @@ export class TodayView extends ItemView {
 			return;
 		}
 		this.stale = false;
-		const column = this.columnEl;
+		const scrolled = this.scrollEl.scrollTop;
+		this.draw(this.columnEl);
+		this.scrollEl.scrollTop = scrolled;
+	}
+
+	private draw(column: HTMLElement): void {
 		column.empty();
 		this.renderingRows = new Set();
 		const all = visibleEntries(this.ui.repository.list());
@@ -259,17 +268,6 @@ export class TodayView extends ItemView {
 		this.renderFooter(column, true);
 		this.shownRows = this.renderingRows;
 		this.playMotion(column);
-	}
-
-	/** Scrolls the sheet, and only the sheet, so a row half under the navbar is in full view while it shows its choices. */
-	private bringIntoView(element: HTMLElement): void {
-		const inset = parseFloat(this.contentEl.style.getPropertyValue("--th-bottom-inset")) || 0;
-		const visible = this.scrollEl.getBoundingClientRect();
-		const box = element.getBoundingClientRect();
-		const below = box.bottom - (visible.bottom - inset - VIEW_GAP);
-		const above = visible.top + VIEW_GAP - box.top;
-		if (below > 0) this.scrollEl.scrollTop += below;
-		else if (above > 0) this.scrollEl.scrollTop -= above;
 	}
 
 	/** The sheet moved: its top edge is the jar's floor, and the celebration line rides just above it. */
@@ -614,7 +612,8 @@ export class TodayView extends ItemView {
 		const main = row.querySelector<HTMLElement>(".th-row-main");
 		if (main && this.menu === path) this.renderChoices(main, path, habit, mark);
 		if (main && this.closing === path) {
-			this.motion.refold(this.contentOf(main));
+			this.motion.refold(main, this.contentOf(main), this.leavingChoices);
+			this.leavingChoices = null;
 			this.closing = null;
 		}
 		if (this.asking === path) this.renderReasons(row, path);
@@ -671,17 +670,29 @@ export class TodayView extends ItemView {
 		main.addClass("is-choosing");
 		if (!this.menuOpening) return;
 		this.menuOpening = false;
-		this.bringIntoView(main);
 		this.unfolding = this.motion.slideChoices(bar, this.contentOf(main));
 	}
 
 	/** Back from the choices to the row; anything still unfolding stops at once, so cancel works mid-animation. */
 	private closeChoices(): void {
+		this.takeChoices();
 		this.unfolding?.stop();
 		this.unfolding = null;
 		this.closing = this.menu;
 		this.menu = null;
 		this.render();
+	}
+
+	/** Keeps a copy of the open choices where they stand, even mid-slide, so they can leave the way they came. */
+	private takeChoices(): void {
+		const bar = this.contentEl.querySelector<HTMLElement>(".th-row-choices");
+		if (!bar) return;
+		const transform = getComputedStyle(bar).transform;
+		const offset = transform === "none" ? 0 : new DOMMatrix(transform).m41;
+		const copy = bar.cloneNode(true) as HTMLElement;
+		copy.removeClass("is-arriving");
+		copy.style.transform = `translateX(${offset}px)`;
+		this.leavingChoices = copy;
 	}
 
 	/** The row's own content — circle and name — without the choices laid over it. */
@@ -790,6 +801,7 @@ export class TodayView extends ItemView {
 		if (!this.menu && !this.asking) return;
 		const target = event.target as HTMLElement | null;
 		if (target?.closest(".th-row-choices, .th-mark-button, .th-row-extra")) return;
+		this.takeChoices();
 		this.unfolding?.stop();
 		this.unfolding = null;
 		this.closing = this.menu;
