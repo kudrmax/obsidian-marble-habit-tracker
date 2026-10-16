@@ -476,14 +476,23 @@ button.th-day:disabled { cursor: default; opacity: 1; }
 .th-day.is-low .th-day-value { top: -20px; color: var(--text-accent); }
 .th-day.is-low .th-day-fill { overflow: visible; }
 .th-day.is-selected .th-day-dow, .th-day.is-selected .th-day-num { color: var(--text-accent); font-weight: 700; }
-.th-day.is-selected .th-day-pill { background: color-mix(in srgb, var(--interactive-accent) 10%, var(--background-primary)); }
+.th-day.is-selected .th-day-pill { background: color-mix(in srgb, var(--interactive-accent) 16%, var(--background-primary)); }
 .th-day.is-selected .th-day-fill { background: var(--interactive-accent); }
 .th-day.is-future .th-day-dow, .th-day.is-future .th-day-num { color: var(--text-faint); }
 .th-day.is-future .th-day-fill { display: none; }
+/* On a dark page the columns need more light to read, and the shown day more of the accent. */
+.theme-dark .th-day-pill { background: color-mix(in srgb, var(--text-normal) 9%, var(--background-primary)); }
+.theme-dark .th-day-fill { background: color-mix(in srgb, var(--text-normal) 24%, var(--background-primary)); }
+.theme-dark .th-day.is-selected .th-day-pill { background: color-mix(in srgb, var(--interactive-accent) 30%, var(--background-primary)); }
+.theme-dark .th-day.is-selected .th-day-fill { background: var(--interactive-accent); }
 
 .th-sheet { position: absolute; left: 0; right: 0; top: var(--th-sheet-top); bottom: 0; z-index: 4; display: flex; flex-direction: column; border-radius: 24px 24px 0 0; corner-shape: round; background: var(--background-secondary); box-shadow: 0 -0.5px 0 var(--background-modifier-border); }
 .th-sheet.is-settling { transition: top var(--th-settle); }
-.th-sheet-grip { flex: 0 0 auto; padding: 0 var(--th-gutter); touch-action: none; cursor: grab; -webkit-user-select: none; user-select: none; }
+.th-sheet-grip { position: relative; z-index: 1; flex: 0 0 auto; padding: 0 var(--th-gutter); touch-action: none; cursor: grab; -webkit-user-select: none; user-select: none; }
+/* The grip reaches over the top of the list, so the finger finds it without aiming at the grabber. */
+.th-sheet-grip::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 30px; }
+/* Once the list scrolls, it fades out under the sheet's top edge instead of being cut. */
+.th-sheet.is-scrolled .th-today-scroll { -webkit-mask-image: linear-gradient(to bottom, transparent, #000 26px); mask-image: linear-gradient(to bottom, transparent, #000 26px); }
 .th-sheet-grabber { width: 36px; height: 5px; margin: 6px auto 4px; border-radius: 3px; background: var(--text-faint); opacity: 0.6; }
 .th-sheet .th-today-scroll { position: relative; inset: auto; flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .th-sheet .th-column { padding: 4px var(--th-gutter) calc(var(--th-bottom-inset, 0px) + 140px); }
