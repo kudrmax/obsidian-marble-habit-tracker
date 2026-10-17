@@ -10,13 +10,13 @@ export const WEEK_ROW = 54;
 const HEAD = 56;
 /** Room each side of the week grid; its columns share the rest. */
 const GRID_PAD = 8;
-/** The ring around each date. */
-const RING = 34;
+/** The ring around each date, with room inside for two figures and the shown day's disc. */
+const RING = 40;
 const WEEK_DAYS = 7;
 /** Room between the weeks and whatever of Obsidian covers the bottom of the view, once the tray is up. */
 const BOTTOM_GAP = 8;
 /** How high the folded tray stands over Obsidian's bar. Its dates sit in the middle, as far from its edge as from the bar. */
-const REST_HEIGHT = 60;
+const REST_HEIGHT = 66;
 /** Folded, this week's row hangs this far below the calendar, so its dates sit in the middle of the tray; rising, the room under it grows back. */
 const REST_LIFT = WEEK_ROW / 2 + BOTTOM_GAP - REST_HEIGHT / 2;
 /** The figures the dates are written in, to see where their ink sits in their line. */
@@ -41,7 +41,7 @@ const RUBBER_LOW = 0.15;
 const SETTLE_MS = 420;
 const SVG_NS = "http://www.w3.org/2000/svg";
 /** The ring around a date, in its own box. */
-const RING_RADIUS = 16;
+const RING_RADIUS = 19;
 const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
 
 /** A date's ring: its track all the way round, and the part of it the day was done, if any. */
@@ -53,6 +53,10 @@ interface Ring {
 const CHEVRON_LEFT = "m15 18-6-6 6-6";
 const CHEVRON_RIGHT = "m9 18 6-6-6-6";
 
+const fontOf = (element: HTMLElement) => {
+	const style = getComputedStyle(element);
+	return `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+};
 const clamp = (value: number) => Math.min(1, Math.max(0, value));
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3.4);
 
@@ -83,8 +87,11 @@ export class CalendarTray {
 	private pick: (day: LocalDate) => void = () => undefined;
 	/** How far in from the grid's sides its outer rings start, so the month and the buttons line up with them. */
 	private edge = -1;
-	/** The font the dates were last measured in. */
+	/** The font the dates were last measured in, down. */
 	private figureFont = "";
+	private figureContext: CanvasRenderingContext2D | null = null;
+	/** How far across each date moves to the middle of its circle, by its font and figures. */
+	private readonly figureShifts = new Map<string, number>();
 	/** How much of the view's bottom Obsidian's bars cover. */
 	private inset = 0;
 	private rows = 1;
@@ -254,26 +261,47 @@ export class CalendarTray {
 	}
 
 	/**
-	 * A font's figures need not sit in the middle of their line, so in a ring, or in the folded tray, they can look high or
-	 * low. This finds where their ink is in the line, in whatever font the dates are in, and moves them to its middle.
+	 * A font's figures need not sit in the middle of their box: they can sit high or low in their line, and a narrow 1
+	 * leaves a date off to one side. This finds where their ink is, in whatever font the dates are in, and moves each date
+	 * to the middle of its circle.
 	 */
 	private centerFigures(): void {
-		const figure = this.weeks.querySelector<HTMLElement>(".th-cal-figure");
-		if (!figure) return;
-		const style = getComputedStyle(figure);
-		const font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-		if (font === this.figureFont) return;
-		const context = document.createElement("canvas").getContext("2d");
-		const line = figure.getBoundingClientRect();
-		if (!context || line.height === 0) return;
+		const figures = Array.from(this.weeks.querySelectorAll<HTMLElement>(".th-cal-figure"));
+		this.figureContext ??= document.createElement("canvas").getContext("2d");
+		const context = this.figureContext;
+		if (!context || !figures[0]) return;
+		this.centerDown(figures[0], context);
+		for (const figure of figures) figure.style.left = `${this.shiftAcross(figure, context).toFixed(2)}px`;
+	}
+
+	/** Moves the dates down, or up, to put the ink of their figures in the middle of their line. */
+	private centerDown(sample: HTMLElement, context: CanvasRenderingContext2D): void {
+		const font = fontOf(sample);
+		const line = sample.getBoundingClientRect();
+		if (font === this.figureFont || line.height === 0) return;
 		this.figureFont = font;
 		context.font = font;
 		const ink = context.measureText(FIGURES);
-		const probe = figure.createSpan("th-cal-baseline");
+		const probe = sample.createSpan("th-cal-baseline");
 		const baseline = probe.getBoundingClientRect().top - line.top;
 		probe.remove();
 		const inkMiddle = baseline + (ink.actualBoundingBoxDescent - ink.actualBoundingBoxAscent) / 2;
 		this.tray.style.setProperty("--th-figure-shift", `${(line.height / 2 - inkMiddle).toFixed(2)}px`);
+	}
+
+	/** How far a date moves across to put the ink of its figures in the middle of its box. */
+	private shiftAcross(figure: HTMLElement, context: CanvasRenderingContext2D): number {
+		const font = fontOf(figure);
+		const text = figure.textContent ?? "";
+		const key = `${font}|${text}`;
+		const known = this.figureShifts.get(key);
+		if (known !== undefined) return known;
+		context.font = font;
+		context.textAlign = "center";
+		const ink = context.measureText(text);
+		const shift = (ink.actualBoundingBoxLeft - ink.actualBoundingBoxRight) / 2;
+		this.figureShifts.set(key, shift);
+		return shift;
 	}
 
 	private renderDay(row: HTMLElement, day: CalendarDay, selected: boolean, today: LocalDate): void {
