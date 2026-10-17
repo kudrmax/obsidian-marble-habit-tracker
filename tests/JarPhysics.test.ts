@@ -325,4 +325,67 @@ describe("JarPhysics", () => {
 		const best = Math.min(...Array.from({ length: 5 }, perFrame));
 		expect(best).toBeLessThan(4);
 	});
+
+	describe("bounce", () => {
+		/** Drops a body from high up and returns how high it rises again after its first hit, in px above the floor. */
+		function rebound(bounce: number): number {
+			const physics = new JarPhysics(200, 600);
+			physics.setBounce(bounce);
+			physics.add({ id: "a", x: 100, y: 12, r: 12 });
+			let falling = true;
+			let lowest = 0;
+			let highest = Infinity;
+			for (let frame = 0; frame < 400; frame++) {
+				const before = physics.get("a")!.y;
+				physics.step();
+				const y = physics.get("a")!.y;
+				if (falling && y < before) falling = false;
+				if (falling) lowest = y;
+				else if (y > before) break;
+				else highest = Math.min(highest, y);
+			}
+			return highest === Infinity ? 0 : lowest - highest;
+		}
+
+		it("lands dead with no bounce", () => {
+			expect(rebound(0)).toBe(0);
+		});
+
+		it("comes back up off the floor, higher the bouncier it is", () => {
+			const soft = rebound(0.3);
+			const hard = rebound(0.7);
+			expect(soft).toBeGreaterThan(10);
+			expect(hard).toBeGreaterThan(soft * 2);
+			expect(hard).toBeLessThan(588);
+		});
+
+		it("still comes to rest on the floor", () => {
+			const physics = new JarPhysics(200, 600);
+			physics.setBounce(0.8);
+			physics.add({ id: "a", x: 100, y: 12, r: 12 });
+			expect(settle(physics, 3000)).toBeLessThan(3000);
+			expect(physics.get("a")?.y).toBeCloseTo(588, 0);
+		});
+
+		it("lets a pile settle instead of trembling", () => {
+			const physics = new JarPhysics(120, 400);
+			physics.setBounce(0.8);
+			for (let index = 0; index < 30; index++) physics.add({ id: `b${index}`, x: 15 + ((index * 37) % 90), y: -20 - index * 25, r: 6 + (index % 3) * 6 });
+			expect(settle(physics, 5000)).toBeLessThan(5000);
+		});
+
+		it("knocks a resting body away when another one hits it", () => {
+			const still = new JarPhysics(400, 300);
+			const bouncy = new JarPhysics(400, 300);
+			bouncy.setBounce(0.8);
+			for (const physics of [still, bouncy]) {
+				physics.setGravity({ x: 0, y: 0 });
+				physics.add({ id: "a", x: 100, y: 150, r: 12 });
+				physics.add({ id: "b", x: 200, y: 150, r: 12 });
+				physics.get("a")!.px = 95;
+				for (let frame = 0; frame < 40; frame++) physics.step();
+			}
+			expect(bouncy.get("a")!.x).toBeLessThan(still.get("a")!.x);
+		});
+	});
 });

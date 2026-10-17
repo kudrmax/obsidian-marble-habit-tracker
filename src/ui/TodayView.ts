@@ -10,13 +10,13 @@ import { colorClass } from "./colors";
 import { chip, icon, iconButton } from "./components";
 import { recipeDays } from "./format";
 import { computeStats } from "../domain/Stats";
+import { MarbleFeel, marbleFeel } from "../settings";
 import { DayWatcher } from "./DayWatcher";
 import { EditSheet } from "./EditSheet";
 import { Haptics } from "./Haptics";
 import { helpRows } from "./help";
 import { HelpModal } from "./HelpModal";
 import { Hsl, parseColor } from "./jar/color";
-import { MarbleSizes } from "./jar/JarAssets";
 import { JarCanvas, JarItem } from "./jar/JarCanvas";
 import { KeyboardWatch } from "./KeyboardWatch";
 import { LEAVE_MS, Motion, Slide } from "./Motion";
@@ -28,7 +28,7 @@ import { IN_HAND, TiltSensor } from "./jar/TiltSensor";
 import { Placement, arrange, groupBySection, visibleEntries } from "./order";
 import { Drop, RowDrag } from "./RowDrag";
 import { SectionNameModal } from "./SectionNameModal";
-import { SizeCalibration } from "./SizeCalibration";
+import { MarbleCalibration } from "./MarbleCalibration";
 import { ScreenChrome } from "./ScreenChrome";
 import { closedDayLine, dayStrip, dayTitle, winsLabel, offersShrink, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
@@ -103,9 +103,9 @@ export class TodayView extends ItemView {
 	/** The choices as they stood when closed without an answer, to slide back out past the row's left edge. */
 	private leavingChoices: HTMLElement | null = null;
 	private shelves: readonly Box[] = [];
-	private calibration: SizeCalibration | null = null;
-	/** Sizes being tried on the sliders, shown instead of the saved ones until the calibration ends. */
-	private trialSizes: MarbleSizes | null = null;
+	private calibration: MarbleCalibration | null = null;
+	/** The feel being tried on the sliders, shown instead of the saved one until the calibration ends. */
+	private trialFeel: MarbleFeel | null = null;
 	private readonly tilt = new TiltSensor((gravity) => this.jar?.setGravity(gravity));
 
 	constructor(
@@ -219,12 +219,12 @@ export class TodayView extends ItemView {
 		this.render();
 	}
 
-	/** Puts the size sliders over Today: the marbles on screen follow them until they are saved or cancelled. */
-	calibrateSizes(save: (sizes: MarbleSizes) => void, end: () => void): void {
+	/** Puts the marble sliders over Today: the marbles on screen follow them until they are saved or cancelled. */
+	calibrateMarbles(save: (feel: MarbleFeel) => void, end: () => void): void {
 		this.calibration?.close();
-		this.calibration = new SizeCalibration(this.contentEl, this.ui.settings().marbleSizes, {
-			try: (sizes) => {
-				this.trialSizes = sizes;
+		this.calibration = new MarbleCalibration(this.contentEl, marbleFeel(this.ui.settings()), {
+			try: (feel) => {
+				this.trialFeel = feel;
 				this.jar?.setOptions(this.jarOptions());
 			},
 			drop: () => {
@@ -234,7 +234,7 @@ export class TodayView extends ItemView {
 			save,
 			end: () => {
 				this.calibration = null;
-				this.trialSizes = null;
+				this.trialFeel = null;
 				this.jar?.setOptions(this.jarOptions());
 				end();
 			},
@@ -945,11 +945,13 @@ export class TodayView extends ItemView {
 
 	private jarOptions() {
 		const settings = this.ui.settings();
+		const feel = this.trialFeel ?? marbleFeel(settings);
 		return {
 			material: settings.material,
 			reduceMotion: settings.reduceMotion,
-			sizes: this.trialSizes ?? settings.marbleSizes,
-			speed: settings.speed / 100,
+			sizes: feel.sizes,
+			speed: feel.speed / 100,
+			bounce: feel.bounce / 100,
 			screenCorners: this.ui.screenCorners(),
 			background: this.resolveVar("--background-primary"),
 			onImpact: (strength: number) => this.haptics.impact(strength),

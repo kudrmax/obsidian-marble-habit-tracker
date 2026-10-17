@@ -20,6 +20,8 @@ export interface JarOptions {
 	readonly sizes: MarbleSizes;
 	/** How fast the marbles' time runs: 1 is the speed they were tuned at, 2 twice as fast. */
 	readonly speed: number;
+	/** The share of a hit's speed marbles keep as they bounce back, 0 to 1. */
+	readonly bounce: number;
 	/** The radius of the screen's rounded corners; marbles roll along them. */
 	readonly screenCorners: number;
 	onMerge?(item: JarItem): void;
@@ -108,6 +110,7 @@ export class JarCanvas {
 		this.context = this.canvas.getContext("2d");
 		this.resizer = new ResizeObserver(() => this.measure());
 		this.resizer.observe(this.canvas);
+		this.physics.setBounce(options.bounce);
 		this.measure();
 	}
 
@@ -119,6 +122,7 @@ export class JarCanvas {
 		}
 		const corners = options.screenCorners !== this.options.screenCorners;
 		this.options = options;
+		this.physics.setBounce(options.bounce);
 		if (corners) this.placeScreen();
 		if (resized) for (const item of this.drawn.values()) this.physics.setRadius(item.key, this.radius(item));
 		this.wake();

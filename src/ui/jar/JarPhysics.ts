@@ -47,10 +47,12 @@ const CONTACT = 1;
 const ALIGNED = 0.01;
 const NUDGE = 0.2;
 /**
- * The fastest a body may go up after a step, in px per step. A box that rises under the bodies carries them, and when
- * it stops they hop off it; a fast box would otherwise throw them across the screen.
+ * The fastest a body may be lifted in a step, in px per step, beyond how fast it was already going up. A box that rises
+ * under the bodies carries them, and when it stops they hop off it; a fast box would otherwise throw them across the screen.
  */
 const MAX_LIFT = 6;
+/** Hits slower than this, in px per step, don't bounce, so a resting pile stays at rest instead of trembling. */
+const BOUNCE_MIN = 1.2;
 
 export class JarPhysics {
 	private readonly items = new Map<string, Body>();
@@ -65,6 +67,9 @@ export class JarPhysics {
 	/** Reused every step so the hot loop allocates nothing. */
 	private readonly free: Body[] = [];
 	private before = new Float64Array(64);
+	private incoming = new Float64Array(128);
+	/** The share of a hit's speed a body keeps as it bounces back: 0 lands dead, 1 bounces as high as it fell. */
+	private bounce = 0;
 	private quietFrames = 0;
 	/** A solid ball the mouse moves around; bodies it touches are pushed away. */
 	private pusher: { x: number; y: number; r: number } | null = null;
@@ -110,6 +115,10 @@ export class JarPhysics {
 			this.quietFrames = 0;
 			return;
 		}
+	}
+
+	setBounce(bounce: number): void {
+		this.bounce = Math.max(0, Math.min(1, bounce));
 	}
 
 	setGravity(gravity: Point): void {
@@ -182,9 +191,17 @@ export class JarPhysics {
 		const free = this.free;
 		free.length = 0;
 		for (const body of this.items.values()) if (!this.targets.has(body.id)) free.push(body);
-		if (this.before.length < free.length) this.before = new Float64Array(free.length * 2);
+		if (this.before.length < free.length) {
+			this.before = new Float64Array(free.length * 2);
+			this.incoming = new Float64Array(free.length * 4);
+		}
 		const before = this.before;
-		for (let i = 0; i < free.length; i++) before[i] = Math.hypot(free[i].x - free[i].px, free[i].y - free[i].py);
+		const incoming = this.incoming;
+		for (let i = 0; i < free.length; i++) {
+			incoming[2 * i] = free[i].x - free[i].px;
+			incoming[2 * i + 1] = free[i].y - free[i].py;
+			before[i] = Math.hypot(incoming[2 * i], incoming[2 * i + 1]);
+		}
 		if (this.pusher) for (const body of free) this.pushAway(body);
 		for (let pass = 0; pass < PASSES; pass++) {
 			for (let i = 0; i < free.length; i++) {
@@ -192,21 +209,95 @@ export class JarPhysics {
 				this.contain(free[i]);
 			}
 		}
-		for (const body of free) if (body.y - body.py < -MAX_LIFT) body.py = body.y + MAX_LIFT;
+		for (let i = 0; i < free.length; i++) {
+			const lift = Math.min(-MAX_LIFT, incoming[2 * i + 1]);
+			if (free[i].y - free[i].py < lift) free[i].py = free[i].y - lift;
+		}
+		let hardest = 0;
+		for (let i = 0; i < free.length; i++) hardest = Math.max(hardest, before[i] - Math.hypot(free[i].x - free[i].px, free[i].y - free[i].py));
+		if (this.bounce > 0) this.rebound(free);
 		for (const body of free) {
 			if (body.passing) body.passing = free.some((other) => other !== body && overlaps(body, other)) || this.shapesFor(body).obstacles.some((box) => touches(body, box));
 		}
 		for (const body of free) if (!body.landed && !body.passing) body.landed = this.lands(body, free);
 		let fastest = 0;
-		let hardest = 0;
-		for (let i = 0; i < free.length; i++) {
-			const body = free[i];
-			const speed = Math.hypot(body.x - body.px, body.y - body.py);
-			fastest = Math.max(fastest, speed);
-			hardest = Math.max(hardest, before[i] - speed);
-		}
+		for (const body of free) fastest = Math.max(fastest, Math.hypot(body.x - body.px, body.y - body.py));
 		this.quietFrames = fastest < REST_SPEED ? this.quietFrames + 1 : 0;
 		return hardest;
+	}
+
+	/**
+	 * The collisions above only stop a body at what it hits. Here each hit gives some of its speed back: along the
+	 * contact's normal the body leaves as fast as `bounce` of the speed it came in with, before the step began.
+	 */
+	private rebound(free: readonly Body[]): void {
+		const incoming = this.incoming;
+		for (let i = 0; i < free.length; i++) {
+			const body = free[i];
+			if (body.passing) continue;
+			const inX = incoming[2 * i];
+			const inY = incoming[2 * i + 1];
+			this.reflectOffWalls(body, inX, inY);
+			for (let j = i + 1; j < free.length; j++) {
+				const other = free[j];
+				if (other.passing) continue;
+				const dx = other.x - body.x;
+				const dy = other.y - body.y;
+				const distance = Math.hypot(dx, dy);
+				if (distance === 0 || distance > body.r + other.r + CONTACT) continue;
+				const nx = dx / distance;
+				const ny = dy / distance;
+				const closing = (incoming[2 * j] - inX) * nx + (incoming[2 * j + 1] - inY) * ny;
+				if (closing > -BOUNCE_MIN) continue;
+				const now = (other.x - other.px - (body.x - body.px)) * nx + (other.y - other.py - (body.y - body.py)) * ny;
+				const gain = -this.bounce * closing - now;
+				if (gain <= 0) continue;
+				const massA = body.r * body.r;
+				const massB = other.r * other.r;
+				const shareA = (gain * massB) / (massA + massB);
+				const shareB = (gain * massA) / (massA + massB);
+				body.px += nx * shareA;
+				body.py += ny * shareA;
+				other.px -= nx * shareB;
+				other.py -= ny * shareB;
+			}
+		}
+	}
+
+	/** Gives back speed along the normal (nx, ny), which points from what was hit into the body. */
+	private reflect(body: Body, inX: number, inY: number, nx: number, ny: number): void {
+		const arriving = inX * nx + inY * ny;
+		if (arriving > -BOUNCE_MIN) return;
+		const now = (body.x - body.px) * nx + (body.y - body.py) * ny;
+		const gain = -this.bounce * arriving - now;
+		if (gain <= 0) return;
+		body.px -= nx * gain;
+		body.py -= ny * gain;
+	}
+
+	/** Bounces the body off everything still solid it rests against: the walls, the floor, the boxes, the screen's corners. */
+	private reflectOffWalls(body: Body, inX: number, inY: number): void {
+		if (body.y >= this.height - body.r - CONTACT) this.reflect(body, inX, inY, 0, -1);
+		if (body.x <= body.r + CONTACT) this.reflect(body, inX, inY, 1, 0);
+		if (body.x >= this.width - body.r - CONTACT) this.reflect(body, inX, inY, -1, 0);
+		if (body.inside && body.y <= body.r + CONTACT) this.reflect(body, inX, inY, 0, 1);
+		for (const box of this.solidFor(body)) {
+			const core = inner(box);
+			const dx = body.x - Math.max(core.left, Math.min(core.right, body.x));
+			const dy = body.y - Math.max(core.top, Math.min(core.bottom, body.y));
+			const distance = Math.hypot(dx, dy);
+			if (distance > 0 && distance <= core.radius + body.r + CONTACT) this.reflect(body, inX, inY, dx / distance, dy / distance);
+		}
+		const screen = this.screen;
+		if (!screen) return;
+		const reach = Math.max(screen.radius, body.r);
+		const x = Math.max(screen.left + reach, Math.min(screen.right - reach, body.x));
+		const y = Math.max(screen.top + reach, Math.min(screen.bottom - reach, body.y));
+		if (x === body.x || y === body.y) return;
+		const dx = body.x - x;
+		const dy = body.y - y;
+		const distance = Math.hypot(dx, dy);
+		if (distance > 0 && distance >= reach - body.r - CONTACT) this.reflect(body, inX, inY, -dx / distance, -dy / distance);
 	}
 
 	private pushes(body: Body): boolean {

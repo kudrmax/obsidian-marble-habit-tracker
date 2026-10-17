@@ -17,6 +17,7 @@ describe("loadSettings", () => {
 			material: "grain",
 			marbleSizes: { small: 24, medium: 44, big: 68 },
 			speed: 100,
+			bounce: 50,
 			merge: { smallPerMedium: 7, mediumPerBig: 4 },
 			dayStartHour: 5,
 			hideDone: true,
@@ -47,6 +48,7 @@ describe("loadSettings", () => {
 				material: "halftone",
 				marbleSizes: { small: 20, medium: 48, big: 80 },
 				speed: 150,
+				bounce: 70,
 				merge: { smallPerMedium: 5, mediumPerBig: 3 },
 				dayStartHour: 3,
 				hideDone: false,
@@ -72,6 +74,7 @@ describe("loadSettings", () => {
 			material: "halftone",
 			marbleSizes: { small: 20, medium: 48, big: 80 },
 			speed: 150,
+			bounce: 70,
 			merge: { smallPerMedium: 5, mediumPerBig: 3 },
 			dayStartHour: 3,
 			hideDone: false,
@@ -108,6 +111,13 @@ describe("loadSettings", () => {
 		expect(loadSettings({ speed: 300 }).speed).toBe(100);
 		expect(loadSettings({ speed: 40 }).speed).toBe(100);
 		expect(loadSettings({ speed: 50 }).speed).toBe(50);
+	});
+
+	it("replaces a bounce outside 0–90% or not whole with the default", () => {
+		expect(loadSettings({ bounce: 95 }).bounce).toBe(50);
+		expect(loadSettings({ bounce: -5 }).bounce).toBe(50);
+		expect(loadSettings({ bounce: 12.5 }).bounce).toBe(50);
+		expect(loadSettings({ bounce: 0 }).bounce).toBe(0);
 	});
 
 	it("replaces marble sizes out of range or not whole with defaults", () => {
