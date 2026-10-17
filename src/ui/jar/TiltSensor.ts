@@ -1,4 +1,4 @@
-import { EARTH, Point } from "./JarPhysics";
+import { Point } from "./JarPhysics";
 
 const SMOOTHING = 0.25;
 const RADIANS = Math.PI / 180;
@@ -6,11 +6,11 @@ const RADIANS = Math.PI / 180;
 type PermissionRequest = () => Promise<"granted" | "denied">;
 
 /**
- * The pull of the ground along the screen, from the phone's orientation. The device frame is turned by beta about its
+ * The pull of the ground along the screen, as a share of its full pull, from the phone's orientation. The device frame is turned by beta about its
  * x axis and then by gamma about its own y axis, so the ground's pull lands on the screen's x as cos β · sin γ and on
  * its y as sin β. Face down cos β is negative: the screen's left and right have swapped sides over the ground.
  */
-export function tiltGravity(beta: number, gamma: number, screenAngle: number, strength = EARTH.y): Point {
+export function tiltGravity(beta: number, gamma: number, screenAngle: number, strength = 1): Point {
 	const deviceX = Math.cos(beta * RADIANS) * Math.sin(gamma * RADIANS) * strength;
 	const deviceY = Math.sin(beta * RADIANS) * strength;
 	const angle = screenAngle * RADIANS;

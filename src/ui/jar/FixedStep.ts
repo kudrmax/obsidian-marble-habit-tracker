@@ -1,6 +1,6 @@
 /** Physics always advances in 120 Hz steps, the speed the marbles were tuned at on a 120 Hz iPhone, on every screen. */
 export const STEP_MS = 1000 / 120;
-/** After a pause (hidden tab, slow frame) catch up at most this many steps instead of jumping. */
+/** After a pause (hidden tab, slow frame) catch up at most this many frames' worth of steps instead of jumping. */
 const MAX_STEPS_PER_FRAME = 8;
 
 /**
@@ -14,7 +14,7 @@ export class FixedStep {
 	next(time: number, rate = 1): number {
 		const elapsed = this.last === null ? STEP_MS : time - this.last;
 		this.last = time;
-		this.pending += Math.min(Math.max(elapsed, 0) * rate, STEP_MS * MAX_STEPS_PER_FRAME);
+		this.pending += Math.min(Math.max(elapsed, 0) * rate, STEP_MS * MAX_STEPS_PER_FRAME * Math.max(1, rate));
 		const steps = Math.round(this.pending / STEP_MS);
 		this.pending -= steps * STEP_MS;
 		return steps;

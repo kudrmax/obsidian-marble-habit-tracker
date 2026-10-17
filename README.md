@@ -4,7 +4,7 @@ A habit tracker for [Obsidian](https://obsidian.md) where every win drops a marb
 
 - **Close the day.** One list of today's habits. Tap the circle and the answers slide into the row as buttons — Full, Tiny or Skip, with a reason for a skip. Tap a marked circle to clear it.
 - **Watch the jar fill.** Every done day is a marble in the habit's colour. Seven marbles of one habit merge into a bigger one, four of those into the biggest.
-- **Tilt to roll.** On a phone the marbles roll and bounce with the tilt of the device, held any way up, even face down above you, with a light vibration. Their size, speed and bounce are tuned on Today itself, on your own marbles.
+- **Tilt to roll.** On a phone the marbles roll and bounce with the tilt of the device, held any way up, even face down above you, with a light vibration. They fall, roll and bounce as real balls do. Their size, speed, gravity and bounce are tuned on Today itself, on your own marbles.
 - **Tiny is a win.** Built on BJ Fogg's Tiny Habits recipe: after I …, I will … — the tiny version counts as fully done.
 - **Look back.** This week's dates sit at the bottom of Today. Pull them up for the whole month, each day in a ring of how much of it was done, and page back to earlier months; tap a day to mark it.
 - **All habits.** The list button over Today's calendar, or the *Open all habits* command, shows every habit with its days and wins, archived ones folded at the bottom.

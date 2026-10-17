@@ -2,7 +2,7 @@ import { JarSize } from "../../domain/Jar";
 import { AssetSpec, JarMaterial, MarbleSizes, assetKey, assetSvg } from "./JarAssets";
 import { Hsl, hsl } from "./color";
 import { FixedStep } from "./FixedStep";
-import { Box, JarPhysics, Point } from "./JarPhysics";
+import { Box, JarPhysics, Point, perStep } from "./JarPhysics";
 
 export interface JarItem {
 	readonly key: string;
@@ -20,6 +20,8 @@ export interface JarOptions {
 	readonly sizes: MarbleSizes;
 	/** How fast the marbles' time runs: 1 is the speed they were tuned at, 2 twice as fast. */
 	readonly speed: number;
+	/** How hard marbles fall, in px/s², when the screen stands upright. */
+	readonly gravity: number;
 	/** The share of a hit's speed marbles keep as they bounce back, 0 to 1. */
 	readonly bounce: number;
 	/** The radius of the screen's rounded corners; marbles roll along them. */
@@ -33,7 +35,8 @@ const BORN_MS = 520;
 const DROP_MS = 650;
 const MERGE_MS = 420;
 const HOLD_MS = 260;
-const KICK = 8;
+/** How fast a marble hops off the tapped button, against gravity, in px per step: 300 px/s. */
+const KICK = 2.5;
 const RAIN_GAP = 18;
 const QUIET_STEPS = 1500;
 /** The size of the invisible ball the mouse pushes marbles with. */
@@ -101,6 +104,7 @@ export class JarCanvas {
 	private readonly clock = new FixedStep();
 	private filled = false;
 	private ghost = 0;
+	private tilt: Point = { x: 0, y: 1 };
 
 	constructor(
 		parent: HTMLElement,
@@ -111,6 +115,7 @@ export class JarCanvas {
 		this.resizer = new ResizeObserver(() => this.measure());
 		this.resizer.observe(this.canvas);
 		this.physics.setBounce(options.bounce);
+		this.applyGravity();
 		this.measure();
 	}
 
@@ -123,6 +128,7 @@ export class JarCanvas {
 		const corners = options.screenCorners !== this.options.screenCorners;
 		this.options = options;
 		this.physics.setBounce(options.bounce);
+		this.applyGravity();
 		if (corners) this.placeScreen();
 		if (resized) for (const item of this.drawn.values()) this.physics.setRadius(item.key, this.radius(item));
 		this.wake();
@@ -169,8 +175,15 @@ export class JarCanvas {
 		if (!this.physics.isSettled()) this.wake();
 	}
 
-	setGravity(gravity: Point): void {
-		this.physics.setGravity(gravity);
+	/** Which way and how hard the ground pulls, as a share of the full `gravity` along each axis of the screen. */
+	setTilt(tilt: Point): void {
+		this.tilt = tilt;
+		this.applyGravity();
+	}
+
+	private applyGravity(): void {
+		const pull = perStep(this.options.gravity);
+		this.physics.setGravity({ x: this.tilt.x * pull, y: this.tilt.y * pull });
 		if (!this.physics.isSettled()) this.wake();
 	}
 

@@ -21,6 +21,8 @@ export interface HabitSettings {
 	marbleSizes: MarbleSizes;
 	/** How fast marbles move, in percent of the speed they were tuned at. */
 	speed: number;
+	/** How hard marbles fall, in px/s², with the screen upright. */
+	gravity: number;
 	/** How much of a hit's speed marbles keep as they bounce back, in percent. */
 	bounce: number;
 	merge: MergeRule;
@@ -53,7 +55,8 @@ export const DEFAULT_SETTINGS: HabitSettings = {
 	material: "grain",
 	marbleSizes: DEFAULT_MARBLE_SIZES,
 	speed: 100,
-	bounce: 50,
+	gravity: 1000,
+	bounce: 20,
 	merge: DEFAULT_MERGE_RULE,
 	dayStartHour: 5,
 	hideDone: true,
@@ -72,19 +75,24 @@ export interface MarbleFeel {
 	readonly sizes: MarbleSizes;
 	/** Percent of the speed they were tuned at. */
 	readonly speed: number;
+	/** px/s² with the screen upright. */
+	readonly gravity: number;
 	/** Percent of a hit's speed kept on the bounce. */
 	readonly bounce: number;
 }
 
 export function marbleFeel(settings: HabitSettings): MarbleFeel {
-	return { sizes: settings.marbleSizes, speed: settings.speed, bounce: settings.bounce };
+	return { sizes: settings.marbleSizes, speed: settings.speed, gravity: settings.gravity, bounce: settings.bounce };
 }
 
 export const MAX_DAY_START = 12;
-export const MIN_SPEED = 50;
-export const MAX_SPEED = 200;
+export const MIN_SPEED = 10;
+export const MAX_SPEED = 400;
+export const MIN_GRAVITY = 100;
+export const MAX_GRAVITY = 7000;
 export const MIN_BOUNCE = 0;
-export const MAX_BOUNCE = 90;
+/** A perfectly elastic marble: it keeps all its speed, and with nothing in the air to slow it, bounces for ever. */
+export const MAX_BOUNCE = 100;
 const MIN_MERGE = 2;
 const MAX_MERGE = 30;
 
@@ -107,6 +115,7 @@ export function loadSettings(data: unknown): HabitSettings {
 		material: isJarMaterial(raw.material) ? raw.material : DEFAULT_SETTINGS.material,
 		marbleSizes: loadMarbleSizes(raw.marbleSizes),
 		speed: integer(raw.speed, MIN_SPEED, MAX_SPEED, DEFAULT_SETTINGS.speed),
+		gravity: integer(raw.gravity, MIN_GRAVITY, MAX_GRAVITY, DEFAULT_SETTINGS.gravity),
 		bounce: integer(raw.bounce, MIN_BOUNCE, MAX_BOUNCE, DEFAULT_SETTINGS.bounce),
 		merge: loadMerge(raw.merge, (raw as Record<string, unknown>).mergeSize),
 		dayStartHour: integer(raw.dayStartHour, 0, MAX_DAY_START, DEFAULT_SETTINGS.dayStartHour),

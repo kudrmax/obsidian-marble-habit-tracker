@@ -96,6 +96,7 @@ export default class MarbleHabitTrackerPlugin extends Plugin implements Settings
 		view.calibrateMarbles((feel) => {
 			this.config.marbleSizes = feel.sizes;
 			this.config.speed = feel.speed;
+			this.config.gravity = feel.gravity;
 			this.config.bounce = feel.bounce;
 			void this.saveSettings();
 		}, end);

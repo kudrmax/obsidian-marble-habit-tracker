@@ -97,8 +97,10 @@ export class SettingsTab extends PluginSettingTab {
 		this.stylePicker(containerEl);
 		const sizes = settings.marbleSizes;
 		new Setting(containerEl)
-			.setName("Size, speed and bounce")
-			.setDesc(`Tune them on Today, on your own marbles. Now: ${sizes.small}, ${sizes.medium} and ${sizes.big} px, speed ${settings.speed}%, bounce ${settings.bounce}%.`)
+			.setName("Size and physics")
+			.setDesc(
+				`Tune them on Today, on your own marbles. Now: ${sizes.small}, ${sizes.medium} and ${sizes.big} px, speed ${settings.speed}%, gravity ${settings.gravity} px/s², bounce ${settings.bounce}%.`,
+			)
 			.addButton((button) => button.setButtonText("Tune").onClick(() => this.stepOut((back) => void this.host.calibrateMarbles(back))));
 		const merge = (name: string, desc: string, key: keyof HabitSettings["merge"]) =>
 			new Setting(containerEl)

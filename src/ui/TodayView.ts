@@ -106,7 +106,7 @@ export class TodayView extends ItemView {
 	private calibration: MarbleCalibration | null = null;
 	/** The feel being tried on the sliders, shown instead of the saved one until the calibration ends. */
 	private trialFeel: MarbleFeel | null = null;
-	private readonly tilt = new TiltSensor((gravity) => this.jar?.setGravity(gravity));
+	private readonly tilt = new TiltSensor((tilt) => this.jar?.setTilt(tilt));
 
 	constructor(
 		leaf: WorkspaceLeaf,
@@ -951,6 +951,7 @@ export class TodayView extends ItemView {
 			reduceMotion: settings.reduceMotion,
 			sizes: feel.sizes,
 			speed: feel.speed / 100,
+			gravity: feel.gravity,
 			bounce: feel.bounce / 100,
 			screenCorners: this.ui.screenCorners(),
 			background: this.resolveVar("--background-primary"),
@@ -977,7 +978,7 @@ export class TodayView extends ItemView {
 	private applyTilt(): void {
 		if (!this.tiltEnabled() || !Platform.isMobile) {
 			this.tilt.stop();
-			this.jar?.setGravity(IN_HAND);
+			this.jar?.setTilt(IN_HAND);
 			return;
 		}
 		if (!this.contentEl.isShown() || document.hidden) {

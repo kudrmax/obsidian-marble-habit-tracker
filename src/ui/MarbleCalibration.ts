@@ -1,6 +1,6 @@
 import { Setting } from "obsidian";
 import { JarSize } from "../domain/Jar";
-import { DEFAULT_SETTINGS, MAX_BOUNCE, MAX_SPEED, MIN_BOUNCE, MIN_SPEED, MarbleFeel, marbleFeel } from "../settings";
+import { DEFAULT_SETTINGS, MAX_BOUNCE, MAX_GRAVITY, MAX_SPEED, MIN_BOUNCE, MIN_GRAVITY, MIN_SPEED, MarbleFeel, marbleFeel } from "../settings";
 import { MAX_MARBLE, MIN_MARBLE } from "./jar/JarAssets";
 
 export interface MarbleCalibrationHost {
@@ -40,6 +40,7 @@ const DIALS: readonly Dial[] = [
 	sizeDial("medium"),
 	sizeDial("big"),
 	{ name: "Speed", min: MIN_SPEED, max: MAX_SPEED, step: 5, unit: "%", read: (feel) => feel.speed, write: (feel, speed) => ({ ...feel, speed }) },
+	{ name: "Gravity", min: MIN_GRAVITY, max: MAX_GRAVITY, step: 50, unit: " px/s²", read: (feel) => feel.gravity, write: (feel, gravity) => ({ ...feel, gravity }) },
 	{ name: "Bounce", min: MIN_BOUNCE, max: MAX_BOUNCE, step: 5, unit: "%", read: (feel) => feel.bounce, write: (feel, bounce) => ({ ...feel, bounce }) },
 ];
 
