@@ -405,9 +405,12 @@ button.th-style-tile.is-selected { border-color: var(--interactive-accent); }
 /* Marble sizes: a small jar that follows the sliders. */
 /* Marble sizes, picked on Today: a card of sliders over the top of the list, the marbles stay in view below it. */
 .th-size-calibration { position: absolute; top: calc(var(--th-top-inset, 0px) + 8px); left: var(--th-gutter); right: var(--th-gutter); z-index: 8; max-width: calc(var(--th-column) - 2 * var(--th-gutter)); margin: 0 auto; padding: var(--size-4-3) var(--size-4-4); border-radius: var(--radius-l); background: var(--background-secondary); box-shadow: var(--shadow-l); }
-.th-size-calibration-title { font-size: var(--font-ui-medium); font-weight: var(--font-semibold); }
-.th-size-calibration .setting-item { padding: var(--size-4-2) 0; }
-.th-size-calibration .setting-item:first-of-type { border-top: none; }
+.th-size-calibration-title { margin-bottom: var(--size-4-2); padding-inline-start: var(--size-4-4); font-size: var(--font-ui-medium); font-weight: var(--font-semibold); }
+.th-size-calibration .setting-item { align-items: center; padding: var(--size-4-2); border-top: none; border-radius: 30px; }
+.th-size-calibration .setting-item-info { flex: 0 0 4.5em; padding-inline-start: var(--size-4-2); }
+.th-size-calibration .th-size-stepper { flex: 1 1 auto; min-width: 0; gap: var(--size-4-2); }
+.th-size-calibration .th-size-stepper input[type="range"] { flex: 1 1 auto; min-width: 0; width: auto; }
+.th-size-calibration button.th-size-step { flex: none; width: 44px; height: 44px; border-radius: 50%; corner-shape: round; padding: 0; font-size: 22px; }
 .th-size-calibration .modal-button-container { flex-wrap: wrap; margin: var(--size-4-3) 0 0; padding: 0; }
 .is-phone .th-size-calibration .modal-button-container { display: grid; grid-template-columns: 1fr 1fr; }
 
