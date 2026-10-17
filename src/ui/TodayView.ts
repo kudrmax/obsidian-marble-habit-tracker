@@ -28,7 +28,7 @@ import { Placement, arrange, groupBySection, visibleEntries } from "./order";
 import { Drop, RowDrag } from "./RowDrag";
 import { SectionNameModal } from "./SectionNameModal";
 import { ScreenChrome } from "./ScreenChrome";
-import { calendarWeeks, closedDayLine, dayStrip, dayTitle, winsLabel, offersShrink, todayEntries } from "./today";
+import { closedDayLine, dayStrip, dayTitle, winsLabel, offersShrink, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
 
 export const HABITS_VIEW = "tiny-habits-grid";
@@ -402,7 +402,7 @@ export class TodayView extends ItemView {
 	/** The calendar in the tray, with the shown day picked; a tap on a day shows it above. */
 	private renderCalendar(all: readonly HabitEntry[]): void {
 		const today = this.ui.service.today();
-		this.tray?.show(calendarWeeks(dayStrip(all, today)), this.shownDay(), today, (day) => this.showDay(day));
+		this.tray?.show(dayStrip(all, today), this.shownDay(), today, (day) => this.showDay(day));
 	}
 
 	/** On a past day, a chip at the top says which one, and its cross goes back to today. */

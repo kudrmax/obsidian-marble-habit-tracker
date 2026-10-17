@@ -1,34 +1,29 @@
 import { LocalDate } from "../domain/LocalDate";
 import { Box } from "./jar/JarPhysics";
-import { CalendarDay, dayTitle, donePercent, monthOf } from "./today";
+import { CalendarDay, CalendarMonth, StripDay, calendarMonths, dayTitle, donePercent, monthTitle, monthWeeks } from "./today";
 
-/** The strip with the grabber at the tray's top; the grabber's bottom edge is this far down. */
+/** The strip with the grabber at the tray's top. */
 const GRIP = 14;
-const GRABBER_BOTTOM = 10;
 /** One week of the calendar: each date in a ring of how much of that day was done. */
 export const WEEK_ROW = 54;
-/** A date's line. */
-const DATE = 24;
-/** Folded, the dates sit this far under the grabber and as far over Obsidian's bar. */
-const REST_GAP = 8;
-/**
- * Over the weeks: room under the grabber, the month with Today's buttons on its line, then the weekdays. They come in,
- * weekdays first, once this week's row is whole.
- */
-const HEAD = 74;
+/** Over the weeks: room under the grabber, then one line with the month, its arrows and Today's buttons. */
+const HEAD = 56;
 /** Room each side of the week grid; its columns share the rest. */
 const GRID_PAD = 8;
 /** The ring around each date. */
 const RING = 34;
+const WEEK_DAYS = 7;
 /** Room between the weeks and whatever of Obsidian covers the bottom of the view, once the tray is up. */
 const BOTTOM_GAP = 8;
-/** How high the folded tray stands over Obsidian's bar: the grabber, the dates and the room around them. */
-const REST_HEIGHT = GRABBER_BOTTOM + REST_GAP + DATE + REST_GAP;
-/** Folded, this week's row hangs this far below the calendar, so only its dates show; rising, the room under it grows back. */
-const REST_LIFT = GRABBER_BOTTOM + REST_GAP + DATE / 2 + WEEK_ROW / 2 - (REST_HEIGHT - BOTTOM_GAP);
+/** How high the folded tray stands over Obsidian's bar. Its dates sit in the middle, as far from its edge as from the bar. */
+const REST_HEIGHT = 48;
+/** Folded, this week's row hangs this far below the calendar, so its dates sit in the middle of the tray; rising, the room under it grows back. */
+const REST_LIFT = WEEK_ROW / 2 + BOTTOM_GAP - REST_HEIGHT / 2;
+/** The figures the dates are written in, to see where their ink sits in their line. */
+const FIGURES = "0123456789";
 /** How far the tray rises before this week's row is whole. */
 const ROW_WHOLE = WEEK_ROW + GRIP + BOTTOM_GAP - REST_HEIGHT;
-/** The furthest the tray goes up, so the habits never go out of sight behind it. */
+/** The furthest the tray goes up: enough for a month of six weeks. */
 const MAX_UP = 360;
 /** How far the tray rises before its shadow is at full strength. */
 const SHADOW_FADE = 60;
@@ -42,45 +37,51 @@ const FLICK = 0.45;
 const RUBBER = 0.35;
 const RUBBER_LOW = 0.15;
 const SETTLE_MS = 420;
-/** The weekdays over the calendar, Monday first. */
-const WEEKDAY_LETTERS = ["M", "T", "W", "T", "F", "S", "S"];
 const SVG_NS = "http://www.w3.org/2000/svg";
-/** The ring around a date, in its 36-unit box. */
+/** The ring around a date, in its own box. */
 const RING_RADIUS = 16;
 const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
+const CHEVRON_LEFT = "m15 18-6-6 6-6";
+const CHEVRON_RIGHT = "m9 18 6-6-6-6";
 
 const clamp = (value: number) => Math.min(1, Math.max(0, value));
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3.4);
 
 /**
  * Today's calendar, in a tray at the bottom of the view over Obsidian's navbar. Folded, it shows this week's dates;
- * pulled up, earlier weeks come in above them with how much of each day was done. Let go, it stays on the nearest whole
- * week. Its top edge is the floor the marbles stand on, wherever it is: rising, it carries them up and they hop off it.
- * Once it is all the way up, its weeks scroll back in time.
+ * pulled up, the rest of the month comes in above them, each date in a ring of how much of that day was done, under a
+ * line with the month, arrows to the months before and Today's buttons. Let go, it stays on the nearest whole week. Its
+ * top edge is the floor the marbles stand on, wherever it is: rising, it carries them up and they hop off it.
  */
 export class CalendarTray {
 	readonly tray: HTMLElement;
 	private readonly grip: HTMLElement;
-	/** The month and the weekdays over the weeks. */
+	private readonly calendar: HTMLElement;
 	private readonly head: HTMLElement;
-	private readonly month: HTMLElement;
+	private readonly line: HTMLElement;
+	private readonly title: HTMLElement;
+	private readonly previous: HTMLButtonElement;
+	private readonly next: HTMLButtonElement;
 	/** Today's buttons, on the month's line. */
 	private readonly tools: HTMLElement;
-	/** The weeks, oldest first; they scroll, and stay on the newest unless scrolled back. */
 	private readonly weeks: HTMLElement;
-	private shown: CalendarDay[][] = [];
+	private days: readonly StripDay[] = [];
+	private months: CalendarMonth[] = [];
+	/** The month on show, as an index into `months`; folded, it is always this month. */
+	private monthIndex = -1;
+	private shownDay: LocalDate | null = null;
 	private today: LocalDate | null = null;
+	private pick: (day: LocalDate) => void = () => undefined;
 	/** How far in from the grid's sides its outer rings start, so the month and the buttons line up with them. */
 	private edge = -1;
-	private readonly calendar: HTMLElement;
+	/** The font the dates were last measured in. */
+	private figureFont = "";
 	/** How much of the view's bottom Obsidian's bars cover. */
 	private inset = 0;
 	private rows = 1;
 	/** How far above its rest the tray is. */
 	private raised = 0;
 	private hidden = false;
-	/** Whether the weeks stay scrolled to the newest. */
-	private pinned = true;
 	private restTop = 0;
 	/** Where the tray's top was last told to whoever stands on it. */
 	private lastTop = Number.NaN;
@@ -100,16 +101,17 @@ export class CalendarTray {
 		private readonly onMove: () => void,
 	) {
 		this.tray = root.createDiv("th-tray");
-		this.grip = this.tray.createEl("button", { cls: "th-tray-grip", attr: { "aria-label": "Show earlier days" } });
+		this.grip = this.tray.createEl("button", { cls: "th-tray-grip", attr: { "aria-label": "Show the month" } });
 		this.grip.createSpan("th-tray-grabber");
 		this.calendar = this.tray.createDiv("th-cal");
 		this.weeks = this.calendar.createDiv("th-cal-weeks");
 		this.head = this.calendar.createDiv("th-cal-head");
-		const line = this.head.createDiv("th-cal-line");
-		this.month = line.createDiv("th-cal-month");
+		this.line = this.head.createDiv("th-cal-line");
+		const line = this.line;
+		this.title = line.createDiv("th-cal-month");
+		this.previous = this.arrow(line, "Previous month", CHEVRON_LEFT, -1);
+		this.next = this.arrow(line, "Next month", CHEVRON_RIGHT, 1);
 		this.tools = line.createDiv("th-cal-tools");
-		const letters = this.head.createDiv("th-cal-weekdays");
-		for (const letter of WEEKDAY_LETTERS) letters.createSpan({ text: letter });
 		this.tray.addEventListener("pointerdown", this.pointerDown);
 		window.addEventListener("pointermove", this.pointerMove);
 		window.addEventListener("pointerup", this.pointerUp);
@@ -120,7 +122,6 @@ export class CalendarTray {
 		this.tray.addEventListener("touchmove", (event) => {
 			if (this.drag?.moving) event.stopPropagation();
 		});
-		this.weeks.addEventListener("scroll", this.scrolled, { passive: true });
 		this.resizer = new ResizeObserver(() => this.placeRest());
 		this.resizer.observe(root);
 		this.place();
@@ -146,6 +147,7 @@ export class CalendarTray {
 	setTools(tools: HTMLElement): void {
 		this.tools.empty();
 		this.tools.appendChild(tools);
+		this.fitTitle();
 	}
 
 	/** The tray keeps its place while `held` says so; call `refit` once it no longer holds. */
@@ -162,6 +164,7 @@ export class CalendarTray {
 		this.hidden = hidden;
 		this.tray.toggleClass("is-hidden", hidden);
 		if (hidden) this.settle(0);
+		else this.fitTitle();
 	}
 
 	snap(open: boolean): void {
@@ -173,7 +176,93 @@ export class CalendarTray {
 		return { left: 0, top: this.restTop - this.raised, right: this.root.clientWidth, bottom: this.root.clientHeight, radius: CORNER };
 	}
 
-	private renderDay(row: HTMLElement, day: CalendarDay, selected: boolean, today: LocalDate, pick: (day: LocalDate) => void): void {
+	/**
+	 * Takes the calendar's days and draws the month on show: this month unless an earlier one was opened with the arrows.
+	 * The shown day is picked; a tap on another day picks it.
+	 */
+	show(days: readonly StripDay[], shown: LocalDate, today: LocalDate, pick: (day: LocalDate) => void): void {
+		this.days = days;
+		this.shownDay = shown;
+		this.today = today;
+		this.pick = pick;
+		this.months = calendarMonths(days, today);
+		if (this.monthIndex < 0 || this.monthIndex >= this.months.length) this.monthIndex = this.months.length - 1;
+		this.renderMonth();
+	}
+
+	private arrow(line: HTMLElement, label: string, path: string, step: number): HTMLButtonElement {
+		const button = line.createEl("button", { cls: "th-cal-arrow", attr: { "aria-label": label } });
+		const svg = button.appendChild(document.createElementNS(SVG_NS, "svg"));
+		svg.setAttribute("viewBox", "0 0 24 24");
+		svg.setAttribute("aria-hidden", "true");
+		const stroke = svg.appendChild(document.createElementNS(SVG_NS, "path"));
+		stroke.setAttribute("d", path);
+		button.addEventListener("click", () => this.turn(step));
+		return button;
+	}
+
+	/** Opens the month before or after the one on show, all of it. */
+	private turn(step: number): void {
+		const index = Math.min(this.months.length - 1, Math.max(0, this.monthIndex + step));
+		if (index === this.monthIndex) return;
+		this.monthIndex = index;
+		this.renderMonth();
+		this.settle(this.maxUp());
+	}
+
+	private renderMonth(): void {
+		const month = this.months[this.monthIndex];
+		const today = this.today;
+		if (!month || !today) return;
+		const weeks = monthWeeks(this.days, month, today);
+		this.weeks.empty();
+		const list = this.weeks.createDiv("th-cal-list");
+		for (const week of weeks) {
+			const row = list.createDiv("th-cal-week");
+			for (const day of week) this.renderDay(row, day, this.shownDay?.equals(day.date) ?? false, today);
+		}
+		this.fitTitle();
+		this.previous.disabled = this.monthIndex === 0;
+		this.next.disabled = this.monthIndex === this.months.length - 1;
+		this.rows = Math.max(1, weeks.length);
+		this.raised = Math.min(this.raised, this.maxUp());
+		this.centerFigures();
+		this.place();
+	}
+
+	/** The month's whole name, or its short one when the whole one leaves the buttons no room on its line. */
+	private fitTitle(): void {
+		const month = this.months[this.monthIndex];
+		const today = this.today;
+		if (!month || !today) return;
+		this.title.setText(monthTitle(month, today));
+		if (this.line.scrollWidth > this.line.clientWidth) this.title.setText(monthTitle(month, today, "short"));
+	}
+
+	/**
+	 * A font's figures need not sit in the middle of their line, so in a ring, or in the folded tray, they can look high or
+	 * low. This finds where their ink is in the line, in whatever font the dates are in, and moves them to its middle.
+	 */
+	private centerFigures(): void {
+		const figure = this.weeks.querySelector<HTMLElement>(".th-cal-figure");
+		if (!figure) return;
+		const style = getComputedStyle(figure);
+		const font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+		if (font === this.figureFont) return;
+		const context = document.createElement("canvas").getContext("2d");
+		const line = figure.getBoundingClientRect();
+		if (!context || line.height === 0) return;
+		this.figureFont = font;
+		context.font = font;
+		const ink = context.measureText(FIGURES);
+		const probe = figure.createSpan("th-cal-baseline");
+		const baseline = probe.getBoundingClientRect().top - line.top;
+		probe.remove();
+		const inkMiddle = baseline + (ink.actualBoundingBoxDescent - ink.actualBoundingBoxAscent) / 2;
+		this.tray.style.setProperty("--th-figure-shift", `${(line.height / 2 - inkMiddle).toFixed(2)}px`);
+	}
+
+	private renderDay(row: HTMLElement, day: CalendarDay, selected: boolean, today: LocalDate): void {
 		const off = day.future || day.outside;
 		const percent = off ? null : donePercent(day);
 		const title = dayTitle(day.date, today);
@@ -181,11 +270,10 @@ export class CalendarTray {
 		button.toggleClass("is-selected", selected);
 		button.toggleClass("is-today", day.date.equals(today));
 		button.toggleClass("is-off", off);
-		button.toggleClass("is-full", percent === 100);
 		if (!off) this.renderRing(button, percent ?? 0);
-		button.createSpan({ cls: "th-cal-date", text: String(day.date.day) });
+		button.createSpan("th-cal-date").createSpan({ cls: "th-cal-figure", text: String(day.date.day) });
 		button.disabled = off;
-		button.addEventListener("click", () => pick(day.date));
+		button.addEventListener("click", () => this.pick(day.date));
 	}
 
 	/** A ring around the date, drawn as far round as the day was done: a full ring for a day done in full. */
@@ -209,52 +297,15 @@ export class CalendarTray {
 		arc.setAttribute("transform", `rotate(-90 ${RING / 2} ${RING / 2})`);
 	}
 
-	/** The month most of the weeks in sight are in, over the calendar. */
-	private nameMonths(): void {
-		if (this.shown.length === 0 || !this.today) return;
-		const { first, last } = this.visibleWeeks();
-		this.month.setText(monthOf(this.shown.slice(first, last + 1), this.today));
-	}
-
 	/** Lines the month and the buttons up with the grid's outer rings, whatever the width. */
 	private alignToGrid(): void {
 		const column = parseFloat(getComputedStyle(this.root).getPropertyValue("--th-column")) || Infinity;
 		const width = Math.min(this.calendar.clientWidth, column);
-		const edge = Math.round(GRID_PAD + ((width - 2 * GRID_PAD) / WEEKDAY_LETTERS.length - RING) / 2);
+		const edge = Math.round(GRID_PAD + ((width - 2 * GRID_PAD) / WEEK_DAYS - RING) / 2);
 		if (width === 0 || edge === this.edge) return;
 		this.edge = edge;
 		this.tray.style.setProperty("--th-cal-edge", `${edge}px`);
-	}
-
-	/** The weeks in sight, as indexes into the weeks, oldest first. */
-	private visibleWeeks(): { first: number; last: number } {
-		const hidden = Math.max(0, this.weeks.scrollHeight - this.rows * WEEK_ROW);
-		const top = Math.max(0, this.weeks.scrollTop - hidden);
-		const first = Math.min(this.rows - 1, Math.floor(top / WEEK_ROW));
-		const last = Math.max(first, Math.ceil((top + this.weeks.clientHeight - hidden) / WEEK_ROW) - 1);
-		return { first, last: Math.min(last, this.rows - 1) };
-	}
-
-	/**
-	 * Draws the weeks, the newest at the bottom, each date with how much of that day was done under it. The shown day is
-	 * picked; the days to come and the ones before the calendar can't be. The weeks stay where they were scrolled.
-	 */
-	show(weeks: CalendarDay[][], shown: LocalDate, today: LocalDate, pick: (day: LocalDate) => void): void {
-		const first = this.shown.length === 0;
-		const scrolled = this.weeks.scrollTop;
-		this.shown = weeks;
-		this.today = today;
-		this.weeks.empty();
-		const list = this.weeks.createDiv("th-cal-list");
-		for (const week of weeks) {
-			const row = list.createDiv("th-cal-week");
-			for (const day of week) this.renderDay(row, day, day.date.equals(shown), today, pick);
-		}
-		this.rows = Math.max(1, weeks.length);
-		this.raised = Math.min(this.raised, this.maxUp());
-		if (first) this.pinned = true;
-		this.place();
-		if (!this.pinned) this.weeks.scrollTop = scrolled;
+		this.fitTitle();
 	}
 
 	private maxUp(): number {
@@ -283,20 +334,11 @@ export class CalendarTray {
 		this.tray.style.setProperty("--th-detail", String(clamp(raised / ROW_WHOLE)));
 		this.tray.style.setProperty("--th-head-height", `${Math.min(HEAD, Math.max(0, raised - ROW_WHOLE))}px`);
 		this.tray.style.setProperty("--th-open", String(clamp(raised / SHADOW_FADE)));
-		this.alignToGrid();
 		// Folded, this week's row hangs low so only its dates show; pushed below its rest, the tray takes them down with it.
 		this.tray.style.setProperty("--th-lift", `${Math.max(0, REST_LIFT - this.raised)}px`);
-		const full = this.raised >= this.maxUp() - 1;
-		this.weeks.toggleClass("is-scrollable", full);
-		this.grip.setAttribute("aria-label", this.raised > 1 ? "Hide earlier days" : "Show earlier days");
-		if (this.pinned) this.weeks.scrollTop = this.weeks.scrollHeight;
-		this.nameMonths();
+		this.alignToGrid();
+		this.grip.setAttribute("aria-label", this.raised > 1 ? "Hide the month" : "Show the month");
 	}
-
-	private readonly scrolled = () => {
-		this.pinned = this.weeks.scrollHeight - this.weeks.scrollTop - this.weeks.clientHeight < 2;
-		this.nameMonths();
-	};
 
 	/** Where the finger puts the tray, giving way less and less past either end of its range. */
 	private bounded(raised: number): number {
@@ -308,9 +350,6 @@ export class CalendarTray {
 
 	private readonly pointerDown = (event: PointerEvent) => {
 		if (this.hidden || event.button !== 0) return;
-		// All the way up, the weeks scroll under a finger instead; the grip and the head still move the tray.
-		const onWeeks = this.weeks.contains(event.target as Node);
-		if (onWeeks && this.weeks.hasClass("is-scrollable") && event.pointerType !== "mouse") return;
 		cancelAnimationFrame(this.settleFrame);
 		this.drag = { pointer: event.pointerId, startY: event.clientY, startRaised: this.raised, lastY: event.clientY, lastAt: event.timeStamp, speed: 0, moving: false };
 	};
@@ -373,9 +412,16 @@ export class CalendarTray {
 		return stops.reduce((best, stop) => (Math.abs(stop - raised) < Math.abs(best - raised) ? stop : best));
 	}
 
-	/** Moves the tray to `target` above its rest, within its range, on iOS's settling curve, and taps when it opens or folds. */
+	/**
+	 * Moves the tray to `target` above its rest, within its range, on iOS's settling curve, and taps when it opens or
+	 * folds. Folding goes back to this month, so the folded tray always shows this week.
+	 */
 	private settle(target: number): void {
 		cancelAnimationFrame(this.settleFrame);
+		if (target <= 0 && this.monthIndex !== this.months.length - 1) {
+			this.monthIndex = this.months.length - 1;
+			this.renderMonth();
+		}
 		const to = Math.min(this.maxUp(), Math.max(0, target));
 		if ((to > 1) !== (this.raised > 1)) this.onSnap();
 		const from = this.raised;

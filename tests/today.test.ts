@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HabitEntry } from "../src/application/ports";
 import { TINY, missed } from "../src/domain/DayMark";
-import { calendarWeeks, closedDayLine, dayStrip, dayTitle, donePercent, monthOf, totalWins, winsLabel, winsSince, offersShrink, todayEntries } from "../src/ui/today";
+import { calendarMonths, closedDayLine, dayStrip, dayTitle, donePercent, monthTitle, monthWeeks, totalWins, winsLabel, winsSince, offersShrink, todayEntries } from "../src/ui/today";
 import { d } from "./support/dates";
 import { habitNote } from "./support/habits";
 
@@ -72,24 +72,50 @@ describe("dayStrip", () => {
 	});
 });
 
-describe("calendarWeeks", () => {
-	const thursday = d("2026-10-15");
+describe("calendarMonths", () => {
+	it("runs from the month of the calendar's first day to this month", () => {
+		const today = d("2026-10-15");
+		const short = dayStrip([ok("Read")], today);
+		expect(calendarMonths(short, today)).toEqual([{ year: 2026, month: 10 }]);
+		const long = dayStrip([ok("Read", { done_tiny: ["2026-08-15"] })], today);
+		expect(calendarMonths(long, today)).toEqual([{ year: 2026, month: 8 }, { year: 2026, month: 9 }, { year: 2026, month: 10 }]);
+		const turn = dayStrip([ok("Read", { done_tiny: ["2025-12-22"] })], d("2026-01-04"));
+		expect(calendarMonths(turn, d("2026-01-04"))).toEqual([{ year: 2025, month: 12 }, { year: 2026, month: 1 }]);
+	});
+});
 
-	it("lays the strip out as weeks from Monday, the first one filled back with days outside it", () => {
-		const weeks = calendarWeeks(dayStrip([ok("Read")], thursday));
+describe("monthWeeks", () => {
+	const today = d("2026-10-15");
+
+	it("lays a month out as weeks from Monday, this month only up to this week", () => {
+		const weeks = monthWeeks(dayStrip([ok("Read")], today), { year: 2026, month: 10 }, today);
 		expect(weeks).toHaveLength(3);
 		expect(weeks.every((week) => week.length === 7)).toBe(true);
 		expect(weeks[0][0].date.toString()).toBe("2026-09-28");
-		expect(weeks[0].filter((day) => day.outside).map((day) => day.date.day)).toEqual([28, 29, 30, 1]);
 		expect(weeks[2][6].date.toString()).toBe("2026-10-18");
-		expect(weeks.flat().filter((day) => day.outside)).toHaveLength(4);
 	});
 
-	it("keeps each day's counts", () => {
+	it("keeps the counts of the calendar's days in the month and leaves the rest outside", () => {
 		const read = ok("Read", { done_tiny: ["2026-10-15"] });
-		const weeks = calendarWeeks(dayStrip([read], thursday));
-		expect(weeks[2][3]).toMatchObject({ due: 1, done: 1, future: false, outside: false });
-		expect(weeks[0][0]).toMatchObject({ due: 0, done: 0, future: false, outside: true });
+		const weeks = monthWeeks(dayStrip([read], today), { year: 2026, month: 10 }, today);
+		const on = (text: string) => weeks.flat().find((day) => day.date.toString() === text);
+		expect(on("2026-09-30")).toMatchObject({ outside: true });
+		expect(on("2026-10-01")).toMatchObject({ outside: true });
+		expect(on("2026-10-02")).toMatchObject({ outside: false, due: 1 });
+		expect(on("2026-10-15")).toMatchObject({ outside: false, due: 1, done: 1, future: false });
+		expect(on("2026-10-18")).toMatchObject({ future: true });
+	});
+
+	it("shows an earlier month whole, with the neighbouring months' days outside", () => {
+		const read = ok("Read", { done_tiny: ["2026-09-20"] });
+		const weeks = monthWeeks(dayStrip([read], today), { year: 2026, month: 9 }, today);
+		expect(weeks).toHaveLength(5);
+		expect(weeks[0][0].date.toString()).toBe("2026-08-31");
+		expect(weeks[4][6].date.toString()).toBe("2026-10-04");
+		const on = (text: string) => weeks.flat().find((day) => day.date.toString() === text);
+		expect(on("2026-09-19")).toMatchObject({ outside: true });
+		expect(on("2026-09-20")).toMatchObject({ outside: false, done: 1 });
+		expect(on("2026-10-01")).toMatchObject({ outside: true });
 	});
 });
 
@@ -103,16 +129,15 @@ describe("donePercent", () => {
 	});
 });
 
-describe("monthOf", () => {
-	it("names the month most of the weeks' days are in, with its year only when it isn't this year", () => {
-		const today = d("2026-10-15");
-		const weeks = calendarWeeks(dayStrip([ok("Read")], today));
-		expect(monthOf(weeks, today)).toBe("October");
-		expect(monthOf(weeks.slice(0, 1), today)).toBe("October");
-		const turn = calendarWeeks(dayStrip([ok("Read", { done_tiny: ["2025-12-22"] })], d("2026-01-04")));
-		expect(monthOf(turn.slice(0, 1), d("2026-01-04"))).toBe("December 2025");
-		expect(monthOf(turn.slice(1), d("2026-01-04"))).toBe("January");
-		expect(monthOf([], today)).toBe("");
+describe("monthTitle", () => {
+	it("names the month, with its year only when it isn't this year", () => {
+		expect(monthTitle({ year: 2026, month: 10 }, d("2026-10-15"))).toBe("October");
+		expect(monthTitle({ year: 2025, month: 12 }, d("2026-01-04"))).toBe("December 2025");
+	});
+
+	it("shortens the name to three letters when asked", () => {
+		expect(monthTitle({ year: 2026, month: 9 }, d("2026-10-15"), "short")).toBe("Sep");
+		expect(monthTitle({ year: 2025, month: 9 }, d("2026-10-15"), "short")).toBe("Sep 2025");
 	});
 });
 
