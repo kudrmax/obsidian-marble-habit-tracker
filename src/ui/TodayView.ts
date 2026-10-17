@@ -154,9 +154,13 @@ export class TodayView extends ItemView {
 			this.updateFloor();
 			this.jar?.setLedges(ledges);
 		});
-		const keyboard = new KeyboardWatch(root, () => this.jar?.refit());
+		const keyboard = new KeyboardWatch(root, () => {
+			this.jar?.refit();
+			this.tray?.refit();
+		});
 		this.keyboard = keyboard;
 		this.jar.holdWhile(() => keyboard.isOpen());
+		this.tray.holdWhile(() => keyboard.isOpen());
 		this.registerEvent(this.app.workspace.on("layout-change", () => this.chrome?.measure()));
 		this.registerDomEvent(window, "resize", () => this.chrome?.measure());
 		this.registerEvent(
@@ -308,9 +312,9 @@ export class TodayView extends ItemView {
 		this.playMotion(column);
 	}
 
-	/** The marbles fall over the list and stand on the calendar's tray as it rests, above Obsidian's bars. */
+	/** The marbles fall over the list and stand on the calendar's tray, wherever it is, above Obsidian's bars. */
 	private updateFloor(): void {
-		this.jar?.setObstacles(this.tray ? [...this.shelves, this.tray.restBox()] : this.shelves);
+		this.jar?.setObstacles(this.tray ? [...this.shelves, this.tray.box()] : this.shelves);
 	}
 
 	/** Starts what moves after a redraw: rows folding away, a new day or screen sliding in, a recipe growing open. */

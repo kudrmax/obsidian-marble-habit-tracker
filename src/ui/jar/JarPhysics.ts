@@ -46,6 +46,11 @@ const CONTACT = 1;
 /** Bodies closer than this to straight above one another get pushed a hair apart sideways, as nothing in the world is perfectly aligned. */
 const ALIGNED = 0.01;
 const NUDGE = 0.2;
+/**
+ * The fastest a body may go up after a step, in px per step. A box that rises under the bodies carries them, and when
+ * it stops they hop off it; a fast box would otherwise throw them across the screen.
+ */
+const MAX_LIFT = 6;
 
 export class JarPhysics {
 	private readonly items = new Map<string, Body>();
@@ -187,6 +192,7 @@ export class JarPhysics {
 				this.contain(free[i]);
 			}
 		}
+		for (const body of free) if (body.y - body.py < -MAX_LIFT) body.py = body.y + MAX_LIFT;
 		for (const body of free) {
 			if (body.passing) body.passing = free.some((other) => other !== body && overlaps(body, other)) || this.shapesFor(body).obstacles.some((box) => touches(body, box));
 		}

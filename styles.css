@@ -479,21 +479,22 @@ button.th-tray-grip:hover { background: transparent; }
 .th-tray-grabber { display: block; width: 36px; height: 5px; margin: 5px auto 0; border-radius: 3px; background: var(--text-faint); opacity: 0.6; }
 .th-cal { position: absolute; left: 0; right: 0; top: 14px; bottom: var(--th-tray-inset); overflow: hidden; }
 .th-tray.is-hidden .th-cal { display: none; }
-.th-cal-weeks { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; touch-action: none; }
+.th-cal-weeks { position: absolute; left: 0; right: 0; top: var(--th-head-height, 0px); bottom: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; touch-action: none; }
 .th-cal-weeks.is-scrollable { touch-action: pan-y; }
 .th-cal-weeks::-webkit-scrollbar { display: none; }
-/* Room for the head over the oldest week, and the weeks sit at the bottom while they fit. */
-.th-cal-list { display: flex; flex-direction: column; justify-content: flex-end; min-height: 100%; padding-top: 40px; box-sizing: border-box; }
-.th-cal-head { position: absolute; left: 0; right: 0; top: 0; z-index: 1; height: 40px; background: var(--background-secondary); opacity: var(--th-head, 0); touch-action: none; pointer-events: none; }
-/* The head takes taps only once it is in sight; folded, it would sit over this week's dates. */
-.th-cal-head.is-shown { pointer-events: auto; }
-.th-cal-month { padding: 0 var(--th-gutter); font-size: 13px; line-height: 18px; font-weight: 600; color: var(--text-normal); }
-.th-cal-weekdays, .th-cal-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); padding: 0 12px; }
-.th-cal-weekdays { padding-top: 4px; }
+/* The weeks sit at the bottom while they fit. */
+.th-cal-list { display: flex; flex-direction: column; justify-content: flex-end; min-height: 100%; }
+/* The head is a band of its own over the weeks that opens as the tray rises, the weekdays first, right above the dates. */
+.th-cal-head { position: absolute; left: 0; right: 0; top: 0; height: var(--th-head-height, 0px); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; touch-action: none; }
+.th-cal-month { flex: none; padding: 0 var(--th-gutter); font-size: 13px; line-height: 18px; font-weight: 600; color: var(--text-normal); }
+/* The calendar keeps to the list's column, so on a wide tab its days stand under the habits, not across the tab. */
+.th-cal-month, .th-cal-weekdays, .th-cal-week { box-sizing: border-box; width: 100%; max-width: var(--th-column); margin: 0 auto; }
+.th-cal-weekdays, .th-cal-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); padding-left: 12px; padding-right: 12px; }
+.th-cal-weekdays { flex: none; padding-top: 4px; padding-bottom: 4px; }
 .th-cal-weekdays span { text-align: center; font-size: 10px; line-height: 14px; font-weight: 600; color: var(--text-muted); }
 .th-cal-week { flex: 0 0 52px; height: 52px; }
 button.th-cal-day { height: 52px; margin: 0; padding: 4px 0 0; border: none; border-radius: 0; box-shadow: none; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-button.th-cal-day:hover { background: transparent; }
+button.th-cal-day:hover, button.th-cal-day.mobile-tap, button.th-tray-grip.mobile-tap { background: transparent; }
 button.th-cal-day:disabled { cursor: default; opacity: 1; }
 .th-cal-date { height: 24px; display: flex; align-items: center; font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--text-normal); }
 .th-cal-percent { min-height: 14px; font-size: 11px; line-height: 14px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text-muted); opacity: var(--th-percent, 0); }

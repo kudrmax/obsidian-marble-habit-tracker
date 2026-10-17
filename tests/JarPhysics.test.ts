@@ -282,6 +282,31 @@ describe("JarPhysics", () => {
 	});
 
 
+	it("carries a body up on a rising box, and lets it hop only a little when the box stops", () => {
+		const physics = new JarPhysics(400, 800);
+		let top = 700;
+		const floor = () => physics.setObstacles([{ left: 0, top, right: 400, bottom: 800, radius: 0 }]);
+		floor();
+		physics.add({ id: "a", x: 200, y: 600, r: 12 });
+		settle(physics);
+		expect(physics.get("a")?.y).toBeCloseTo(top - 12, 0);
+		// The box jumps up fast, as a flicked tray does, then stops.
+		for (let frame = 0; frame < 15; frame++) {
+			top -= 10;
+			floor();
+			physics.step();
+			expect(physics.get("a")?.y ?? 0).toBeLessThanOrEqual(top - 12 + 0.01);
+		}
+		let highest = Infinity;
+		for (let frame = 0; frame < 400; frame++) {
+			physics.step();
+			highest = Math.min(highest, physics.get("a")?.y ?? 0);
+		}
+		expect(top - 12 - highest).toBeGreaterThan(5);
+		expect(top - 12 - highest).toBeLessThan(60);
+		expect(physics.get("a")?.y).toBeCloseTo(top - 12, 0);
+	});
+
 	it("steps a full jar quickly", () => {
 		const fullJar = () => {
 			const physics = new JarPhysics(390, 760);

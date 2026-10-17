@@ -6,7 +6,7 @@ import { CalendarDay, dayTitle, donePercent, monthsOf } from "./today";
 const GRIP = 14;
 /** One week of the calendar: the dates, and the percents under them once the tray is pulled up. */
 export const WEEK_ROW = 52;
-/** The month and the weekdays over the weeks. */
+/** The month and the weekdays over the weeks; they come in first as the tray rises, right above the dates. */
 const HEAD = 40;
 /** Room between the calendar and whatever of Obsidian covers the bottom of the view. */
 const BOTTOM_GAP = 8;
@@ -14,8 +14,6 @@ const BOTTOM_GAP = 8;
 const MAX_UP = 360;
 /** How far the tray rises before the percents have fully come in. */
 const PERCENT_FADE = 24;
-/** The head comes in once it has room above the newest week, over this distance. */
-const HEAD_FADE = 24;
 /** How far the tray rises before its shadow is at full strength. */
 const SHADOW_FADE = 60;
 /** The rounded corners of the tray's top edge, which the marbles roll along. */
@@ -36,8 +34,9 @@ const easeOut = (t: number) => 1 - Math.pow(1 - t, 3.4);
 
 /**
  * Today's calendar, in a tray at the bottom of the view over Obsidian's navbar. Folded, it shows this week's dates;
- * pulled up, earlier weeks come in above them with how much of each day was done. It stays wherever it is let go, and
- * its top edge at rest is the floor the marbles stand on. Once it is all the way up, its weeks scroll back in time.
+ * pulled up, earlier weeks come in above them with how much of each day was done. Let go, it stays on the nearest whole
+ * week. Its top edge is the floor the marbles stand on, wherever it is: rising, it carries them up and they hop off it.
+ * Once it is all the way up, its weeks scroll back in time.
  */
 export class CalendarTray {
 	readonly tray: HTMLElement;
@@ -58,6 +57,12 @@ export class CalendarTray {
 	/** Whether the weeks stay scrolled to the newest. */
 	private pinned = true;
 	private restTop = 0;
+	/** Where the tray's top was last told to whoever stands on it. */
+	private lastTop = Number.NaN;
+	/** Moves of the tray are told only once it is built. */
+	private ready = false;
+	/** While the phone's keyboard is up the view is shorter for a moment; the tray stays where it was. */
+	private held: () => boolean = () => false;
 	private drag: { pointer: number; startY: number; startRaised: number; lastY: number; lastAt: number; speed: number; moving: boolean } | null = null;
 	/** A drag that moved swallows the click it ends with, so it does not also pick a day. */
 	private swallowClick = false;
@@ -67,7 +72,7 @@ export class CalendarTray {
 	constructor(
 		private readonly root: HTMLElement,
 		private readonly onSnap: () => void,
-		private readonly onRest: () => void,
+		private readonly onMove: () => void,
 	) {
 		this.tray = root.createDiv("th-tray");
 		this.grip = this.tray.createEl("button", { cls: "th-tray-grip", attr: { "aria-label": "Show earlier days" } });
@@ -83,12 +88,16 @@ export class CalendarTray {
 		window.addEventListener("pointerup", this.pointerUp);
 		window.addEventListener("pointercancel", this.pointerCancel);
 		this.tray.addEventListener("click", this.clickAfterDrag, true);
-		// Obsidian has its own gestures on the screen's edges; a move on the tray is the tray's.
-		for (const type of ["touchstart", "touchmove", "touchend"] as const) this.tray.addEventListener(type, (event) => event.stopPropagation());
+		// A finger moving the tray moves only the tray: Obsidian's own gestures don't get it. Its taps still do, so
+		// Obsidian can take the pressed look off a date when the finger lifts.
+		this.tray.addEventListener("touchmove", (event) => {
+			if (this.drag?.moving) event.stopPropagation();
+		});
 		this.weeks.addEventListener("scroll", this.scrolled, { passive: true });
 		this.resizer = new ResizeObserver(() => this.placeRest());
 		this.resizer.observe(root);
 		this.place();
+		this.ready = true;
 	}
 
 	destroy(): void {
@@ -106,6 +115,15 @@ export class CalendarTray {
 		this.placeRest();
 	}
 
+	/** The tray keeps its place while `held` says so; call `refit` once it no longer holds. */
+	holdWhile(held: () => boolean): void {
+		this.held = held;
+	}
+
+	refit(): void {
+		this.placeRest();
+	}
+
 	/** All habits has no calendar: the tray folds down and keeps only its floor. */
 	setHidden(hidden: boolean): void {
 		this.hidden = hidden;
@@ -117,9 +135,9 @@ export class CalendarTray {
 		this.settle(open ? this.maxUp() : 0);
 	}
 
-	/** The tray at rest, as the box the marbles stand on. */
-	restBox(): Box {
-		return { left: 0, top: this.restTop, right: this.root.clientWidth, bottom: this.root.clientHeight, radius: CORNER };
+	/** The tray where it is now, as the box the marbles stand on. */
+	box(): Box {
+		return { left: 0, top: this.restTop - this.raised, right: this.root.clientWidth, bottom: this.root.clientHeight, radius: CORNER };
 	}
 
 	private renderDay(row: HTMLElement, day: CalendarDay, selected: boolean, today: LocalDate, pick: (day: LocalDate) => void): void {
@@ -146,10 +164,10 @@ export class CalendarTray {
 
 	/** The weeks in sight, as indexes into the weeks, oldest first. */
 	private visibleWeeks(): { first: number; last: number } {
-		const top = this.weeks.scrollTop + HEAD;
-		const bottom = this.weeks.scrollTop + this.weeks.clientHeight;
-		const first = Math.max(0, Math.floor((top - HEAD) / WEEK_ROW));
-		const last = Math.max(first, Math.ceil((bottom - HEAD) / WEEK_ROW) - 1);
+		const hidden = Math.max(0, this.weeks.scrollHeight - this.rows * WEEK_ROW);
+		const top = Math.max(0, this.weeks.scrollTop - hidden);
+		const first = Math.min(this.rows - 1, Math.floor(top / WEEK_ROW));
+		const last = Math.max(first, Math.ceil((top + this.weeks.clientHeight - hidden) / WEEK_ROW) - 1);
 		return { first, last: Math.min(last, this.rows - 1) };
 	}
 
@@ -178,11 +196,10 @@ export class CalendarTray {
 		return Math.min(MAX_UP, HEAD + (this.rows - 1) * WEEK_ROW);
 	}
 
-	/** Places the tray again after the view or Obsidian's bars changed, and says so when its rest moved. */
+	/** Places the tray again after the view or Obsidian's bars changed. */
 	private placeRest(): void {
-		const before = this.restTop;
+		if (this.held()) return;
 		this.place();
-		if (this.restTop !== before) this.onRest();
 	}
 
 	private place(): void {
@@ -191,13 +208,14 @@ export class CalendarTray {
 		this.restTop = restTop;
 		const top = restTop - this.raised;
 		this.root.style.setProperty("--th-tray-top", `${top}px`);
+		if (this.ready && top !== this.lastTop) this.onMove();
+		this.lastTop = top;
 		this.root.style.setProperty("--th-tray-rest", `${height - restTop}px`);
 		this.root.style.setProperty("--th-tray-inset", `${this.inset + BOTTOM_GAP}px`);
 		const raised = Math.max(0, this.raised);
 		this.tray.style.setProperty("--th-percent", String(clamp(raised / PERCENT_FADE)));
-		const head = clamp((raised - HEAD + HEAD_FADE / 2) / HEAD_FADE);
-		this.tray.style.setProperty("--th-head", String(head));
-		this.head.toggleClass("is-shown", head > 0.5);
+		// The first of the room the tray gains goes to the head, so it never lies over a week; the weeks get the rest.
+		this.tray.style.setProperty("--th-head-height", `${Math.min(HEAD, raised)}px`);
 		this.tray.style.setProperty("--th-open", String(clamp(raised / SHADOW_FADE)));
 		const full = this.raised >= this.maxUp() - 1;
 		this.weeks.toggleClass("is-scrollable", full);
@@ -222,7 +240,7 @@ export class CalendarTray {
 	private readonly pointerDown = (event: PointerEvent) => {
 		if (this.hidden || event.button !== 0) return;
 		// All the way up, the weeks scroll under a finger instead; the grip and the head still move the tray.
-		const onWeeks = this.weeks.contains(event.target as Node) && !this.head.contains(event.target as Node);
+		const onWeeks = this.weeks.contains(event.target as Node);
 		if (onWeeks && this.weeks.hasClass("is-scrollable") && event.pointerType !== "mouse") return;
 		cancelAnimationFrame(this.settleFrame);
 		this.drag = { pointer: event.pointerId, startY: event.clientY, startRaised: this.raised, lastY: event.clientY, lastAt: event.timeStamp, speed: 0, moving: false };
@@ -269,11 +287,21 @@ export class CalendarTray {
 		event.preventDefault();
 	};
 
-	/** A flick down folds the tray, a flick up opens it all the way; otherwise it stays where it was let go. */
+	/**
+	 * A flick down folds the tray, a flick up opens it all the way; otherwise it stays about where it was let go, on the
+	 * nearest whole week, so no week is left cut in half under the head.
+	 */
 	private letGo(speed: number): void {
 		if (speed > FLICK) this.settle(0);
 		else if (speed < -FLICK) this.settle(this.maxUp());
-		else this.settle(this.raised);
+		else this.settle(this.nearestStop(this.raised));
+	}
+
+	/** Folded, the head over this week, or the head over one more whole week each time, up to all the way. */
+	private nearestStop(raised: number): number {
+		const stops = [0, this.maxUp()];
+		for (let week = 0; HEAD + week * WEEK_ROW < this.maxUp(); week++) stops.push(HEAD + week * WEEK_ROW);
+		return stops.reduce((best, stop) => (Math.abs(stop - raised) < Math.abs(best - raised) ? stop : best));
 	}
 
 	/** Moves the tray to `target` above its rest, within its range, on iOS's settling curve, and taps when it opens or folds. */
