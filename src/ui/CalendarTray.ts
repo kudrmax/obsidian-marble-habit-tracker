@@ -23,6 +23,8 @@ const REST_LIFT = WEEK_ROW / 2 + BOTTOM_GAP - REST_HEIGHT / 2;
 const FIGURES = "0123456789";
 /** How far the tray rises before this week's row is whole. */
 const ROW_WHOLE = WEEK_ROW + GRIP + BOTTOM_GAP - REST_HEIGHT;
+/** How far the tray rises while the rings draw themselves round: up to its first stop, with the head open. */
+const RINGS_DRAWN = ROW_WHOLE + HEAD;
 /** The furthest the tray goes up: enough for a month of six weeks. */
 const MAX_UP = 360;
 /** How far the tray rises before its shadow is at full strength. */
@@ -41,6 +43,13 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 /** The ring around a date, in its own box. */
 const RING_RADIUS = 16;
 const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
+
+/** A date's ring: its track all the way round, and the part of it the day was done, if any. */
+interface Ring {
+	readonly track: SVGCircleElement;
+	readonly done: SVGCircleElement | null;
+	readonly share: number;
+}
 const CHEVRON_LEFT = "m15 18-6-6 6-6";
 const CHEVRON_RIGHT = "m9 18 6-6-6-6";
 
@@ -79,6 +88,9 @@ export class CalendarTray {
 	/** How much of the view's bottom Obsidian's bars cover. */
 	private inset = 0;
 	private rows = 1;
+	private rings: Ring[] = [];
+	/** How far round the rings were last drawn. */
+	private drawn = -1;
 	/** How far above its rest the tray is. */
 	private raised = 0;
 	private hidden = false;
@@ -216,6 +228,8 @@ export class CalendarTray {
 		if (!month || !today) return;
 		const weeks = monthWeeks(this.days, month, today);
 		this.weeks.empty();
+		this.rings = [];
+		this.drawn = -1;
 		const list = this.weeks.createDiv("th-cal-list");
 		for (const week of weeks) {
 			const row = list.createDiv("th-cal-week");
@@ -276,7 +290,7 @@ export class CalendarTray {
 		button.addEventListener("click", () => this.pick(day.date));
 	}
 
-	/** A ring around the date, drawn as far round as the day was done: a full ring for a day done in full. */
+	/** A ring around the date, its accent part as far round as the day was done: all of it for a day done in full. */
 	private renderRing(button: HTMLElement, percent: number): void {
 		const svg = button.appendChild(document.createElementNS(SVG_NS, "svg"));
 		svg.setAttribute("class", "th-cal-ring");
@@ -288,13 +302,29 @@ export class CalendarTray {
 			element.setAttribute("cx", String(RING / 2));
 			element.setAttribute("cy", String(RING / 2));
 			element.setAttribute("r", String(RING_RADIUS));
+			element.setAttribute("transform", `rotate(-90 ${RING / 2} ${RING / 2})`);
 			return element;
 		};
-		circle("th-cal-ring-track");
-		if (percent === 0) return;
-		const arc = circle("th-cal-ring-arc");
-		arc.setAttribute("stroke-dasharray", `${((RING_LENGTH * percent) / 100).toFixed(2)} ${RING_LENGTH.toFixed(2)}`);
-		arc.setAttribute("transform", `rotate(-90 ${RING / 2} ${RING / 2})`);
+		const track = circle("th-cal-ring-track");
+		this.rings.push({ track, done: percent === 0 ? null : circle("th-cal-ring-arc"), share: percent / 100 });
+	}
+
+	/**
+	 * Draws every ring from its top, clockwise, as far round as `round` says, from none to all the way; the part the day
+	 * was done grows with it, so each ring comes in drawing itself rather than fading in.
+	 */
+	private drawRings(round: number): void {
+		if (round === this.drawn) return;
+		this.drawn = round;
+		for (const ring of this.rings) {
+			this.drawArc(ring.track, round);
+			if (ring.done) this.drawArc(ring.done, round * ring.share);
+		}
+	}
+
+	private drawArc(circle: SVGCircleElement, share: number): void {
+		circle.setAttribute("stroke-dasharray", `${(RING_LENGTH * share).toFixed(2)} ${RING_LENGTH.toFixed(2)}`);
+		circle.style.visibility = share > 0 ? "" : "hidden";
 	}
 
 	/** Lines the month and the buttons up with the grid's outer rings, whatever the width. */
@@ -329,9 +359,9 @@ export class CalendarTray {
 		this.root.style.setProperty("--th-tray-rest", `${height - restTop}px`);
 		this.root.style.setProperty("--th-tray-inset", `${this.inset + BOTTOM_GAP}px`);
 		const raised = Math.max(0, this.raised);
-		// Rising, the room under this week's row grows back first and the row becomes whole while its rings come in; then
-		// the head opens over it, so it never lies over a week; the earlier weeks get the rest.
-		this.tray.style.setProperty("--th-detail", String(clamp(raised / ROW_WHOLE)));
+		// Rising, the room under this week's row grows back first and the row becomes whole; then the head opens over it, so
+		// it never lies over a week; the earlier weeks get the rest. All the while, up to the first stop, the rings draw round.
+		this.drawRings(clamp(raised / RINGS_DRAWN));
 		this.tray.style.setProperty("--th-head-height", `${Math.min(HEAD, Math.max(0, raised - ROW_WHOLE))}px`);
 		this.tray.style.setProperty("--th-open", String(clamp(raised / SHADOW_FADE)));
 		// Folded, this week's row hangs low so only its dates show; pushed below its rest, the tray takes them down with it.
