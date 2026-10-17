@@ -257,20 +257,13 @@ export class TodayView extends ItemView {
 		const closed = habits.length > 0 && answeredHabits.length === habits.length && this.leaving.size === 0;
 		this.renderCalendar(all);
 		this.renderHead();
-		const chipLine = this.renderDayChip(column);
+		this.renderDayChip(column);
 		const hideDone = this.ui.settings().hideDone;
 		const hidden = hideDone && !this.showDone ? answeredHabits.filter((entry) => !this.leaving.has(entry.path)).length : 0;
-		const tools = () => this.renderTools(hidden, hideDone && answeredHabits.length > 0);
-		const place = (element: HTMLElement) => (chipLine ? chipLine.appendChild(element) : column.appendChild(this.toolsLine(element)));
-		if (closed) {
-			place(tools());
-			this.renderRing(column, habits.map((entry) => entry.habit), this.wasClosed === false);
-		}
+		this.tray?.setTools(this.renderTools(hidden, hideDone && answeredHabits.length > 0));
+		if (closed) this.renderRing(column, habits.map((entry) => entry.habit), this.wasClosed === false);
 		this.wasClosed = closed;
-		if (habits.length === 0) {
-			place(tools());
-			column.createDiv("th-ring-block").createEl("h2", { cls: "th-title", text: "Nothing for today" });
-		}
+		if (habits.length === 0) column.createDiv("th-ring-block").createEl("h2", { cls: "th-title", text: "Nothing for today" });
 
 		const open =(entry: Extract<HabitEntry, { kind: "ok" }>) =>
 			entry.habit.markOn(today) === undefined ||
@@ -283,29 +276,14 @@ export class TodayView extends ItemView {
 			(entry) => entry.habit.section,
 		).flatMap((group) => group.items.filter((item) => habits.some((habit) => habit.path === item.path)));
 		const shown = ordered.filter((entry) => !hideDone || this.showDone || open(entry));
-		// The buttons sit on the first header's line, so the habits start as high as they can.
-		let pending: HTMLElement | null = closed || habits.length === 0 ? null : tools();
-		if (pending && chipLine) {
-			chipLine.appendChild(pending);
-			pending = null;
-		}
 		let section: string | undefined | null = null;
 		for (const entry of shown) {
 			if (entry.habit.section !== section) {
 				section = entry.habit.section;
-				if (section !== undefined) {
-					const header = this.renderSection(column, section);
-					if (pending) header.appendChild(pending);
-					pending = null;
-				}
-			}
-			if (pending) {
-				column.appendChild(this.toolsLine(pending));
-				pending = null;
+				if (section !== undefined) this.renderSection(column, section);
 			}
 			this.renderRow(column, entry.path, entry.habit);
 		}
-		if (pending) column.appendChild(this.toolsLine(pending));
 		for (const entry of entries) if (entry.kind === "broken") this.renderBroken(column, entry);
 		this.renderNewSection(column);
 		this.shownRows = this.renderingRows;
@@ -442,7 +420,7 @@ export class TodayView extends ItemView {
 
 	/**
 	 * Today's buttons, small and round: how many answered habits are hidden (a tap shows them), All habits, a new
-	 * habit, and the help. They ride on the first section header's line.
+	 * habit, and the help. They sit in the tray, over the calendar.
 	 */
 	private renderTools(hidden: number, foldable: boolean): HTMLElement {
 		const tools = createDiv("th-tools");
@@ -471,13 +449,6 @@ export class TodayView extends ItemView {
 			this.ui.markHintsSeen();
 		});
 		return tools;
-	}
-
-	/** The buttons on a line of their own, when no section header starts the list. */
-	private toolsLine(tools: HTMLElement): HTMLElement {
-		const line = createDiv("th-tools-line");
-		line.appendChild(tools);
-		return line;
 	}
 
 	/** The sheet's header holds All habits' way back; on Today it stays empty, the habits come first. */
