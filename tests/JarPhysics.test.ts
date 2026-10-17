@@ -347,6 +347,44 @@ describe("JarPhysics", () => {
 			return highest === Infinity ? 0 : lowest - highest;
 		}
 
+		/** Drops a body from `drop` px above whatever it lands on and returns how high it rises again, in px. */
+		function riseAfterHit(bounce: number, onto: "floor" | "marble" | "pile"): number {
+			const physics = new JarPhysics(200, 600);
+			physics.setBounce(bounce);
+			if (onto === "marble") physics.add({ id: "rest", x: 100, y: 588, r: 12 });
+			if (onto === "pile") {
+				for (let index = 0; index < 24; index++) physics.add({ id: `rest${index}`, x: 12 + ((index * 53) % 176), y: -30 * index, r: 12 });
+				physics.setBounce(0);
+				settle(physics, 5000);
+				physics.setBounce(bounce);
+			}
+			const top = Math.min(588, ...physics.bodies().filter((body) => Math.abs(body.x - 100) < 24).map((body) => body.y - 24));
+			physics.add({ id: "a", x: 100, y: top - 300, r: 12 });
+			let lowest = 0;
+			let rising = false;
+			let highest = Infinity;
+			for (let frame = 0; frame < 400; frame++) {
+				const before = physics.get("a")!.y;
+				physics.step();
+				const y = physics.get("a")!.y;
+				if (!rising && y < before) rising = true;
+				if (!rising) lowest = y;
+				else if (y > before) break;
+				else highest = Math.min(highest, y);
+			}
+			return highest === Infinity ? 0 : lowest - highest;
+		}
+
+		it("bounces off a marble lying on the floor about as high as off the floor itself", () => {
+			const floor = riseAfterHit(0.5, "floor");
+			expect(riseAfterHit(0.5, "marble")).toBeGreaterThan(floor * 0.7);
+		});
+
+		it("bounces off the top of a pile about as high as off the floor itself", () => {
+			const floor = riseAfterHit(0.5, "floor");
+			expect(riseAfterHit(0.5, "pile")).toBeGreaterThan(floor * 0.7);
+		});
+
 		it("lands dead with no bounce", () => {
 			expect(rebound(0)).toBe(0);
 		});

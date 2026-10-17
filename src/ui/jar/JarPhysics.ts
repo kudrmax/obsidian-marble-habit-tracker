@@ -53,6 +53,8 @@ const NUDGE = 0.2;
 const MAX_LIFT = 6;
 /** Hits slower than this, in px per step, don't bounce, so a resting pile stays at rest instead of trembling. */
 const BOUNCE_MIN = 1.2;
+/** A hit counts as from above when it comes within 60° of the pull of gravity. */
+const SUPPORTED = 0.5;
 
 export class JarPhysics {
 	private readonly items = new Map<string, Body>();
@@ -68,6 +70,7 @@ export class JarPhysics {
 	private readonly free: Body[] = [];
 	private before = new Float64Array(64);
 	private incoming = new Float64Array(128);
+	private readonly contacts = new Contacts();
 	/** The share of a hit's speed a body keeps as it bounces back: 0 lands dead, 1 bounces as high as it fell. */
 	private bounce = 0;
 	private quietFrames = 0;
@@ -227,17 +230,19 @@ export class JarPhysics {
 	}
 
 	/**
-	 * The collisions above only stop a body at what it hits. Here each hit gives some of its speed back: along the
-	 * contact's normal the body leaves as fast as `bounce` of the speed it came in with, before the step began.
+	 * The collisions above only stop a body at what it hits. Here each hit gives some of its speed back: along every
+	 * contact's normal, bodies part at least as fast as `bounce` of the speed they met with before the step began, and
+	 * contacts that met slower just don't close in further. Solved over all contacts at once, several passes, so a pile
+	 * stands on the floor: a marble landing on top bounces off the whole pile, not off one loose marble.
 	 */
 	private rebound(free: readonly Body[]): void {
+		const contacts = this.contacts;
+		contacts.clear();
 		const incoming = this.incoming;
 		for (let i = 0; i < free.length; i++) {
 			const body = free[i];
 			if (body.passing) continue;
-			const inX = incoming[2 * i];
-			const inY = incoming[2 * i + 1];
-			this.reflectOffWalls(body, inX, inY);
+			this.touchWalls(i, body);
 			for (let j = i + 1; j < free.length; j++) {
 				const other = free[j];
 				if (other.passing) continue;
@@ -247,46 +252,73 @@ export class JarPhysics {
 				if (distance === 0 || distance > body.r + other.r + CONTACT) continue;
 				const nx = dx / distance;
 				const ny = dy / distance;
-				const closing = (incoming[2 * j] - inX) * nx + (incoming[2 * j + 1] - inY) * ny;
-				if (closing > -BOUNCE_MIN) continue;
-				const now = (other.x - other.px - (body.x - body.px)) * nx + (other.y - other.py - (body.y - body.py)) * ny;
-				const gain = -this.bounce * closing - now;
+				const closing = (incoming[2 * j] - incoming[2 * i]) * nx + (incoming[2 * j + 1] - incoming[2 * i + 1]) * ny;
+				contacts.add(i, j, nx, ny, this.parting(closing), this.shareOf(body, other, i, j, nx, ny));
+			}
+		}
+		for (let pass = 0; pass < PASSES; pass++) {
+			for (let c = 0; c < contacts.length; c++) {
+				const a = free[contacts.a[c]];
+				const nx = contacts.nx[c];
+				const ny = contacts.ny[c];
+				const j = contacts.b[c];
+				if (j < 0) {
+					const gain = contacts.target[c] - ((a.x - a.px) * nx + (a.y - a.py) * ny);
+					if (gain <= 0) continue;
+					a.px -= nx * gain;
+					a.py -= ny * gain;
+					continue;
+				}
+				const b = free[j];
+				const gain = contacts.target[c] - ((b.x - b.px - (a.x - a.px)) * nx + (b.y - b.py - (a.y - a.py)) * ny);
 				if (gain <= 0) continue;
-				const massA = body.r * body.r;
-				const massB = other.r * other.r;
-				const shareA = (gain * massB) / (massA + massB);
-				const shareB = (gain * massA) / (massA + massB);
-				body.px += nx * shareA;
-				body.py += ny * shareA;
-				other.px -= nx * shareB;
-				other.py -= ny * shareB;
+				const shareA = contacts.share[c];
+				a.px += nx * gain * shareA;
+				a.py += ny * gain * shareA;
+				b.px -= nx * gain * (1 - shareA);
+				b.py -= ny * gain * (1 - shareA);
 			}
 		}
 	}
 
-	/** Gives back speed along the normal (nx, ny), which points from what was hit into the body. */
-	private reflect(body: Body, inX: number, inY: number, nx: number, ny: number): void {
-		const arriving = inX * nx + inY * ny;
-		if (arriving > -BOUNCE_MIN) return;
-		const now = (body.x - body.px) * nx + (body.y - body.py) * ny;
-		const gain = -this.bounce * arriving - now;
-		if (gain <= 0) return;
-		body.px -= nx * gain;
-		body.py -= ny * gain;
+	/**
+	 * How much of a contact's push body `a` takes. A body that lay still on the pile when `b` hit it from above is held up
+	 * by everything under it down to the floor, so it doesn't give way: the one that hit it takes the whole bounce.
+	 */
+	private shareOf(a: Body, b: Body, i: number, j: number, nx: number, ny: number): number {
+		const pull = Math.hypot(this.gravity.x, this.gravity.y);
+		const below = pull > 0 ? (nx * this.gravity.x + ny * this.gravity.y) / pull : 0;
+		if (below > SUPPORTED && this.resting(b, j)) return 1;
+		if (below < -SUPPORTED && this.resting(a, i)) return 0;
+		const massA = a.r * a.r;
+		const massB = b.r * b.r;
+		return massB / (massA + massB);
 	}
 
-	/** Bounces the body off everything still solid it rests against: the walls, the floor, the boxes, the screen's corners. */
-	private reflectOffWalls(body: Body, inX: number, inY: number): void {
-		if (body.y >= this.height - body.r - CONTACT) this.reflect(body, inX, inY, 0, -1);
-		if (body.x <= body.r + CONTACT) this.reflect(body, inX, inY, 1, 0);
-		if (body.x >= this.width - body.r - CONTACT) this.reflect(body, inX, inY, -1, 0);
-		if (body.inside && body.y <= body.r + CONTACT) this.reflect(body, inX, inY, 0, 1);
+	private resting(body: Body, index: number): boolean {
+		return body.landed && Math.hypot(this.incoming[2 * index], this.incoming[2 * index + 1]) < BOUNCE_MIN;
+	}
+
+	/** How fast a contact must part, given how fast it met: a hard hit bounces, a soft touch only stops. */
+	private parting(meeting: number): number {
+		return meeting < -BOUNCE_MIN ? -this.bounce * meeting : 0;
+	}
+
+	/** The body's contacts with everything still solid: the walls, the floor, the boxes, the screen's corners. */
+	private touchWalls(index: number, body: Body): void {
+		const inX = this.incoming[2 * index];
+		const inY = this.incoming[2 * index + 1];
+		const wall = (nx: number, ny: number) => this.contacts.add(index, -1, nx, ny, this.parting(inX * nx + inY * ny), 1);
+		if (body.y >= this.height - body.r - CONTACT) wall(0, -1);
+		if (body.x <= body.r + CONTACT) wall(1, 0);
+		if (body.x >= this.width - body.r - CONTACT) wall(-1, 0);
+		if (body.inside && body.y <= body.r + CONTACT) wall(0, 1);
 		for (const box of this.solidFor(body)) {
 			const core = inner(box);
 			const dx = body.x - Math.max(core.left, Math.min(core.right, body.x));
 			const dy = body.y - Math.max(core.top, Math.min(core.bottom, body.y));
 			const distance = Math.hypot(dx, dy);
-			if (distance > 0 && distance <= core.radius + body.r + CONTACT) this.reflect(body, inX, inY, dx / distance, dy / distance);
+			if (distance > 0 && distance <= core.radius + body.r + CONTACT) wall(dx / distance, dy / distance);
 		}
 		const screen = this.screen;
 		if (!screen) return;
@@ -297,7 +329,7 @@ export class JarPhysics {
 		const dx = body.x - x;
 		const dy = body.y - y;
 		const distance = Math.hypot(dx, dy);
-		if (distance > 0 && distance >= reach - body.r - CONTACT) this.reflect(body, inX, inY, -dx / distance, -dy / distance);
+		if (distance > 0 && distance >= reach - body.r - CONTACT) wall(-dx / distance, -dy / distance);
 	}
 
 	private pushes(body: Body): boolean {
@@ -388,6 +420,50 @@ export class JarPhysics {
 }
 
 const NONE: readonly Box[] = [];
+
+/**
+ * The step's touching pairs and wall touches, in flat arrays reused from step to step. `b` is -1 for a wall;
+ * `share` is how much of a push body `a` takes; `target` is how fast the contact must part along its normal.
+ */
+class Contacts {
+	length = 0;
+	a = new Int32Array(256);
+	b = new Int32Array(256);
+	nx = new Float64Array(256);
+	ny = new Float64Array(256);
+	target = new Float64Array(256);
+	share = new Float64Array(256);
+
+	clear(): void {
+		this.length = 0;
+	}
+
+	add(a: number, b: number, nx: number, ny: number, target: number, share: number): void {
+		if (this.length === this.a.length) this.grow();
+		const index = this.length++;
+		this.a[index] = a;
+		this.b[index] = b;
+		this.nx[index] = nx;
+		this.ny[index] = ny;
+		this.target[index] = target;
+		this.share[index] = share;
+	}
+
+	private grow(): void {
+		const size = this.a.length * 2;
+		const grown = <T extends Int32Array | Float64Array>(array: T): T => {
+			const next = new (array.constructor as new (size: number) => T)(size);
+			next.set(array);
+			return next;
+		};
+		this.a = grown(this.a);
+		this.b = grown(this.b);
+		this.nx = grown(this.nx);
+		this.ny = grown(this.ny);
+		this.target = grown(this.target);
+		this.share = grown(this.share);
+	}
+}
 
 interface Shapes {
 	readonly obstacles: readonly Box[];
