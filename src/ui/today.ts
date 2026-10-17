@@ -45,11 +45,16 @@ export interface StripDay {
 	readonly future: boolean;
 }
 
-/** How many days the strip under the sheet shows at least, today included. */
+/** A day in Today's calendar; the days before the strip starts are only there to fill its first week. */
+export interface CalendarDay extends StripDay {
+	readonly outside: boolean;
+}
+
+/** How many days the calendar shows at least, today included. */
 const STRIP_DAYS = 14;
 
 /**
- * The days under Today's sheet, oldest first: from the first marked day, or two weeks back if that is later, to the end
+ * The days of Today's calendar, oldest first: from the first marked day, or two weeks back if that is later, to the end
  * of this week. Each day says how many habits were due and how many were done.
  */
 export function dayStrip(entries: readonly HabitEntry[], today: LocalDate): StripDay[] {
@@ -63,6 +68,34 @@ export function dayStrip(entries: readonly HabitEntry[], today: LocalDate): Stri
 		days.push({ date, due: due.length, done: due.filter((habit) => isDone(habit.markOn(date))).length, future: date.isAfter(today) });
 	}
 	return days;
+}
+
+/** The days as weeks from Monday; the first week is filled back to its Monday with days outside the strip. */
+export function calendarWeeks(days: readonly StripDay[]): CalendarDay[][] {
+	if (days.length === 0) return [];
+	const first = days[0].date;
+	const before: CalendarDay[] = [];
+	for (let back = WEEKDAYS.indexOf(first.weekday()); back > 0; back--) before.push({ date: first.addDays(-back), due: 0, done: 0, future: false, outside: true });
+	const all = [...before, ...days.map((day) => ({ ...day, outside: false }))];
+	const weeks: CalendarDay[][] = [];
+	for (let start = 0; start < all.length; start += WEEKDAYS.length) weeks.push(all.slice(start, start + WEEKDAYS.length));
+	return weeks;
+}
+
+/** How much of a day was done, as a whole percent; null for a day with nothing due. */
+export function donePercent(day: StripDay): number | null {
+	return day.due === 0 ? null : Math.round((day.done / day.due) * 100);
+}
+
+/** The month the weeks span, or the first and the last of them, with years when they differ. */
+export function monthsOf(weeks: readonly (readonly CalendarDay[])[]): string {
+	const first = weeks[0]?.[0]?.date;
+	const lastWeek = weeks[weeks.length - 1];
+	const last = lastWeek?.[lastWeek.length - 1]?.date;
+	if (!first || !last) return "";
+	if (first.year !== last.year) return `${MONTHS[first.month - 1]} ${first.year} – ${MONTHS[last.month - 1]} ${last.year}`;
+	if (first.month === last.month) return MONTHS[first.month - 1];
+	return `${MONTHS[first.month - 1]} – ${MONTHS[last.month - 1]}`;
 }
 
 export function todayEntries(entries: readonly HabitEntry[], today: LocalDate): HabitEntry[] {

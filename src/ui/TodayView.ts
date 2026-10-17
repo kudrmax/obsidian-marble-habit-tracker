@@ -11,7 +11,6 @@ import { chip, icon, iconButton } from "./components";
 import { recipeDays } from "./format";
 import { computeStats } from "../domain/Stats";
 import { DayWatcher } from "./DayWatcher";
-import { DragScroll } from "./DragScroll";
 import { EditSheet } from "./EditSheet";
 import { Haptics } from "./Haptics";
 import { helpRows } from "./help";
@@ -20,7 +19,8 @@ import { Hsl, parseColor } from "./jar/color";
 import { JarCanvas, JarItem } from "./jar/JarCanvas";
 import { KeyboardWatch } from "./KeyboardWatch";
 import { LEAVE_MS, Motion, Slide } from "./Motion";
-import { TodaySheet } from "./TodaySheet";
+import { CalendarTray } from "./CalendarTray";
+import { TodayPanel } from "./TodayPanel";
 import { Box } from "./jar/JarPhysics";
 import { Point } from "./jar/JarPhysics";
 import { IN_HAND, TiltSensor } from "./jar/TiltSensor";
@@ -28,8 +28,7 @@ import { Placement, arrange, groupBySection, visibleEntries } from "./order";
 import { Drop, RowDrag } from "./RowDrag";
 import { SectionNameModal } from "./SectionNameModal";
 import { ScreenChrome } from "./ScreenChrome";
-import { StripDay, closedDayLine, dayStrip, dayTitle, winsLabel, offersShrink, todayEntries } from "./today";
-import { weekdayShort } from "./format";
+import { calendarWeeks, closedDayLine, dayStrip, dayTitle, winsLabel, offersShrink, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
 
 export const HABITS_VIEW = "tiny-habits-grid";
@@ -43,12 +42,6 @@ const CAPTION_MS = 2000;
 /** The word on each answer: short and the same whatever the recipe's fields are called. */
 const CHOICE_WORDS: Record<Answer, string> = { full: "Full", tiny: "Tiny", skip: "Skip" };
 const DAY_CHECK_MS = 60_000;
-/** How far a day's column reaches under the sheet; matches `--th-day-under` in the styles. */
-const DAY_UNDER = 40;
-/** How far the sheet drops before the days are fully in sight. */
-const DAYS_FADE_IN = 48;
-/** The height a day's fill needs to hold its count inside. */
-const DAY_VALUE_ROOM = 32;
 /** Obsidian re-reads a note a moment after it is written, so the tap point has to wait for the new mark. */
 const ORIGIN_TTL_MS = 4000;
 const FALLBACK_COLOR: Hsl = { h: 258, s: 88, l: 66 };
@@ -99,7 +92,8 @@ export class TodayView extends ItemView {
 	/** The card just opened, to grow its recipe in once. */
 	private opening: string | null = null;
 	private menuOpening = false;
-	private sheet: TodaySheet | null = null;
+	private panel: TodayPanel | null = null;
+	private tray: CalendarTray | null = null;
 	/** The choices' arrival while it plays, so a cancel mid-way stops it. */
 	private unfolding: { stop(): void } | null = null;
 	/** The row whose choices just closed, to bring its circle and name back. */
@@ -107,13 +101,6 @@ export class TodayView extends ItemView {
 	/** The choices as they stood when closed without an answer, to slide back out past the row's left edge. */
 	private leavingChoices: HTMLElement | null = null;
 	private shelves: readonly Box[] = [];
-	/** Whether the strip has been brought to today once; from then on only its user scrolls it. */
-	private stripPlaced = false;
-	/** Where the strip was last scrolled. */
-	private stripScroll = 0;
-	private dragScroll: DragScroll | null = null;
-	/** Whether the sheet is pulled down far enough to show the days. */
-	private stripOpen = false;
 	private readonly tilt = new TiltSensor((gravity) => this.jar?.setGravity(gravity));
 
 	constructor(
@@ -144,15 +131,9 @@ export class TodayView extends ItemView {
 		const root = this.contentEl;
 		root.empty();
 		root.addClass("tiny-habits", "th-today");
-		const sheet = new TodaySheet(
-			root,
-			(top) => this.sheetMoved(top),
-			() => this.haptics.tap(),
-		);
-		this.sheet = sheet;
-		this.dragScroll = new DragScroll(sheet.days);
-		this.registerDomEvent(sheet.days, "scroll", () => (this.stripScroll = sheet.days.scrollLeft));
-		this.scrollEl = sheet.scroll;
+		const panel = new TodayPanel(root);
+		this.panel = panel;
+		this.scrollEl = panel.scroll;
 		this.columnEl = this.scrollEl.createDiv("th-column");
 		this.registerDomEvent(this.columnEl, "focusout", () => window.setTimeout(() => this.stale && this.render()));
 		this.rowDrag = new RowDrag(
@@ -161,9 +142,15 @@ export class TodayView extends ItemView {
 			(drop) => this.dropped(drop),
 		);
 		this.jar = new JarCanvas(root, this.jarOptions());
+		this.tray = new CalendarTray(
+			root,
+			() => this.haptics.tap(),
+			() => this.updateFloor(),
+		);
 		this.updateFloor();
 		this.chrome = new ScreenChrome(root, this.containerEl, (shelves, ledges) => {
 			this.shelves = shelves;
+			this.tray?.setInset(Math.max(0, ...shelves.map((shelf) => Math.ceil(root.clientHeight - shelf.top))));
 			this.updateFloor();
 			this.jar?.setLedges(ledges);
 		});
@@ -207,10 +194,9 @@ export class TodayView extends ItemView {
 		this.rowDrag = null;
 		this.jar?.destroy();
 		this.jar = null;
-		this.sheet?.destroy();
-		this.sheet = null;
-		this.dragScroll?.destroy();
-		this.dragScroll = null;
+		this.tray?.destroy();
+		this.tray = null;
+		this.panel = null;
 		window.clearTimeout(this.captionTimer);
 		window.clearTimeout(this.stylesTimer);
 		for (const timer of this.celebrating.values()) window.clearTimeout(timer);
@@ -265,7 +251,7 @@ export class TodayView extends ItemView {
 		const habits = entries.flatMap((entry) => (entry.kind === "ok" ? [entry] : []));
 		const answeredHabits = habits.filter((entry) => entry.habit.markOn(today) !== undefined);
 		const closed = habits.length > 0 && answeredHabits.length === habits.length && this.leaving.size === 0;
-		this.renderDays(all);
+		this.renderCalendar(all);
 		this.renderHead();
 		const chipLine = this.renderDayChip(column);
 		const hideDone = this.ui.settings().hideDone;
@@ -322,26 +308,9 @@ export class TodayView extends ItemView {
 		this.playMotion(column);
 	}
 
-	/** The sheet moved: the day columns stretch to its edge, and the shown day's count keeps where it can be read. */
-	private sheetMoved(top: number): void {
-		const strip = this.sheet?.days;
-		const shown = strip ? top - strip.offsetTop : 0;
-		const open = shown > 2;
-		// The days open on today the first time; after that the strip stays where it was scrolled, and only gets that
-		// place back if Obsidian reset it while it was out of sight.
-		if (open && !this.stripOpen && strip) {
-			if (!this.stripPlaced) this.placeStrip();
-			else if (strip.scrollLeft === 0 && this.stripScroll > 0) strip.scrollLeft = this.stripScroll;
-		}
-		this.stripOpen = open;
-		// Hidden while the sheet is up, or its labels would show in the sheet's rounded corners.
-		strip?.style.setProperty("opacity", String(Math.min(1, Math.max(0, shown / DAYS_FADE_IN))));
-		this.placeDayValue();
-	}
-
-	/** The marbles fall to the bottom of the screen, over the sheet, and lie on Obsidian's bars there. */
+	/** The marbles fall over the list and stand on the calendar's tray as it rests, above Obsidian's bars. */
 	private updateFloor(): void {
-		this.jar?.setObstacles(this.shelves);
+		this.jar?.setObstacles(this.tray ? [...this.shelves, this.tray.restBox()] : this.shelves);
 	}
 
 	/** Starts what moves after a redraw: rows folding away, a new day or screen sliding in, a recipe growing open. */
@@ -362,7 +331,7 @@ export class TodayView extends ItemView {
 	}
 
 	showAll(): void {
-		this.sheet?.snap("up");
+		this.tray?.snap(false);
 		this.slide = this.screen === "all" ? null : "push";
 		this.screen = "all";
 		this.menu = null;
@@ -448,57 +417,10 @@ export class TodayView extends ItemView {
 		return this.day && this.day.isBefore(today) ? this.day : today;
 	}
 
-	/**
-	 * The days under the sheet, one column each: how much of the day was done fills it from the bottom, and the column
-	 * reaches under the sheet's edge so it stretches as the sheet is pulled down. A tap shows that day below and leaves
-	 * the strip where it is: only its user scrolls it.
-	 */
-	private renderDays(all: readonly HabitEntry[]): void {
-		const strip = this.sheet?.days;
-		if (!strip) return;
-		const scrolled = strip.scrollLeft;
-		strip.empty();
+	/** The calendar in the tray, with the shown day picked; a tap on a day shows it above. */
+	private renderCalendar(all: readonly HabitEntry[]): void {
 		const today = this.ui.service.today();
-		const shown = this.shownDay();
-		const row = strip.createDiv("th-days-row");
-		for (const day of dayStrip(all, today)) this.renderDay(row, day, day.date.equals(shown), day.date.equals(today));
-		strip.scrollLeft = scrolled;
-		this.placeDayValue();
-	}
-
-	/** Brings the shown day into view, a little right of the middle; waits until the strip has a width to scroll in. */
-	private placeStrip(): void {
-		const strip = this.sheet?.days;
-		const selected = strip?.querySelector<HTMLElement>(".th-day.is-selected");
-		// Before Obsidian has laid the view out, the strip can have a width while its days still sit at zero.
-		if (!strip || !selected || strip.clientWidth === 0 || (selected.offsetLeft === 0 && selected.previousElementSibling)) return;
-		strip.scrollLeft = selected.offsetLeft - (strip.clientWidth - selected.offsetWidth) * 0.6;
-		this.stripPlaced = true;
-	}
-
-	private renderDay(row: HTMLElement, day: StripDay, selected: boolean, today: boolean): HTMLElement {
-		const share = day.due === 0 ? 0 : day.done / day.due;
-		const button = row.createEl("button", { cls: "th-day", attr: { "aria-label": dayTitle(day.date, this.ui.service.today()), "aria-pressed": String(selected) } });
-		button.toggleClass("is-selected", selected);
-		button.toggleClass("is-today", today);
-		button.toggleClass("is-future", day.future);
-		button.style.setProperty("--th-share", String(share));
-		button.createSpan({ cls: "th-day-dow", text: weekdayShort(day.date.weekday()) });
-		button.createSpan({ cls: "th-day-num", text: String(day.date.day) });
-		const fill = button.createSpan("th-day-pill").createSpan("th-day-fill");
-		if (selected && day.due > 0) fill.createSpan({ cls: "th-day-value", text: `${day.done}/${day.due}` });
-		button.disabled = day.future;
-		button.addEventListener("click", () => this.showDay(day.date));
-		return button;
-	}
-
-	/** The shown day's count sits at the top of its fill, or just above it when the fill is too short to hold it. */
-	private placeDayValue(): void {
-		const day = this.sheet?.days.querySelector<HTMLElement>(".th-day.is-selected");
-		const fill = day?.querySelector<HTMLElement>(".th-day-fill");
-		if (!day || !fill) return;
-		const visible = fill.getBoundingClientRect().height - DAY_UNDER;
-		day.toggleClass("is-low", visible < DAY_VALUE_ROOM);
+		this.tray?.show(calendarWeeks(dayStrip(all, today)), this.shownDay(), today, (day) => this.showDay(day));
 	}
 
 	/** On a past day, a chip at the top says which one, and its cross goes back to today. */
@@ -556,10 +478,10 @@ export class TodayView extends ItemView {
 
 	/** The sheet's header holds All habits' way back; on Today it stays empty, the habits come first. */
 	private renderHead(): void {
-		const head = this.sheet?.head;
+		const head = this.panel?.head;
 		if (!head) return;
 		head.empty();
-		this.sheet?.days.toggleClass("is-hidden", this.screen === "all");
+		this.tray?.setHidden(this.screen === "all");
 		if (this.screen !== "all") return;
 		const line = head.createDiv("th-head-line");
 		const back = line.createEl("button", { cls: "th-back" });

@@ -451,54 +451,56 @@ button.th-card-open { grid-column: 1 / -1; justify-self: start; display: inline-
 .th-row-text { cursor: pointer; }
 
 /*
- * Today is two layers: the days on a stage, and a sheet over them with the habits. The sheet rests up, so the habits
- * come first; pulled down, it shows the days, whose columns reach under its edge and stretch with it. The marbles fall
- * over everything to the bottom of the screen. On a phone it all follows iOS: the system font and Reminders' plain list.
+ * Today is a panel with the habits under Obsidian's header, and a tray with the calendar at the bottom, over Obsidian's
+ * navbar. The marbles fall over the list and stand on the tray's top edge. Folded, the tray shows this week's dates;
+ * pulled up, earlier weeks and how much of each day was done. On a phone it all follows iOS: the system font and
+ * Reminders' plain list.
  */
-.tiny-habits.th-today { --th-sheet-top: 0px; --th-sheet-now: 0px; --th-day-under: 40px; --th-days-top: calc(var(--th-top-inset, 0px) + 6px); }
+.tiny-habits.th-today { --th-tray-top: 100%; --th-tray-rest: 0px; --th-tray-inset: 0px; }
 .is-mobile .tiny-habits { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-interface); }
 .th-today .th-jar { z-index: 5; }
-.th-today .th-caption { z-index: 6; }
+.th-today .th-caption { z-index: 7; bottom: calc(var(--th-tray-rest) + 110px); }
 
-.th-stage { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
-.th-days { position: absolute; left: 0; right: 0; top: var(--th-days-top); height: calc(var(--th-sheet-now) - var(--th-days-top) + var(--th-day-under)); overflow-x: auto; overflow-y: hidden; pointer-events: auto; scrollbar-width: none; overscroll-behavior-x: contain; -webkit-mask-image: linear-gradient(to right, transparent, #000 34px, #000 calc(100% - 34px), transparent); mask-image: linear-gradient(to right, transparent, #000 34px, #000 calc(100% - 34px), transparent); }
-.th-days::-webkit-scrollbar { display: none; }
-.th-days.is-hidden { display: none; }
-.th-days-row { display: flex; gap: 8px; width: max-content; height: 100%; padding: 0 34px; }
-button.th-day { flex: 0 0 46px; width: 46px; height: 100%; padding: 0; border: none; border-radius: 0; box-shadow: none; background: transparent; display: flex; flex-direction: column; align-items: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-button.th-day:hover { background: transparent; }
-button.th-day:disabled { cursor: default; opacity: 1; }
-.th-day-dow { font-size: 10px; line-height: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
-.th-day-num { margin-top: 1px; font-size: 16px; line-height: 20px; font-weight: 500; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; color: var(--text-muted); }
-.th-day-pill { position: relative; flex: 1 1 auto; width: 100%; margin-top: 8px; border-radius: 23px; corner-shape: round; overflow: hidden; background: color-mix(in srgb, var(--text-normal) 5%, var(--background-primary)); }
-.th-day-fill { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--th-day-under) + var(--th-share) * (100% - var(--th-day-under))); border-radius: 23px; corner-shape: round; background: color-mix(in srgb, var(--text-normal) 14%, var(--background-primary)); }
-.th-day-value { position: absolute; top: 9px; left: 0; right: 0; text-align: center; font-size: 12px; line-height: 14px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-on-accent); }
-.th-day.is-low .th-day-value { top: -20px; color: var(--text-accent); }
-.th-day.is-low .th-day-fill { overflow: visible; }
-.th-day.is-selected .th-day-dow, .th-day.is-selected .th-day-num { color: var(--text-accent); font-weight: 700; }
-.th-day.is-selected .th-day-pill { background: color-mix(in srgb, var(--interactive-accent) 16%, var(--background-primary)); }
-.th-day.is-selected .th-day-fill { background: var(--interactive-accent); }
-.th-day.is-future .th-day-dow, .th-day.is-future .th-day-num { color: var(--text-faint); }
-.th-day.is-future .th-day-fill { display: none; }
-/* On a dark page the columns need more light to read, and the shown day more of the accent. */
-.theme-dark .th-day-pill { background: color-mix(in srgb, var(--text-normal) 9%, var(--background-primary)); }
-.theme-dark .th-day-fill { background: color-mix(in srgb, var(--text-normal) 24%, var(--background-primary)); }
-.theme-dark .th-day.is-selected .th-day-pill { background: color-mix(in srgb, var(--interactive-accent) 30%, var(--background-primary)); }
-.theme-dark .th-day.is-selected .th-day-fill { background: var(--interactive-accent); }
-
-.th-sheet { position: absolute; left: 0; right: 0; top: var(--th-sheet-top); bottom: 0; z-index: 4; display: flex; flex-direction: column; border-radius: 24px 24px 0 0; corner-shape: round; background: var(--background-secondary); box-shadow: 0 -0.5px 0 var(--background-modifier-border); }
-.th-sheet.is-settling { transition: top var(--th-settle); }
-.th-sheet-grip { position: relative; z-index: 1; flex: 0 0 auto; padding: 0 var(--th-gutter); touch-action: none; cursor: grab; -webkit-user-select: none; user-select: none; }
-/* The grip reaches over the top of the list, so the finger finds it without aiming at the grabber. */
-.th-sheet-grip::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 30px; }
-/* Once the list scrolls, it fades out under the sheet's top edge instead of being cut. */
+.th-sheet { position: absolute; left: 0; right: 0; top: calc(var(--th-top-inset, 0px) + 6px); bottom: 0; z-index: 4; display: flex; flex-direction: column; padding-top: 6px; border-radius: 24px 24px 0 0; corner-shape: round; background: var(--background-secondary); box-shadow: 0 -0.5px 0 var(--background-modifier-border); }
+/* Once the list scrolls, it fades out under the panel's top edge instead of being cut. */
 .th-sheet.is-scrolled .th-today-scroll { -webkit-mask-image: linear-gradient(to bottom, transparent, #000 26px); mask-image: linear-gradient(to bottom, transparent, #000 26px); }
-.th-sheet-grabber { width: 36px; height: 5px; margin: 6px auto 4px; border-radius: 3px; background: var(--text-faint); opacity: 0.6; }
 .th-sheet .th-today-scroll { position: relative; inset: auto; flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: none; }
-.th-sheet .th-column { padding: 4px var(--th-gutter) calc(var(--th-bottom-inset, 0px) + 140px); }
+.th-sheet .th-column { padding: 4px var(--th-gutter) calc(var(--th-tray-rest) + 140px); }
+.th-sheet-head { flex: 0 0 auto; padding: 0 var(--th-gutter); }
 .th-sheet-head .th-head-line { display: flex; align-items: center; min-height: 44px; }
 .th-sheet-title { flex: 1; min-width: 0; margin: 0; font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: -0.01em; color: var(--text-normal); }
 .th-sheet-head button.th-back { margin-right: 8px; font-size: 17px; color: var(--text-accent); }
+
+/* The calendar's tray: the list's own ground, a hairline on top, and a shadow that grows as it is pulled up. */
+.th-tray { position: absolute; left: 0; right: 0; top: var(--th-tray-top); bottom: 0; z-index: 6; border-radius: 24px 24px 0 0; corner-shape: round; background: var(--background-secondary); box-shadow: 0 -0.5px 0 var(--background-modifier-border), 0 -8px 24px rgba(0, 0, 0, calc(0.1 * var(--th-open, 0))); -webkit-user-select: none; user-select: none; }
+button.th-tray-grip { position: absolute; left: 0; right: 0; top: 0; z-index: 2; display: block; width: 100%; height: 14px; padding: 0; border: none; border-radius: 0; box-shadow: none; background: transparent; cursor: grab; touch-action: none; -webkit-tap-highlight-color: transparent; }
+button.th-tray-grip:hover { background: transparent; }
+.th-tray.is-dragging, .th-tray.is-dragging button.th-tray-grip { cursor: grabbing; }
+.th-tray-grabber { display: block; width: 36px; height: 5px; margin: 5px auto 0; border-radius: 3px; background: var(--text-faint); opacity: 0.6; }
+.th-cal { position: absolute; left: 0; right: 0; top: 14px; bottom: var(--th-tray-inset); overflow: hidden; }
+.th-tray.is-hidden .th-cal { display: none; }
+.th-cal-weeks { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; touch-action: none; }
+.th-cal-weeks.is-scrollable { touch-action: pan-y; }
+.th-cal-weeks::-webkit-scrollbar { display: none; }
+/* Room for the head over the oldest week, and the weeks sit at the bottom while they fit. */
+.th-cal-list { display: flex; flex-direction: column; justify-content: flex-end; min-height: 100%; padding-top: 40px; box-sizing: border-box; }
+.th-cal-head { position: absolute; left: 0; right: 0; top: 0; z-index: 1; height: 40px; background: var(--background-secondary); opacity: var(--th-head, 0); touch-action: none; pointer-events: none; }
+/* The head takes taps only once it is in sight; folded, it would sit over this week's dates. */
+.th-cal-head.is-shown { pointer-events: auto; }
+.th-cal-month { padding: 0 var(--th-gutter); font-size: 13px; line-height: 18px; font-weight: 600; color: var(--text-normal); }
+.th-cal-weekdays, .th-cal-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); padding: 0 12px; }
+.th-cal-weekdays { padding-top: 4px; }
+.th-cal-weekdays span { text-align: center; font-size: 10px; line-height: 14px; font-weight: 600; color: var(--text-muted); }
+.th-cal-week { flex: 0 0 52px; height: 52px; }
+button.th-cal-day { height: 52px; margin: 0; padding: 4px 0 0; border: none; border-radius: 0; box-shadow: none; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button.th-cal-day:hover { background: transparent; }
+button.th-cal-day:disabled { cursor: default; opacity: 1; }
+.th-cal-date { height: 24px; display: flex; align-items: center; font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--text-normal); }
+.th-cal-percent { min-height: 14px; font-size: 11px; line-height: 14px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text-muted); opacity: var(--th-percent, 0); }
+.th-cal-day.is-full .th-cal-percent { color: var(--text-normal); }
+.th-cal-day.is-today .th-cal-date { font-weight: 700; }
+.th-cal-day.is-selected:not(.is-today) .th-cal-date, .th-cal-day.is-selected:not(.is-today) .th-cal-percent { color: var(--text-accent); font-weight: 700; }
+.th-cal-day.is-off .th-cal-date { color: var(--text-faint); }
 
 /* Today's buttons ride on the first header's line: answered count, All habits, new habit, help. */
 .th-tools { display: flex; align-items: center; gap: 8px; margin: -3px 0 -2px auto; }

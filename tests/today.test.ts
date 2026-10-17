@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HabitEntry } from "../src/application/ports";
 import { TINY, missed } from "../src/domain/DayMark";
-import { closedDayLine, dayStrip, dayTitle, totalWins, winsLabel, winsSince, offersShrink, todayEntries } from "../src/ui/today";
+import { calendarWeeks, closedDayLine, dayStrip, dayTitle, donePercent, monthsOf, totalWins, winsLabel, winsSince, offersShrink, todayEntries } from "../src/ui/today";
 import { d } from "./support/dates";
 import { habitNote } from "./support/habits";
 
@@ -69,6 +69,47 @@ describe("dayStrip", () => {
 		expect(on("2026-10-15")).toMatchObject({ due: 2, done: 1, future: false });
 		expect(on("2026-10-14")).toMatchObject({ due: 2, done: 1 });
 		expect(on("2026-10-18")).toMatchObject({ due: 3, done: 0, future: true });
+	});
+});
+
+describe("calendarWeeks", () => {
+	const thursday = d("2026-10-15");
+
+	it("lays the strip out as weeks from Monday, the first one filled back with days outside it", () => {
+		const weeks = calendarWeeks(dayStrip([ok("Read")], thursday));
+		expect(weeks).toHaveLength(3);
+		expect(weeks.every((week) => week.length === 7)).toBe(true);
+		expect(weeks[0][0].date.toString()).toBe("2026-09-28");
+		expect(weeks[0].filter((day) => day.outside).map((day) => day.date.day)).toEqual([28, 29, 30, 1]);
+		expect(weeks[2][6].date.toString()).toBe("2026-10-18");
+		expect(weeks.flat().filter((day) => day.outside)).toHaveLength(4);
+	});
+
+	it("keeps each day's counts", () => {
+		const read = ok("Read", { done_tiny: ["2026-10-15"] });
+		const weeks = calendarWeeks(dayStrip([read], thursday));
+		expect(weeks[2][3]).toMatchObject({ due: 1, done: 1, future: false, outside: false });
+		expect(weeks[0][0]).toMatchObject({ due: 0, done: 0, future: false, outside: true });
+	});
+});
+
+describe("donePercent", () => {
+	it("says how much of a day was done as a whole percent, and nothing for a day with nothing due", () => {
+		const day = (due: number, done: number) => ({ date: d("2026-10-15"), due, done, future: false });
+		expect(donePercent(day(2, 1))).toBe(50);
+		expect(donePercent(day(3, 2))).toBe(67);
+		expect(donePercent(day(8, 8))).toBe(100);
+		expect(donePercent(day(0, 0))).toBeNull();
+	});
+});
+
+describe("monthsOf", () => {
+	it("names the month the weeks span, or the first and the last", () => {
+		const weeks = calendarWeeks(dayStrip([ok("Read")], d("2026-10-15")));
+		expect(monthsOf(weeks)).toBe("September – October");
+		expect(monthsOf(weeks.slice(1))).toBe("October");
+		const turn = calendarWeeks(dayStrip([ok("Read", { done_tiny: ["2025-12-29"] })], d("2026-01-04")));
+		expect(monthsOf(turn)).toBe("December 2025 – January 2026");
 	});
 });
 
