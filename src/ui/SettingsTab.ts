@@ -7,14 +7,22 @@ import { Hsl, parseColor } from "./jar/color";
 import { DEFAULT_MARBLE_SIZES, JAR_MATERIALS, JarMaterial, assetSvg } from "./jar/JarAssets";
 import { CornerCalibration } from "./CornerCalibration";
 import { DeviceSettings } from "./DeviceSettings";
-import { MarbleSizesModal } from "./MarbleSizesModal";
 import { FolderSuggest, TagSuggest } from "./suggest";
 
 export interface SettingsHost {
 	config: HabitSettings;
 	saveSettings(): Promise<void>;
 	newHabit(): void;
+	/** Opens Today with the size sliders over it; `end` runs once they are saved or cancelled. */
+	calibrateMarbleSizes(end: () => void): Promise<void>;
 	readonly device: DeviceSettings;
+}
+
+/** Obsidian's settings window, which the public API doesn't expose. */
+interface SettingsWindow {
+	open(): void;
+	close(): void;
+	openTabById(id: string): void;
 }
 
 const MATERIAL_NAMES: Record<JarMaterial, string> = { grain: "Grain", aura: "Aura", halftone: "Halftone" };
@@ -65,6 +73,18 @@ export class SettingsTab extends PluginSettingTab {
 		this.properties(containerEl);
 	}
 
+	/** Closes the settings for something done on Today, and gives the way back to this spot in them. */
+	private stepOut(away: (back: () => void) => void): void {
+		const window = (this.app as unknown as { setting: SettingsWindow }).setting;
+		const scrolled = this.containerEl.scrollTop;
+		window.close();
+		away(() => {
+			window.open();
+			window.openTabById(this.host.manifest.id);
+			this.containerEl.scrollTop = scrolled;
+		});
+	}
+
 	private async save(change: (settings: HabitSettings) => void): Promise<void> {
 		change(this.host.config);
 		await this.host.saveSettings();
@@ -78,14 +98,8 @@ export class SettingsTab extends PluginSettingTab {
 		const sizes = settings.marbleSizes;
 		new Setting(containerEl)
 			.setName("Marble sizes")
-			.setDesc(`Small ${sizes.small}, medium ${sizes.medium}, big ${sizes.big} px. Pick them on a jar of falling marbles.`)
-			.addButton((button) =>
-				button.setButtonText("Adjust").onClick(() =>
-					new MarbleSizesModal(this.app, sizes, settings.material, settings.speed / 100, (next) => {
-						void this.save((changed) => (changed.marbleSizes = next)).then(() => this.display());
-					}).open(),
-				),
-			);
+			.setDesc(`Small ${sizes.small}, medium ${sizes.medium}, big ${sizes.big} px. Pick them on Today, on your own marbles.`)
+			.addButton((button) => button.setButtonText("Adjust").onClick(() => this.stepOut((back) => void this.host.calibrateMarbleSizes(back))));
 		new Setting(containerEl)
 			.setName("Speed")
 			.setDesc(`How fast marbles fall, roll and merge. ${DEFAULT_SETTINGS.speed}% is the original speed.`)

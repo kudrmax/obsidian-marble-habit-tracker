@@ -87,6 +87,18 @@ export default class MarbleHabitTrackerPlugin extends Plugin implements Settings
 		this.refreshViews();
 	}
 
+	async calibrateMarbleSizes(end: () => void): Promise<void> {
+		const view = await this.openGrid();
+		if (!view) {
+			end();
+			return;
+		}
+		view.calibrateSizes((sizes) => {
+			this.config.marbleSizes = sizes;
+			void this.saveSettings();
+		}, end);
+	}
+
 	private onActiveHabit(checking: boolean, archived: boolean, action: (path: string) => void): boolean {
 		const path = this.notes?.activeHabit();
 		if (!path || this.notes?.isArchived(path) !== archived) return false;
