@@ -31,7 +31,7 @@ export class SizeCalibration {
 		this.root.createDiv({ cls: "th-size-calibration-title", text: "Marble sizes" });
 		const setters = SIZES.map((size) => {
 			let set: (value: number) => void = () => undefined;
-			new Setting(this.root).setName(SIZE_NAMES[size]).addSlider((slider) => {
+			const setting = new Setting(this.root).setName(SIZE_NAMES[size]).addSlider((slider) => {
 				slider
 					.setLimits(MIN_MARBLE, MAX_MARBLE, 1)
 					.setDynamicTooltip()
@@ -40,6 +40,14 @@ export class SizeCalibration {
 					.onChange((value) => this.resize({ ...this.sizes, [size]: value }));
 				set = (value) => slider.setValue(value);
 			});
+			const step = (by: number) => {
+				const value = Math.max(MIN_MARBLE, Math.min(MAX_MARBLE, this.sizes[size] + by));
+				set(value);
+				this.resize({ ...this.sizes, [size]: value });
+			};
+			setting.controlEl.addClass("th-size-stepper");
+			setting.controlEl.prepend(this.stepButton("−", `Smaller ${size} marbles`, () => step(-1)));
+			setting.controlEl.append(this.stepButton("+", `Bigger ${size} marbles`, () => step(1)));
 			return set;
 		});
 		const buttons = this.root.createDiv("modal-button-container");
@@ -62,6 +70,12 @@ export class SizeCalibration {
 		document.removeEventListener("keydown", this.onKey, true);
 		this.root.remove();
 		this.host.end();
+	}
+
+	private stepButton(text: string, label: string, onClick: () => void): HTMLButtonElement {
+		const button = createEl("button", { cls: "th-size-step", text, attr: { "aria-label": label } });
+		button.addEventListener("click", onClick);
+		return button;
 	}
 
 	private resize(sizes: MarbleSizes): void {
