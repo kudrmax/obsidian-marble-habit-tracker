@@ -1,12 +1,12 @@
 import { LocalDate } from "../domain/LocalDate";
 import { Box } from "./jar/JarPhysics";
-import { CalendarDay, dayTitle, donePercent, monthsOf } from "./today";
+import { CalendarDay, dayTitle, donePercent, monthOf } from "./today";
 
 /** The strip with the grabber at the tray's top; the grabber's bottom edge is this far down. */
 const GRIP = 14;
 const GRABBER_BOTTOM = 10;
 /** One week of the calendar: each date in a ring of how much of that day was done. */
-export const WEEK_ROW = 52;
+export const WEEK_ROW = 54;
 /** A date's line. */
 const DATE = 24;
 /** Folded, the dates sit this far under the grabber and as far over Obsidian's bar. */
@@ -15,7 +15,11 @@ const REST_GAP = 8;
  * Over the weeks: room under the grabber, the month with Today's buttons on its line, then the weekdays. They come in,
  * weekdays first, once this week's row is whole.
  */
-const HEAD = 66;
+const HEAD = 74;
+/** Room each side of the week grid; its columns share the rest. */
+const GRID_PAD = 8;
+/** The ring around each date. */
+const RING = 34;
 /** Room between the weeks and whatever of Obsidian covers the bottom of the view, once the tray is up. */
 const BOTTOM_GAP = 8;
 /** How high the folded tray stands over Obsidian's bar: the grabber, the dates and the room around them. */
@@ -65,6 +69,9 @@ export class CalendarTray {
 	/** The weeks, oldest first; they scroll, and stay on the newest unless scrolled back. */
 	private readonly weeks: HTMLElement;
 	private shown: CalendarDay[][] = [];
+	private today: LocalDate | null = null;
+	/** How far in from the grid's sides its outer rings start, so the month and the buttons line up with them. */
+	private edge = -1;
 	private readonly calendar: HTMLElement;
 	/** How much of the view's bottom Obsidian's bars cover. */
 	private inset = 0;
@@ -175,7 +182,7 @@ export class CalendarTray {
 		button.toggleClass("is-today", day.date.equals(today));
 		button.toggleClass("is-off", off);
 		button.toggleClass("is-full", percent === 100);
-		if (percent !== null) this.renderRing(button, percent);
+		if (!off) this.renderRing(button, percent ?? 0);
 		button.createSpan({ cls: "th-cal-date", text: String(day.date.day) });
 		button.disabled = off;
 		button.addEventListener("click", () => pick(day.date));
@@ -185,13 +192,13 @@ export class CalendarTray {
 	private renderRing(button: HTMLElement, percent: number): void {
 		const svg = button.appendChild(document.createElementNS(SVG_NS, "svg"));
 		svg.setAttribute("class", "th-cal-ring");
-		svg.setAttribute("viewBox", "0 0 36 36");
+		svg.setAttribute("viewBox", `0 0 ${RING} ${RING}`);
 		svg.setAttribute("aria-hidden", "true");
 		const circle = (cls: string) => {
 			const element = svg.appendChild(document.createElementNS(SVG_NS, "circle"));
 			element.setAttribute("class", cls);
-			element.setAttribute("cx", "18");
-			element.setAttribute("cy", "18");
+			element.setAttribute("cx", String(RING / 2));
+			element.setAttribute("cy", String(RING / 2));
 			element.setAttribute("r", String(RING_RADIUS));
 			return element;
 		};
@@ -199,14 +206,24 @@ export class CalendarTray {
 		if (percent === 0) return;
 		const arc = circle("th-cal-ring-arc");
 		arc.setAttribute("stroke-dasharray", `${((RING_LENGTH * percent) / 100).toFixed(2)} ${RING_LENGTH.toFixed(2)}`);
-		arc.setAttribute("transform", "rotate(-90 18 18)");
+		arc.setAttribute("transform", `rotate(-90 ${RING / 2} ${RING / 2})`);
 	}
 
-	/** The month, or months, of the weeks in sight, over the calendar. */
+	/** The month most of the weeks in sight are in, over the calendar. */
 	private nameMonths(): void {
-		if (this.shown.length === 0) return;
+		if (this.shown.length === 0 || !this.today) return;
 		const { first, last } = this.visibleWeeks();
-		this.month.setText(monthsOf(this.shown.slice(first, last + 1)));
+		this.month.setText(monthOf(this.shown.slice(first, last + 1), this.today));
+	}
+
+	/** Lines the month and the buttons up with the grid's outer rings, whatever the width. */
+	private alignToGrid(): void {
+		const column = parseFloat(getComputedStyle(this.root).getPropertyValue("--th-column")) || Infinity;
+		const width = Math.min(this.calendar.clientWidth, column);
+		const edge = Math.round(GRID_PAD + ((width - 2 * GRID_PAD) / WEEKDAY_LETTERS.length - RING) / 2);
+		if (width === 0 || edge === this.edge) return;
+		this.edge = edge;
+		this.tray.style.setProperty("--th-cal-edge", `${edge}px`);
 	}
 
 	/** The weeks in sight, as indexes into the weeks, oldest first. */
@@ -226,6 +243,7 @@ export class CalendarTray {
 		const first = this.shown.length === 0;
 		const scrolled = this.weeks.scrollTop;
 		this.shown = weeks;
+		this.today = today;
 		this.weeks.empty();
 		const list = this.weeks.createDiv("th-cal-list");
 		for (const week of weeks) {
@@ -265,6 +283,7 @@ export class CalendarTray {
 		this.tray.style.setProperty("--th-detail", String(clamp(raised / ROW_WHOLE)));
 		this.tray.style.setProperty("--th-head-height", `${Math.min(HEAD, Math.max(0, raised - ROW_WHOLE))}px`);
 		this.tray.style.setProperty("--th-open", String(clamp(raised / SHADOW_FADE)));
+		this.alignToGrid();
 		// Folded, this week's row hangs low so only its dates show; pushed below its rest, the tray takes them down with it.
 		this.tray.style.setProperty("--th-lift", `${Math.max(0, REST_LIFT - this.raised)}px`);
 		const full = this.raised >= this.maxUp() - 1;

@@ -87,15 +87,21 @@ export function donePercent(day: StripDay): number | null {
 	return day.due === 0 ? null : Math.round((day.done / day.due) * 100);
 }
 
-/** The month the weeks span, or the first and the last of them, with years when they differ. */
-export function monthsOf(weeks: readonly (readonly CalendarDay[])[]): string {
-	const first = weeks[0]?.[0]?.date;
-	const lastWeek = weeks[weeks.length - 1];
-	const last = lastWeek?.[lastWeek.length - 1]?.date;
-	if (!first || !last) return "";
-	if (first.year !== last.year) return `${MONTHS[first.month - 1]} ${first.year} – ${MONTHS[last.month - 1]} ${last.year}`;
-	if (first.month === last.month) return MONTHS[first.month - 1];
-	return `${MONTHS[first.month - 1]} – ${MONTHS[last.month - 1]}`;
+/** The month most of the weeks' days are in, the later one on a tie, with its year only when it isn't this year. */
+export function monthOf(weeks: readonly (readonly CalendarDay[])[], today: LocalDate): string {
+	const counts = new Map<string, { year: number; month: number; days: number }>();
+	for (const week of weeks) {
+		for (const { date } of week) {
+			const key = `${date.year}-${date.month}`;
+			const count = counts.get(key) ?? { year: date.year, month: date.month, days: 0 };
+			counts.set(key, { ...count, days: count.days + 1 });
+		}
+	}
+	let main: { year: number; month: number; days: number } | null = null;
+	for (const count of counts.values()) if (!main || count.days >= main.days) main = count;
+	if (!main) return "";
+	const name = MONTHS[main.month - 1];
+	return main.year === today.year ? name : `${name} ${main.year}`;
 }
 
 export function todayEntries(entries: readonly HabitEntry[], today: LocalDate): HabitEntry[] {

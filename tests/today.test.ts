@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HabitEntry } from "../src/application/ports";
 import { TINY, missed } from "../src/domain/DayMark";
-import { calendarWeeks, closedDayLine, dayStrip, dayTitle, donePercent, monthsOf, totalWins, winsLabel, winsSince, offersShrink, todayEntries } from "../src/ui/today";
+import { calendarWeeks, closedDayLine, dayStrip, dayTitle, donePercent, monthOf, totalWins, winsLabel, winsSince, offersShrink, todayEntries } from "../src/ui/today";
 import { d } from "./support/dates";
 import { habitNote } from "./support/habits";
 
@@ -103,13 +103,16 @@ describe("donePercent", () => {
 	});
 });
 
-describe("monthsOf", () => {
-	it("names the month the weeks span, or the first and the last", () => {
-		const weeks = calendarWeeks(dayStrip([ok("Read")], d("2026-10-15")));
-		expect(monthsOf(weeks)).toBe("September – October");
-		expect(monthsOf(weeks.slice(1))).toBe("October");
-		const turn = calendarWeeks(dayStrip([ok("Read", { done_tiny: ["2025-12-29"] })], d("2026-01-04")));
-		expect(monthsOf(turn)).toBe("December 2025 – January 2026");
+describe("monthOf", () => {
+	it("names the month most of the weeks' days are in, with its year only when it isn't this year", () => {
+		const today = d("2026-10-15");
+		const weeks = calendarWeeks(dayStrip([ok("Read")], today));
+		expect(monthOf(weeks, today)).toBe("October");
+		expect(monthOf(weeks.slice(0, 1), today)).toBe("October");
+		const turn = calendarWeeks(dayStrip([ok("Read", { done_tiny: ["2025-12-22"] })], d("2026-01-04")));
+		expect(monthOf(turn.slice(0, 1), d("2026-01-04"))).toBe("December 2025");
+		expect(monthOf(turn.slice(1), d("2026-01-04"))).toBe("January");
+		expect(monthOf([], today)).toBe("");
 	});
 });
 

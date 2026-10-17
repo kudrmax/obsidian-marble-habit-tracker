@@ -472,7 +472,7 @@ button.th-card-open { grid-column: 1 / -1; justify-self: start; display: inline-
 .th-sheet-head button.th-back { margin-right: 8px; font-size: 17px; color: var(--text-accent); }
 
 /* The calendar's tray: the list's own ground, a hairline on top, and a shadow that grows as it is pulled up. */
-.th-tray { position: absolute; left: 0; right: 0; top: var(--th-tray-top); bottom: 0; z-index: 6; border-radius: 24px 24px 0 0; corner-shape: round; background: var(--background-secondary); box-shadow: 0 -0.5px 0 var(--background-modifier-border), 0 -8px 24px rgba(0, 0, 0, calc(0.1 * var(--th-open, 0))); -webkit-user-select: none; user-select: none; }
+.th-tray { position: absolute; left: 0; right: 0; top: var(--th-tray-top); bottom: 0; z-index: 6; border-radius: 24px 24px 0 0; corner-shape: round; background: var(--background-primary); box-shadow: 0 -0.5px 0 var(--background-modifier-border), 0 -8px 24px rgba(0, 0, 0, calc(0.12 * var(--th-open, 0))); -webkit-user-select: none; user-select: none; }
 button.th-tray-grip { position: absolute; left: 0; right: 0; top: 0; z-index: 2; display: block; width: 100%; height: 14px; padding: 0; border: none; border-radius: 0; box-shadow: none; background: transparent; cursor: grab; touch-action: none; -webkit-tap-highlight-color: transparent; }
 button.th-tray-grip:hover { background: transparent; }
 .th-tray.is-dragging, .th-tray.is-dragging button.th-tray-grip { cursor: grabbing; }
@@ -486,27 +486,31 @@ button.th-tray-grip:hover { background: transparent; }
 .th-cal-list { display: flex; flex-direction: column; justify-content: flex-end; min-height: 100%; }
 /* The head is a band of its own over the weeks that opens as the tray rises, the weekdays first, right above the dates. */
 .th-cal-head { position: absolute; left: 0; right: 0; top: 0; height: var(--th-head-height, 0px); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; touch-action: none; }
-.th-cal-month { flex: 1; min-width: 0; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--text-normal); }
+/* The month reads as one of Today's section headers. */
+.th-cal-month { flex: 1; min-width: 0; font-size: 20px; line-height: 25px; font-weight: 700; color: var(--text-normal); }
 /* The calendar keeps to the list's column, so on a wide tab its days stand under the habits, not across the tab. */
 .th-cal-line, .th-cal-weekdays, .th-cal-week { box-sizing: border-box; width: 100%; max-width: var(--th-column); margin-left: auto; margin-right: auto; }
-.th-cal-line { flex: none; display: flex; align-items: center; min-height: 30px; margin-bottom: 6px; padding: 0 var(--th-gutter); }
+.th-cal-line { flex: none; display: flex; align-items: center; min-height: 30px; margin-bottom: 8px; padding: 0 var(--th-cal-edge, var(--th-gutter)); }
+/* In the tray the buttons are bare icons; the last icon, not its button, lines up with the last ring. */
 .th-cal-tools { margin-left: auto; }
-.th-cal-tools .th-tools { margin: 0; }
-.th-cal-weekdays, .th-cal-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); padding-left: 12px; padding-right: 12px; }
+.th-cal-tools .th-tools { gap: 4px; margin: 0 -11px 0 0; }
+.th-cal-tools button.th-tool { background: transparent; }
+.th-cal-tools button.th-tool:hover { background: var(--background-modifier-hover); }
+.th-cal-weekdays, .th-cal-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); padding-left: 8px; padding-right: 8px; }
 .th-cal-weekdays { flex: none; padding-bottom: 4px; }
-.th-cal-weekdays span { text-align: center; font-size: 10px; line-height: 14px; font-weight: 600; color: var(--text-muted); }
-.th-cal-week { flex: 0 0 52px; height: 52px; }
-button.th-cal-day { position: relative; height: 52px; margin: 0; padding: 0; border: none; border-radius: 0; box-shadow: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.th-cal-weekdays span { text-align: center; font-size: var(--th-small-size); line-height: 16px; font-weight: 600; color: var(--text-muted); }
+.th-cal-week { flex: 0 0 54px; height: 54px; }
+button.th-cal-day { position: relative; height: 54px; margin: 0; padding: 0; border: none; border-radius: 0; box-shadow: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 button.th-cal-day:hover, button.th-cal-day.mobile-tap, button.th-tray-grip.mobile-tap { background: transparent; }
 button.th-cal-day:disabled { cursor: default; opacity: 1; }
-.th-cal-date { position: relative; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; line-height: 24px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--text-normal); }
+.th-cal-date { position: relative; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: var(--th-text-size); line-height: 24px; font-weight: 400; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; color: var(--text-normal); }
 /* How much of a day was done: a ring in Obsidian's accent, drawn as far round as that; it comes in as the tray rises. */
-.th-cal-ring { position: absolute; left: 50%; top: 50%; width: 36px; height: 36px; margin: -18px 0 0 -18px; opacity: var(--th-detail, 0); pointer-events: none; }
-.th-cal-ring-track, .th-cal-ring-arc { fill: none; stroke-width: 2.5; }
+.th-cal-ring { position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; opacity: var(--th-detail, 0); pointer-events: none; }
+.th-cal-ring-track, .th-cal-ring-arc { fill: none; stroke-width: 2; }
 .th-cal-ring-track { stroke: var(--background-modifier-border); }
 .th-cal-ring-arc { stroke: var(--interactive-accent); stroke-linecap: round; }
-.th-cal-day.is-today .th-cal-date { color: var(--text-accent); font-weight: 700; }
-.th-cal-day.is-selected:not(.is-today) .th-cal-date { background: var(--interactive-accent); color: var(--text-on-accent); font-weight: 700; }
+.th-cal-day.is-today .th-cal-date { color: var(--text-accent); font-weight: 600; }
+.th-cal-day.is-selected:not(.is-today) .th-cal-date { background: var(--interactive-accent); color: var(--text-on-accent); font-weight: 600; }
 .th-cal-day.is-off .th-cal-date { color: var(--text-faint); }
 
 /* Today's buttons ride on the first header's line: answered count, All habits, new habit, help. */
