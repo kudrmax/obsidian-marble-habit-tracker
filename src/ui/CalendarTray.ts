@@ -16,7 +16,7 @@ const WEEK_DAYS = 7;
 /** Room between the weeks and whatever of Obsidian covers the bottom of the view, once the tray is up. */
 const BOTTOM_GAP = 8;
 /** How high the folded tray stands over Obsidian's bar. Its dates sit in the middle, as far from its edge as from the bar. */
-const REST_HEIGHT = 48;
+const REST_HEIGHT = 60;
 /** Folded, this week's row hangs this far below the calendar, so its dates sit in the middle of the tray; rising, the room under it grows back. */
 const REST_LIFT = WEEK_ROW / 2 + BOTTOM_GAP - REST_HEIGHT / 2;
 /** The figures the dates are written in, to see where their ink sits in their line. */
