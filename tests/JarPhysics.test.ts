@@ -326,7 +326,45 @@ describe("JarPhysics", () => {
 		expect(best).toBeLessThan(4);
 	});
 
+	it("wakes a resting pile when the phone tilts slowly, a hair at a time", () => {
+		const physics = new JarPhysics(400, 300);
+		for (let index = 0; index < 10; index++) physics.add({ id: `b${index}`, x: 30 + index * 34, y: 280, r: 16 });
+		settle(physics, 5000);
+		expect(physics.isSettled()).toBe(true);
+		const pull = perStep(1000);
+		for (let degree = 0; degree <= 30; degree += 0.5) {
+			const angle = (degree * Math.PI) / 180;
+			physics.setGravity({ x: Math.sin(angle) * pull, y: Math.cos(angle) * pull });
+			if (physics.isSettled()) continue;
+			physics.step();
+		}
+		expect(physics.isSettled()).toBe(false);
+	});
+
 	describe("friction and rolling", () => {
+		it("lets touching marbles fly apart instead of sticking together", () => {
+			const physics = new JarPhysics(800, 800);
+			physics.setGravity({ x: 0, y: 0 });
+			physics.add({ id: "a", x: 380, y: 400, r: 20 });
+			physics.add({ id: "b", x: 420, y: 400, r: 20 });
+			physics.get("a")!.px = 380.1;
+			physics.get("b")!.px = 419.9;
+			for (let step = 0; step < 100; step++) physics.step();
+			const a = physics.get("a")!;
+			const b = physics.get("b")!;
+			expect(Math.hypot(b.x - a.x, b.y - a.y)).toBeGreaterThan(40 + 15);
+		});
+
+		it("lets a cluster thrown sideways fall apart, not fly as one piece", () => {
+			const physics = new JarPhysics(2000, 2000);
+			for (let index = 0; index < 4; index++) physics.add({ id: `m${index}`, x: 100 + index * 30, y: 1000, r: 15 });
+			for (const body of physics.bodies()) body.px = body.x - 2;
+			physics.get("m3")!.px = 190 - 2.3;
+			for (let step = 0; step < 120; step++) physics.step();
+			const xs = physics.bodies().map((body) => body.x).sort((a, b) => a - b);
+			expect(xs[3] - xs[2]).toBeGreaterThan(30 + 20);
+		});
+
 		it("a marble sliding along the floor starts to roll and rolls on at 5/7 of its speed", () => {
 			const physics = new JarPhysics(4000, 300);
 			physics.add({ id: "a", x: 100, y: 288, r: 12 });

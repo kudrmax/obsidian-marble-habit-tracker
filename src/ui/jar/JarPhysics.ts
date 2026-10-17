@@ -84,6 +84,8 @@ export class JarPhysics {
 	private readonly items = new Map<string, Body>();
 	private readonly targets = new Map<string, Point>();
 	private gravity: Point = EARTH;
+	/** The gravity the bodies last moved under. */
+	private movedUnder: Point = EARTH;
 	private obstacles: readonly Box[] = [];
 	private ledges: readonly Box[] = [];
 	/** The screen with its rounded corners, in the same coordinates as the bodies; the bodies stay inside its corners. */
@@ -150,11 +152,14 @@ export class JarPhysics {
 		this.bounce = Math.max(0, Math.min(1, bounce));
 	}
 
+	/** Wakes the bodies once gravity has turned away from the one they last moved under, however slowly it turned. */
 	setGravity(gravity: Point): void {
-		const size = Math.max(Math.hypot(gravity.x, gravity.y), Math.hypot(this.gravity.x, this.gravity.y), Number.EPSILON);
-		const changed = Math.hypot(gravity.x - this.gravity.x, gravity.y - this.gravity.y) > GRAVITY_EPSILON * size;
 		this.gravity = gravity;
-		if (changed) this.quietFrames = 0;
+		const before = this.movedUnder;
+		const size = Math.max(Math.hypot(gravity.x, gravity.y), Math.hypot(before.x, before.y), Number.EPSILON);
+		if (Math.hypot(gravity.x - before.x, gravity.y - before.y) <= GRAVITY_EPSILON * size) return;
+		this.quietFrames = 0;
+		this.movedUnder = gravity;
 	}
 
 	add(input: BodyInput): void {
@@ -261,6 +266,7 @@ export class JarPhysics {
 		let fastest = 0;
 		for (const body of free) fastest = Math.max(fastest, Math.hypot(body.x - body.px, body.y - body.py));
 		this.quietFrames = fastest < REST_SPEED ? this.quietFrames + 1 : 0;
+		if (this.quietFrames === 0) this.movedUnder = this.gravity;
 		return hardest;
 	}
 
@@ -268,7 +274,8 @@ export class JarPhysics {
 	 * The collisions above move bodies apart, and Verlet turns every such move into speed: two marbles pressed together
 	 * fly apart a little, though nothing in the world pushed them. Here, as in XPBD, each contact's speed along its normal
 	 * is set to what the hit calls for instead: `bounce` of the speed they met with before the step began for a hard hit,
-	 * and nothing at all for a soft touch, so a resting pile neither trembles nor gains energy.
+	 * and nothing at all for a soft touch, so a resting pile neither trembles nor gains energy. Only contacts that were
+	 * closing count: two marbles drifting apart are let go, never held together.
 	 */
 	private resolveSpeeds(free: readonly Body[]): void {
 		const contacts = this.contacts;
@@ -288,7 +295,7 @@ export class JarPhysics {
 				const nx = dx / distance;
 				const ny = dy / distance;
 				const closing = (incoming[2 * j] - incoming[2 * i]) * nx + (incoming[2 * j + 1] - incoming[2 * i + 1]) * ny;
-				contacts.add(i, j, nx, ny, closing, this.parting(closing), this.shareOf(body, other, i, j, nx, ny), true);
+				if (closing < 0) contacts.add(i, j, nx, ny, closing, this.parting(closing), this.shareOf(body, other, i, j, nx, ny), true);
 			}
 		}
 		const stopped = this.stopped;
@@ -423,7 +430,7 @@ export class JarPhysics {
 		const inY = this.incoming[2 * index + 1];
 		const wall = (nx: number, ny: number, exact = true) => {
 			const meeting = inX * nx + inY * ny;
-			this.contacts.add(index, -1, nx, ny, meeting, this.parting(meeting), 1, exact);
+			if (meeting < 0) this.contacts.add(index, -1, nx, ny, meeting, this.parting(meeting), 1, exact);
 		};
 		if (body.y >= this.height - body.r - CONTACT) wall(0, -1);
 		if (body.x <= body.r + CONTACT) wall(1, 0);
