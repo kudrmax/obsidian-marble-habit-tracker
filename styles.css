@@ -246,7 +246,6 @@ button.th-back svg { width: 18px; height: 18px; }
 .th-back-icon { display: inline-flex; }
 .th-back-nav + .th-head { padding-top: 2px; }
 button.th-archived-toggle { display: inline-flex; align-items: center; gap: 8px; margin: 12px 0 10px; padding: 0; color: var(--th-muted); }
-button.th-footer-link.th-has-dot .th-footer-link-text::after { content: ""; display: inline-block; vertical-align: middle; margin-left: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--interactive-accent); pointer-events: none; }
 .th-progress { height: var(--th-progress); margin-top: 14px; border-radius: var(--th-progress); background: var(--th-line); overflow: hidden; }
 .th-meta-chevron { display: inline-flex; color: var(--th-faint); transition: transform 150ms ease; }
 .th-meta-chevron svg { width: 14px; height: 14px; }
@@ -487,7 +486,6 @@ button.th-tray-grip:hover { background: transparent; }
 .th-tray.is-dragging, .th-tray.is-dragging button.th-tray-grip { cursor: grabbing; }
 .th-tray-grabber { display: block; width: 36px; height: 5px; margin: 5px auto 0; border-radius: 3px; background: var(--text-faint); opacity: 0.6; }
 .th-cal { position: absolute; left: 0; right: 0; top: 14px; bottom: calc(var(--th-tray-inset) - var(--th-lift, 0px)); overflow: hidden; }
-.th-tray.is-hidden .th-cal { display: none; }
 .th-cal-weeks { position: absolute; left: 0; right: 0; top: var(--th-head-height, 0px); bottom: 0; overflow: hidden; }
 /* The weeks stand on the bottom: folded, only this week's dates show. */
 .th-cal-list { position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; }
@@ -566,22 +564,6 @@ button.th-mark-button:active .th-mark { transform: scale(0.84); transition: tran
 .th-today .th-card-recipe .th-habit-panel { margin-bottom: 0; font-family: var(--font-text); font-size: var(--font-text-size); line-height: var(--line-height-normal); }
 .th-today .th-card-recipe button.th-card-open { margin: 12px 0 0 4px; }
 .th-row-extra { padding: 0 var(--th-gutter) 14px calc(var(--th-gutter) + 38px); }
-
-/* The end of the list: "New habit" in the accent like Reminders' "New Reminder", then rows that lead on. */
-.th-footer { margin: 8px calc(-1 * var(--th-gutter)) 0; }
-button.th-footer-add, button.th-footer-link { display: flex; align-items: center; width: 100%; height: 48px; padding: 0 var(--th-gutter); border: none; border-radius: 0; box-shadow: none; background: transparent; font-size: 17px; cursor: pointer; transition: background-color 120ms ease; }
-button.th-footer-add { gap: 14px; color: var(--text-accent); font-weight: 600; }
-.th-footer-add-icon { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; corner-shape: round; background: var(--interactive-accent); color: var(--text-on-accent); }
-.th-footer-add-icon svg { width: 16px; height: 16px; stroke-width: 3px; }
-.th-footer-links { margin-top: 20px; }
-button.th-footer-link { position: relative; gap: 14px; color: var(--text-normal); }
-button.th-footer-link + button.th-footer-link::before { content: ""; position: absolute; top: 0; left: calc(var(--th-gutter) + 38px); right: 0; height: 1px; transform: scaleY(0.5); transform-origin: top; background: var(--background-modifier-border); }
-.th-footer-link-icon { display: inline-flex; width: 24px; justify-content: center; color: var(--text-muted); }
-.th-footer-link-icon svg { width: 20px; height: 20px; }
-.th-footer-link-text { flex: 1; text-align: left; }
-.th-footer-chevron { display: inline-flex; margin-right: -4px; color: var(--text-faint); }
-.th-footer-chevron svg { width: 18px; height: 18px; }
-button.th-footer-add:active, button.th-footer-link:active { background: var(--background-modifier-hover); }
 
 
 /*

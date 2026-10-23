@@ -18,7 +18,7 @@ export function helpRows(mobile: boolean, merge: MergeRule): HelpRow[] {
 		{ action: "Pull the days up", result: `The bar at the bottom shows this week. Pull it up and the rest of the month comes in above it, each day in a ring of how much of it was done. Let go, it stays on the nearest whole week. The arrows by the month open the months before. The marbles stand on the bar and ride it up. ${tap} a day to mark it. Push the bar down to put the days away.` },
 		{ action: "✓ and a number", result: `How many answered habits are hidden. ${tap} it to show them and change an answer, and again to hide them.` },
 		{ action: "The day above the list", result: "On a past day it says which one; its ✕ goes back to today." },
-		{ action: "The list button", result: "Shows all habits, with the ones not due today and the archived ones." },
+		{ action: "The list button", result: `Shows all habits, with the ones not due today and the archived ones. The days stay under them; ${tap.toLowerCase()} one to go back to Today on that day.` },
 		{ action: "Marbles", result: `Every win drops a marble. ${merge.smallPerMedium} small ones merge into a medium, ${merge.mediumPerBig} medium into a big.` },
 		{ action: mobile ? "Tilt the phone" : "Move the mouse", result: "Rolls the marbles." },
 	];

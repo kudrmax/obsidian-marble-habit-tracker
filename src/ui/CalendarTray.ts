@@ -100,7 +100,6 @@ export class CalendarTray {
 	private drawn = -1;
 	/** How far above its rest the tray is. */
 	private raised = 0;
-	private hidden = false;
 	private restTop = 0;
 	/** Where the tray's top was last told to whoever stands on it. */
 	private lastTop = Number.NaN;
@@ -176,14 +175,6 @@ export class CalendarTray {
 
 	refit(): void {
 		this.placeRest();
-	}
-
-	/** All habits has no calendar: the tray folds down and keeps only its floor. */
-	setHidden(hidden: boolean): void {
-		this.hidden = hidden;
-		this.tray.toggleClass("is-hidden", hidden);
-		if (hidden) this.settle(0);
-		else this.fitTitle();
 	}
 
 	snap(open: boolean): void {
@@ -407,7 +398,7 @@ export class CalendarTray {
 	}
 
 	private readonly pointerDown = (event: PointerEvent) => {
-		if (this.hidden || event.button !== 0) return;
+		if (event.button !== 0) return;
 		cancelAnimationFrame(this.settleFrame);
 		this.drag = { pointer: event.pointerId, startY: event.clientY, startRaised: this.raised, lastY: event.clientY, lastAt: event.timeStamp, speed: 0, moving: false };
 	};

@@ -273,8 +273,9 @@ export class TodayView extends ItemView {
 			return;
 		}
 		if (this.screen === "all") {
+			this.renderCalendar(all);
 			this.renderAll(column, all);
-			this.renderFooter(column, false);
+			this.tray?.setTools(this.renderTools(0, false));
 			this.playMotion(column);
 			return;
 		}
@@ -427,7 +428,7 @@ export class TodayView extends ItemView {
 		return this.day && this.day.isBefore(today) ? this.day : today;
 	}
 
-	/** The calendar in the tray, with the shown day picked; a tap on a day shows it above. */
+	/** The calendar in the tray, on Today and in All habits, with the shown day picked; a tap on a day shows it on Today. */
 	private renderCalendar(all: readonly HabitEntry[]): void {
 		const today = this.ui.service.today();
 		this.tray?.show(dayStrip(all, today), this.shownDay(), today, (day) => this.showDay(day));
@@ -447,8 +448,8 @@ export class TodayView extends ItemView {
 	}
 
 	/**
-	 * Today's buttons, small and round: how many answered habits are hidden (a tap shows them), All habits, a new
-	 * habit, and the help. They sit in the tray, over the calendar.
+	 * The tray's buttons over the calendar, small and round: on Today, how many answered habits are hidden (a tap shows
+	 * them) and All habits; on both screens, a new habit and the help.
 	 */
 	private renderTools(hidden: number, foldable: boolean): HTMLElement {
 		const tools = createDiv("th-tools");
@@ -468,7 +469,7 @@ export class TodayView extends ItemView {
 			element.addEventListener("click", onClick);
 			return element;
 		};
-		button("All habits", "list", () => this.showAll());
+		if (this.screen === "today") button("All habits", "list", () => this.showAll());
 		button("New habit", "plus", () => this.ui.newHabit());
 		const help = tools.createEl("button", { cls: "th-tool th-tool-help", text: "?", attr: { "aria-label": "How it works" } });
 		help.toggleClass("th-has-dot", !this.ui.settings().hintsSeen);
@@ -484,7 +485,6 @@ export class TodayView extends ItemView {
 		const head = this.panel?.head;
 		if (!head) return;
 		head.empty();
-		this.tray?.setHidden(this.screen === "all");
 		if (this.screen !== "all") return;
 		const line = head.createDiv("th-head-line");
 		const back = line.createEl("button", { cls: "th-back" });
@@ -527,8 +527,10 @@ export class TodayView extends ItemView {
 		if (justClosed) this.haptics.merge();
 	}
 
+	/** Shows a day on Today; a day picked in All habits takes the way back to Today. */
 	private showDay(day: LocalDate): void {
-		this.slide = day.isBefore(this.shownDay()) ? "earlier" : "later";
+		this.slide = this.screen === "all" ? "pop" : day.isBefore(this.shownDay()) ? "earlier" : "later";
+		this.screen = "today";
 		this.leaving.clear();
 		this.day = day.isBefore(this.ui.service.today()) ? day : null;
 		this.menu = null;
@@ -574,36 +576,6 @@ export class TodayView extends ItemView {
 			new Notice(error instanceof Error ? error.message : String(error));
 		}
 		this.render();
-	}
-
-
-
-
-	/**
-	 * The end of the list, as in Reminders: a row to add a habit, then the rarely used places — All habits and the help —
-	 * as rows that lead on. Obsidian's header stays Obsidian's.
-	 */
-	private renderFooter(column: HTMLElement, onToday: boolean): void {
-		const footer = column.createDiv("th-footer");
-		const add = footer.createEl("button", { cls: "th-footer-add" });
-		setIcon(add.createSpan("th-footer-add-icon"), "plus");
-		add.appendText("New habit");
-		add.addEventListener("click", () => this.ui.newHabit());
-		const links = footer.createDiv("th-footer-links");
-		const link = (text: string, iconName: string, onClick: () => void) => {
-			const button = links.createEl("button", { cls: "th-footer-link" });
-			setIcon(button.createSpan("th-footer-link-icon"), iconName);
-			button.createSpan({ cls: "th-footer-link-text", text });
-			setIcon(button.createSpan("th-footer-chevron"), "chevron-right");
-			button.addEventListener("click", onClick);
-			return button;
-		};
-		if (onToday) link("All habits", "list", () => this.showAll());
-		const help = link("How it works", "circle-help", () => {
-			new HelpModal(this.app, helpRows(Platform.isMobile, this.ui.settings().merge)).open();
-			this.ui.markHintsSeen();
-		});
-		help.toggleClass("th-has-dot", !this.ui.settings().hintsSeen);
 	}
 
 	private renderEmpty(column: HTMLElement): void {
