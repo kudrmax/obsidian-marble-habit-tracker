@@ -248,7 +248,7 @@ export class SettingsTab extends PluginSettingTab {
 		const trigger = new RecipeLabels(settings.labels).of("anchor");
 		new Setting(containerEl)
 			.setName(`Done without the ${trigger}`)
-			.setDesc(`Lets a habit with a ${trigger} also be marked as done at another moment. Adds a switch to the habit, and to its answers a fourth one, Off, next to Full, Tiny and Skip.`)
+			.setDesc(`Lets a habit with a ${trigger} also be marked as done at another moment. Adds a switch to the habit, and to its answers a fourth one, Anytime, next to Full, Tiny and Skip.`)
 			.addToggle((toggle) => toggle.setValue(settings.notAtTrigger).onChange((value) => void this.save((next) => (next.notAtTrigger = value))));
 		new Setting(containerEl)
 			.setName(`Not at the ${trigger} is a win`)

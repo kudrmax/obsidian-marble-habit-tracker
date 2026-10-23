@@ -19,9 +19,9 @@ describe("helpRows", () => {
 	it("names the answer for a day done not at the trigger only when it is turned on, with the trigger's label", () => {
 		const circle = (rows: ReturnType<typeof helpRows>) => rows.find((row) => row.action === "Tap the circle")?.result;
 		const marbles = (rows: ReturnType<typeof helpRows>) => rows.find((row) => row.action === "Marbles")?.result;
-		expect(circle(helpRows(true, merge))).not.toContain("Off");
+		expect(circle(helpRows(true, merge))).not.toContain("Anytime");
 		const strict = helpRows(true, merge, { trigger: "cue", win: false });
-		expect(circle(strict)).toContain("Full, Tiny, Skip, and Off for a habit that may be done without its cue —");
+		expect(circle(strict)).toContain("Full, Tiny, Skip, and Anytime for a habit that may be done without its cue —");
 		expect(circle(strict)).toContain("not at the cue");
 		expect(marbles(strict)).toContain("A day done not at the cue drops none.");
 		expect(marbles(helpRows(true, merge, { trigger: "cue", win: true }))).toContain("A day done not at the cue is a win too.");

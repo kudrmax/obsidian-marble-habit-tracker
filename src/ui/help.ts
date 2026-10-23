@@ -18,8 +18,8 @@ export interface OffTriggerHelp {
  */
 export function helpRows(mobile: boolean, merge: MergeRule, offTrigger: OffTriggerHelp | null = null): HelpRow[] {
 	const tap = mobile ? "Tap" : "Click";
-	const words = offTrigger ? `Full, Tiny, Skip, and Off for a habit that may be done without its ${offTrigger.trigger}` : "Full, Tiny, Skip";
-	const off = offTrigger ? ` a ring of it with a broken link for a day done not at the ${offTrigger.trigger},` : "";
+	const words = offTrigger ? `Full, Tiny, Skip, and Anytime for a habit that may be done without its ${offTrigger.trigger}` : "Full, Tiny, Skip";
+	const off = offTrigger ? ` grey with a check of its color for a day done not at the ${offTrigger.trigger},` : "";
 	const offWin = offTrigger ? ` A day done not at the ${offTrigger.trigger} ${offTrigger.win ? "is a win too" : "drops none"}.` : "";
 	return [
 		{ action: `${tap} the circle`, result: `The answers slide in from the left as buttons with a word — ${words} — and take the row while the name fades: the habit's color with a check for the full action, a tint of it with a check for the tiny one,${off} grey with a dash for skip. ${tap} one and the circle stays looking like that answer as the habit leaves the list; ✕, where the circle was, brings the row back at any moment. ${tap} the circle of a marked habit to clear the mark.` },

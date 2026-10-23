@@ -42,7 +42,7 @@ const RING_GAP = 9;
 const POP_MS = 450;
 const CAPTION_MS = 2000;
 /** The word on each answer: short and the same whatever the recipe's fields are called. */
-const CHOICE_WORDS: Record<Answer, string> = { full: "Full", tiny: "Tiny", offTrigger: "Off", skip: "Skip" };
+const CHOICE_WORDS: Record<Answer, string> = { full: "Full", tiny: "Tiny", offTrigger: "Anytime", skip: "Skip" };
 const ANSWER_MARKS: Record<Answer, DayMark> = { full: FULL, tiny: TINY, offTrigger: OFF_TRIGGER, skip: SKIPPED };
 const DAY_CHECK_MS = 60_000;
 /** Obsidian re-reads a note a moment after it is written, so the tap point has to wait for the new mark. */
@@ -662,8 +662,9 @@ export class TodayView extends ItemView {
 		};
 		if (habit.hasFull) option("full", labels.title("full"), ["is-done"], "check");
 		if (habit.hasTiny) option("tiny", labels.title("tiny"), ["is-done", "is-tiny"], "check");
-		if (this.canGoOffTrigger(habit)) option("offTrigger", `Not at ${labels.of("anchor")}`, ["is-off-trigger"], "unlink");
+		if (this.canGoOffTrigger(habit)) option("offTrigger", `Not at ${labels.of("anchor")}`, ["is-off-trigger"], "check");
 		option("skip", "Skip", ["is-missed"], null);
+		bar.toggleClass("is-crowded", bar.querySelectorAll(".has-word").length > 3);
 		main.addClass("is-choosing");
 		if (!this.menuOpening) return;
 		this.menuOpening = false;
@@ -724,7 +725,7 @@ export class TodayView extends ItemView {
 			icon(circle, "check");
 		} else if (mark?.kind === "offTrigger") {
 			circle.addClass("is-off-trigger");
-			icon(circle, "unlink");
+			icon(circle, "check");
 		} else if (mark?.kind === "missed") circle.addClass("is-missed");
 		else if (this.asking === path) circle.addClass("is-asking");
 
