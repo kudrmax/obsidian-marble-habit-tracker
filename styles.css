@@ -550,28 +550,44 @@ button.th-week-title:hover { background: var(--background-modifier-hover); }
 .th-week.is-open .th-week-chevron { transform: rotate(180deg); }
 .th-week-tools { margin-left: auto; }
 .th-week-tools .th-tools { margin: 0; }
-.th-week-labels, .th-week-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
-.th-week-label { padding-top: 6px; text-align: center; font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); }
-.th-week-row button.th-cal-day { height: 50px; }
+/*
+ * One left edge and one right edge with the list: the first day's ring starts where the habits' circles start, the
+ * last one ends where Today's last button ends, the rest spread evenly between, each weekday letter over its ring.
+ */
+.th-week { --th-circle-edge: calc((44px - var(--th-mark)) / 2 - 10px); }
+/* The letters of the month and of the section headers start where the circles do, not their boxes; the past day's chip and All habits' way back too. */
+body:not(.is-mobile) .th-today button.th-week-title { margin-left: -9px; }
+body:not(.is-mobile) .th-today .th-sheet .th-group { margin-left: -3px; }
+body:not(.is-mobile) .th-today .th-day-chip-line { margin-left: -2px; }
+body:not(.is-mobile) .th-today .th-sheet-head button.th-back { margin-left: -9px; }
+.th-week-labels, .th-week-row { display: flex; justify-content: space-between; margin-left: var(--th-circle-edge); }
+.th-week-label { flex: 0 0 40px; padding-top: 6px; text-align: center; font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); }
+.th-week-row button.th-cal-day { flex: 0 0 40px; width: 40px; height: 50px; }
 @media (hover: hover) { .th-week button.th-cal-day:not(:disabled):not(.is-selected):hover .th-cal-date { background: var(--background-modifier-hover); } }
 
-/* On a computer a row's answers wait at its right end and show while the pointer is over the row; a long name fades under them. */
+/*
+ * On a computer a row's answers wait at its right end and show while the pointer is over the row, a long name fading
+ * under them. The pointed row lights up as a capsule, round like everything else in the app, and concentric with what
+ * it holds: its round ends sit as far out from the habit's circle and from the answers as they are tall, and the last
+ * answer ends where Today's last button ends.
+ */
 .th-today { --th-ground: var(--background-primary); }
 .mod-sidedock .th-today { --th-ground: var(--background-secondary); }
-.th-row-quick { position: absolute; top: 0; bottom: 0; right: 0; display: flex; align-items: center; padding: 0 calc(var(--th-gutter) - 4px) 0 32px; border-radius: 0 10px 10px 0; background: linear-gradient(to right, transparent, var(--background-modifier-hover) 28px), linear-gradient(to right, transparent, var(--th-ground) 28px); opacity: 0; pointer-events: none; transition: opacity 120ms ease; }
+.th-row:has(.th-row-quick) > .th-row-main { position: relative; isolation: isolate; }
+.th-row-quick { position: absolute; top: 0; bottom: 0; right: calc(var(--th-gutter) - 4px); display: flex; align-items: center; padding: 0 4px 0 32px; border-radius: 0 999px 999px 0; corner-shape: round; background: linear-gradient(to right, transparent, var(--background-modifier-hover) 28px), linear-gradient(to right, transparent, var(--th-ground) 28px); opacity: 0; pointer-events: none; transition: opacity 120ms ease; }
 @media (hover: hover) {
 	.th-row:hover .th-row-quick { opacity: 1; pointer-events: auto; }
-	.th-row:has(.th-row-quick):hover > .th-row-main { border-radius: 10px; background: var(--background-modifier-hover); }
+	.th-row:has(.th-row-quick):hover > .th-row-main::before { content: ""; position: absolute; z-index: -1; top: 0; bottom: 0; left: calc(var(--th-gutter) - 10px + (44px - var(--th-mark)) / 2 - (40px - var(--th-mark)) / 2); right: calc(var(--th-gutter) - 4px); border-radius: 999px; corner-shape: round; background: var(--background-modifier-hover); pointer-events: none; }
 }
 .th-row-quick:focus-within { opacity: 1; pointer-events: auto; }
 .th-today.th-quick-hold .th-row .th-row-quick { opacity: 0; pointer-events: none; }
-.th-today.th-quick-hold .th-row > .th-row-main { background: none; }
+.th-today.th-quick-hold .th-row > .th-row-main::before { display: none; }
 .th-row-quick button.th-choice.has-word { height: 32px; margin-right: 6px; }
 .th-row-quick button.th-choice.has-word:last-child { margin-right: 0; }
-.th-row-quick .th-choice-ball.is-word { width: auto; height: 30px; padding: 0 2px 0 4px; }
+.th-row-quick .th-choice-ball.is-word { width: auto; height: 32px; padding: 0 2px 0 5px; }
 .th-row-quick .th-choice-ball.is-word .th-mark { width: 22px; height: 22px; }
 .th-row-quick .th-choice-ball .th-mark svg { width: 13px; height: 13px; }
-.th-row-quick .th-choice-word { padding-right: 8px; font-size: 13px; }
+.th-row-quick .th-choice-word { padding-right: 9px; font-size: 13px; }
 
 /* The list: Reminders' rows, a circle in the habit's color, the name, a hairline from the name to the edge. */
 .th-sheet .th-group { display: flex; align-items: center; padding: 26px 0 8px; font-size: 20px; line-height: 25px; font-weight: 700; color: var(--text-normal); }
