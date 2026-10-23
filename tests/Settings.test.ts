@@ -26,6 +26,7 @@ describe("loadSettings", () => {
 			tilt: true,
 			cursorPush: true,
 			notAtTrigger: false,
+			wins: { offTrigger: false },
 			hintsSeen: false,
 			haptics: true,
 		});
@@ -56,6 +57,7 @@ describe("loadSettings", () => {
 				tilt: false,
 				cursorPush: false,
 				notAtTrigger: true,
+				wins: { offTrigger: true },
 				hintsSeen: true,
 				haptics: false,
 			}),
@@ -81,6 +83,7 @@ describe("loadSettings", () => {
 			tilt: false,
 			cursorPush: false,
 			notAtTrigger: true,
+			wins: { offTrigger: true },
 			hintsSeen: true,
 			haptics: false,
 		});

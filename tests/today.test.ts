@@ -17,6 +17,12 @@ describe("totalWins", () => {
 		expect(winsLabel(1)).toBe("1 win");
 		expect(winsLabel(214)).toBe("214 wins");
 	});
+
+	it("counts days done not at the trigger only when they are wins", () => {
+		const read = ok("Read", { done_tiny: ["2026-10-08"], off_trigger: ["2026-10-07"] });
+		expect(totalWins([read])).toBe(1);
+		expect(totalWins([read], { offTrigger: true })).toBe(2);
+	});
 });
 
 describe("winsSince", () => {
@@ -69,6 +75,14 @@ describe("dayStrip", () => {
 		expect(on("2026-10-15")).toMatchObject({ due: 2, done: 1, future: false });
 		expect(on("2026-10-14")).toMatchObject({ due: 2, done: 1 });
 		expect(on("2026-10-18")).toMatchObject({ due: 3, done: 0, future: true });
+	});
+
+	it("counts a day done not at the trigger as done only when it is a win", () => {
+		const read = ok("Read", { off_trigger: ["2026-10-14"] });
+		const floss = ok("Floss", { done_tiny: ["2026-10-14"] });
+		const on = (days: ReturnType<typeof dayStrip>) => days.find((day) => day.date.toString() === "2026-10-14");
+		expect(on(dayStrip([read, floss], thursday))).toMatchObject({ due: 2, done: 1 });
+		expect(on(dayStrip([read, floss], thursday, { offTrigger: true }))).toMatchObject({ due: 2, done: 2 });
 	});
 });
 

@@ -1,5 +1,5 @@
 import { HabitEntry } from "../application/ports";
-import { DayMark, isDone } from "../domain/DayMark";
+import { DEFAULT_WIN_RULE, DayMark, WinRule, isWin } from "../domain/DayMark";
 import { Habit } from "../domain/Habit";
 import { LocalDate, WEEKDAYS } from "../domain/LocalDate";
 import { needsRedesign } from "../domain/RedesignRule";
@@ -18,16 +18,16 @@ export function closedDayLine(skipped: number): string {
 	return skipped === 0 ? "Every habit, done" : `${skipped} skipped honestly · see you tomorrow`;
 }
 
-export function totalWins(entries: readonly HabitEntry[]): number {
-	return entries.reduce((sum, entry) => sum + (entry.kind === "ok" ? entry.habit.marks().filter(([, mark]) => isDone(mark)).length : 0), 0);
+export function totalWins(entries: readonly HabitEntry[], wins: WinRule = DEFAULT_WIN_RULE): number {
+	return entries.reduce((sum, entry) => sum + (entry.kind === "ok" ? entry.habit.marks().filter(([, mark]) => isWin(mark, wins)).length : 0), 0);
 }
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 /** The small line under the big number: since the month of the very first win, with its year if that was another year. */
-export function winsSince(entries: readonly HabitEntry[], today: LocalDate): string {
+export function winsSince(entries: readonly HabitEntry[], today: LocalDate, wins: WinRule = DEFAULT_WIN_RULE): string {
 	const first = entries
-		.flatMap((entry) => (entry.kind === "ok" ? entry.habit.marks().filter(([, mark]) => isDone(mark)).map(([date]) => date) : []))
+		.flatMap((entry) => (entry.kind === "ok" ? entry.habit.marks().filter(([, mark]) => isWin(mark, wins)).map(([date]) => date) : []))
 		.reduce<LocalDate | null>((earliest, date) => (earliest === null || date.isBefore(earliest) ? date : earliest), null);
 	if (!first) return "wins";
 	const month = MONTHS[first.month - 1];
@@ -57,7 +57,7 @@ const STRIP_DAYS = 14;
  * The days of Today's calendar, oldest first: from the first marked day, or two weeks back if that is later, to the end
  * of this week. Each day says how many habits were due and how many were done.
  */
-export function dayStrip(entries: readonly HabitEntry[], today: LocalDate): StripDay[] {
+export function dayStrip(entries: readonly HabitEntry[], today: LocalDate, wins: WinRule = DEFAULT_WIN_RULE): StripDay[] {
 	const habits = visibleEntries(entries).flatMap((entry) => (entry.kind === "ok" ? [entry.habit] : []));
 	let start = today.addDays(1 - STRIP_DAYS);
 	for (const habit of habits) for (const [date] of habit.marks()) if (date.isBefore(start)) start = date;
@@ -65,7 +65,7 @@ export function dayStrip(entries: readonly HabitEntry[], today: LocalDate): Stri
 	const days: StripDay[] = [];
 	for (let date = start; !date.isAfter(end); date = date.addDays(1)) {
 		const due = habits.filter((habit) => habit.isScheduled(date) || habit.markOn(date) !== undefined);
-		days.push({ date, due: due.length, done: due.filter((habit) => isDone(habit.markOn(date))).length, future: date.isAfter(today) });
+		days.push({ date, due: due.length, done: due.filter((habit) => isWin(habit.markOn(date), wins)).length, future: date.isAfter(today) });
 	}
 	return days;
 }

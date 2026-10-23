@@ -1,4 +1,4 @@
-import { isDone } from "./DayMark";
+import { DEFAULT_WIN_RULE, WinRule, isWin } from "./DayMark";
 import { Habit } from "./Habit";
 import { LocalDate } from "./LocalDate";
 
@@ -8,6 +8,7 @@ const SHOWN_STREAKS = 5;
 export interface Breakdown {
 	tiny: number;
 	full: number;
+	offTrigger: number;
 	missed: number;
 	empty: number;
 }
@@ -33,22 +34,22 @@ export interface HabitStats {
 	readonly total: number;
 }
 
-export function computeStats(habit: Habit, today: LocalDate): HabitStats {
-	const { all, current } = collectStreaks(habit, today);
+export function computeStats(habit: Habit, today: LocalDate, wins: WinRule = DEFAULT_WIN_RULE): HabitStats {
+	const { all, current } = collectStreaks(habit, today, wins);
 	const byLength = [...all].sort((a, b) => b.length - a.length || b.end.compare(a.end));
 	const streaks = byLength.slice(0, SHOWN_STREAKS);
 	if (current && !streaks.includes(current)) streaks.push(current);
 	return {
-		window: windowStats(habit, today),
+		window: windowStats(habit, today, wins),
 		current,
 		best: byLength[0]?.length ?? 0,
 		streaks,
-		total: habit.marks().filter(([, mark]) => isDone(mark)).length,
+		total: habit.marks().filter(([, mark]) => isWin(mark, wins)).length,
 	};
 }
 
-function windowStats(habit: Habit, today: LocalDate): WindowStats {
-	const breakdown: Breakdown = { tiny: 0, full: 0, missed: 0, empty: 0 };
+function windowStats(habit: Habit, today: LocalDate, wins: WinRule): WindowStats {
+	const breakdown: Breakdown = { tiny: 0, full: 0, offTrigger: 0, missed: 0, empty: 0 };
 	for (let offset = WINDOW_DAYS - 1; offset >= 0; offset--) {
 		const date = today.addDays(-offset);
 		if (!habit.isScheduled(date)) continue;
@@ -56,18 +57,19 @@ function windowStats(habit: Habit, today: LocalDate): WindowStats {
 		if (mark) breakdown[mark.kind]++;
 		else if (!date.equals(today)) breakdown.empty++;
 	}
-	const done = breakdown.tiny + breakdown.full;
-	const scheduled = done + breakdown.missed + breakdown.empty;
+	const offTriggerWins = wins.offTrigger ? breakdown.offTrigger : 0;
+	const done = breakdown.tiny + breakdown.full + offTriggerWins;
+	const scheduled = breakdown.tiny + breakdown.full + breakdown.offTrigger + breakdown.missed + breakdown.empty;
 	return { done, scheduled, percent: scheduled ? Math.round((done * 100) / scheduled) : null, breakdown };
 }
 
-function collectStreaks(habit: Habit, today: LocalDate): { all: Streak[]; current?: Streak } {
+function collectStreaks(habit: Habit, today: LocalDate, wins: WinRule): { all: Streak[]; current?: Streak } {
 	const all: Streak[] = [];
 	let run: Streak | undefined;
 	for (let date = habit.createdOn; !date.isAfter(today); date = date.addDays(1)) {
 		if (!habit.isScheduled(date)) continue;
 		const mark = habit.markOn(date);
-		if (isDone(mark)) {
+		if (isWin(mark, wins)) {
 			run = run ? { ...run, length: run.length + 1, end: date } : { length: 1, start: date, end: date };
 			continue;
 		}

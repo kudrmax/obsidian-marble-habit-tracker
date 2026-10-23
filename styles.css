@@ -322,6 +322,7 @@ button.th-archived-toggle { display: inline-flex; align-items: center; gap: 8px;
 .th-year-day.is-tiny { border-color: var(--th-habit); background: var(--th-habit); }
 .th-year-day.is-full { border-color: var(--th-habit); background: radial-gradient(circle, #ffffff 0 18%, var(--th-habit) 24%); }
 .th-year-day.is-missed { border-color: transparent; background: var(--th-line); }
+.th-year-day.is-off-trigger { border-color: transparent; background: radial-gradient(circle, var(--th-habit) 0 22%, var(--th-line) 28%); }
 .th-year-day.is-off { border-color: transparent; background: radial-gradient(circle, var(--th-line) 0 22%, transparent 28%); }
 .th-year-day.is-before,
 .th-year-day.is-future { opacity: 0.4; }
@@ -577,14 +578,17 @@ button.th-mark-button:active .th-mark { transform: scale(0.84); transition: tran
 .th-mark.is-missed { background: rgb(142, 142, 147); }
 .th-mark.is-missed::after { background: #ffffff; }
 .th-mark.th-choice-cancel { background: color-mix(in srgb, rgb(118, 118, 128) 30%, var(--background-secondary)); color: var(--text-muted); }
+/* Done not at the trigger: the grey of cancel with a check in the habit's color. */
+.th-mark.is-off-trigger { border: none; background: color-mix(in srgb, rgb(118, 118, 128) 30%, var(--background-secondary)); color: var(--th-habit); }
+.th-mark.is-off-trigger svg { stroke-width: 3.2px; }
 .th-mark.is-popping { animation: th-pop 420ms var(--th-ease-pop); }
 .th-mark.is-popping svg path, .th-mark.is-popping svg polyline { stroke-dasharray: 24; animation: th-draw 280ms 120ms ease-out both; }
 @keyframes th-draw { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
 
 
 /*
- * The answers in the row: cancel exactly on the circle, then full, tiny and skip as capsules of one width, each the
- * circle it leaves behind with its word beside it. They take the whole row; the circle and the name fade away.
+ * The answers in the row: cancel exactly on the circle, then full, tiny, anytime and skip as capsules of one width,
+ * each the circle it leaves behind with its word beside it. They take the whole row; the circle and the name fade away.
  */
 .th-row-main.is-choosing { overflow: hidden; }
 .th-row-main.is-choosing .th-mark-button, .th-row-main.is-choosing .th-row-text { opacity: 0; pointer-events: none; }
@@ -604,9 +608,12 @@ button.th-choice.has-word { flex: 0 0 auto; width: auto; margin-right: 8px; }
 .th-choice-ball.is-word.is-done { background: var(--th-habit); color: #ffffff; }
 .th-choice-ball.is-word.is-done.is-tiny { background: color-mix(in srgb, var(--th-habit) 30%, var(--background-secondary)); color: var(--th-habit); }
 .th-choice-ball.is-word.is-missed { background: rgb(142, 142, 147); color: #ffffff; }
+.th-choice-ball.is-word.is-off-trigger { background: color-mix(in srgb, rgb(118, 118, 128) 30%, var(--background-secondary)); color: var(--th-habit); }
 .th-choice-ball.is-word .th-mark { flex: none; }
 .th-choice-word { flex: none; padding-right: 8px; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; }
 button.th-choice.has-word:active .th-choice-ball { scale: 0.94; }
-button.th-choices-toggle { flex: 0 0 32px; width: 32px; height: 32px; margin: 0 6px; padding: 0; border: none; border-radius: 16px; corner-shape: round; box-shadow: none; display: inline-flex; align-items: center; justify-content: center; background: transparent; color: var(--text-faint); cursor: pointer; }
-button.th-choices-toggle svg { width: 16px; height: 16px; stroke-width: 2.4px; }
-button.th-choices-toggle[aria-pressed="true"] { background: rgba(118, 118, 128, 0.24); color: var(--th-habit); }
+/* Four answers don't fit a phone at that width: each one then hugs its sign and word. */
+.th-row-choices.is-crowded button.th-choice.has-word { margin-right: 6px; }
+.th-row-choices.is-crowded button.th-choice.has-word:last-child { margin-right: 0; }
+.th-row-choices.is-crowded .th-choice-ball.is-word { width: auto; padding: 0 2px 0 5px; }
+.th-row-choices.is-crowded .th-choice-ball.is-word .th-mark { width: 24px; }

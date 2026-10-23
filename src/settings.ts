@@ -1,3 +1,4 @@
+import { DEFAULT_WIN_RULE, WinRule } from "./domain/DayMark";
 import { DEFAULT_MERGE_RULE, MergeRule } from "./domain/Jar";
 import { DEFAULT_PROPERTY_NAMES, LEGACY_PROPERTY_NAMES, PropertyNames } from "./infrastructure/HabitCodec";
 import { DEFAULT_LABELS, LEGACY_LABELS, LabelSet } from "./ui/format";
@@ -33,6 +34,7 @@ export interface HabitSettings {
 	cursorPush: boolean;
 	/** Habits may be marked as done without their trigger. */
 	notAtTrigger: boolean;
+	wins: WinRule;
 	/** The help behind Today's "?" was opened once; until then the button carries a dot. */
 	hintsSeen: boolean;
 	haptics: boolean;
@@ -60,6 +62,7 @@ export const DEFAULT_SETTINGS: HabitSettings = {
 	tilt: true,
 	cursorPush: true,
 	notAtTrigger: false,
+	wins: DEFAULT_WIN_RULE,
 	hintsSeen: false,
 	haptics: true,
 };
@@ -98,6 +101,7 @@ export function loadSettings(data: unknown): HabitSettings {
 		tilt: flag(raw.tilt, DEFAULT_SETTINGS.tilt),
 		cursorPush: flag(raw.cursorPush, DEFAULT_SETTINGS.cursorPush),
 		notAtTrigger: flag(raw.notAtTrigger, DEFAULT_SETTINGS.notAtTrigger),
+		wins: loadWins(raw.wins),
 		hintsSeen: flag(raw.hintsSeen, DEFAULT_SETTINGS.hintsSeen),
 		haptics: flag(raw.haptics, DEFAULT_SETTINGS.haptics),
 	};
@@ -137,6 +141,11 @@ function loadMerge(value: unknown, legacySmall: unknown): MergeRule {
 		smallPerMedium: count(raw.smallPerMedium, count(legacySmall, DEFAULT_MERGE_RULE.smallPerMedium)),
 		mediumPerBig: count(raw.mediumPerBig, DEFAULT_MERGE_RULE.mediumPerBig),
 	};
+}
+
+function loadWins(value: unknown): WinRule {
+	const raw = (typeof value === "object" && value !== null ? value : {}) as Record<string, unknown>;
+	return { offTrigger: typeof raw.offTrigger === "boolean" ? raw.offTrigger : DEFAULT_WIN_RULE.offTrigger };
 }
 
 export function parseReasons(text: string): string[] {

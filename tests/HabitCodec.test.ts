@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FULL, missed } from "../src/domain/DayMark";
+import { FULL, OFF_TRIGGER, missed } from "../src/domain/DayMark";
 import { DEFAULT_PROPERTY_NAMES, Frontmatter, HabitDecodeError, decodeHabit, encodeHabit } from "../src/infrastructure/HabitCodec";
 import { d } from "./support/dates";
 
@@ -87,18 +87,32 @@ describe("decodeHabit", () => {
 		expect(read.text("full").versions.length).toBe(habit.text("full").versions.length);
 	});
 
-	it("reads and writes days done not at trigger and the anytime switch", () => {
-		const habit = decodeHabit("Зарядка", example({ anytime: true, off_trigger: ["2026-10-09", "2026-10-07"] }));
+	it("reads and writes days done not at trigger as their own list, and the anytime switch", () => {
+		const habit = decodeHabit("Зарядка", example({ anytime: true, off_trigger: ["2026-10-10"] }));
 		expect(habit.anytime).toBe(true);
-		expect(habit.markOn(d("2026-10-09"))).toEqual({ kind: "full", offTrigger: true });
-		expect(habit.markOn(d("2026-10-07"))?.kind).toBe("missed");
+		expect(habit.markOn(d("2026-10-10"))).toEqual(OFF_TRIGGER);
 		const frontmatter = example();
 		encodeHabit(habit, frontmatter);
-		expect(frontmatter.anytime).toBe(true);
-		expect(frontmatter.off_trigger).toEqual(["2026-10-09"]);
-		encodeHabit(habit.withAnytime(false).withMark(d("2026-10-09"), FULL, d("2026-10-10")), frontmatter);
+		expect(frontmatter).toEqual({ ...EXAMPLE, anytime: true, off_trigger: ["2026-10-10"] });
+		encodeHabit(habit.withAnytime(false).withMark(d("2026-10-10"), FULL, d("2026-10-10")), frontmatter);
 		expect(frontmatter.anytime).toBeUndefined();
 		expect(frontmatter.off_trigger).toBeUndefined();
+		expect(frontmatter.done_full).toEqual(["2026-10-10", "2026-10-09"]);
+	});
+
+	it("reads a day listed both as done and not at trigger, as written up to 1.25, as not at trigger only", () => {
+		const habit = decodeHabit("Зарядка", example({ off_trigger: ["2026-10-09", "2026-10-08"] }));
+		expect(habit.markOn(d("2026-10-09"))).toEqual(OFF_TRIGGER);
+		expect(habit.markOn(d("2026-10-08"))).toEqual(OFF_TRIGGER);
+		const frontmatter = example();
+		encodeHabit(habit, frontmatter);
+		expect(frontmatter.done_full).toBeUndefined();
+		expect(frontmatter.done_tiny).toEqual(["2026-10-06"]);
+		expect(frontmatter.off_trigger).toEqual(["2026-10-09", "2026-10-08"]);
+	});
+
+	it("reports a skipped day that is also listed as not at trigger", () => {
+		expect(() => decodeHabit("Зарядка", example({ off_trigger: ["2026-10-07"] }))).toThrow("2026-10-07");
 	});
 
 	it("keeps several versions from one day in their order", () => {

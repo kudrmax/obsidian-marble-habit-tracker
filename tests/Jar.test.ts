@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DayMark, FULL, TINY, missed } from "../src/domain/DayMark";
+import { DayMark, FULL, OFF_TRIGGER, TINY, missed } from "../src/domain/DayMark";
 import { Habit } from "../src/domain/Habit";
 import { WEEKDAYS, Weekday } from "../src/domain/LocalDate";
 import { buildJar } from "../src/domain/Jar";
@@ -70,6 +70,16 @@ describe("buildJar", () => {
 
 	it("is empty without done days", () => {
 		expect(buildJar(habit("2026-10-01"), today)).toEqual([]);
+	});
+
+	it("drops a plain ball for a day done not at the trigger only when that is a win", () => {
+		const marks = { "2026-10-07": FULL, "2026-10-08": OFF_TRIGGER };
+		expect(buildJar(marked(habit("2026-10-07"), marks), today).map((piece) => piece.id)).toEqual(["small:2026-10-07"]);
+		const jar = buildJar(marked(habit("2026-10-07"), marks), today, undefined, { offTrigger: true });
+		expect(jar.map((piece) => [piece.id, piece.full])).toEqual([
+			["small:2026-10-07", true],
+			["small:2026-10-08", false],
+		]);
 	});
 
 	it("merges by the chosen size", () => {

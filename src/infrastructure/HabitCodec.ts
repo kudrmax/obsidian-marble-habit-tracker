@@ -1,5 +1,5 @@
 import { Component, Version } from "../domain/Component";
-import { DayMark, FULL, TINY, done, isOffTrigger, missed } from "../domain/DayMark";
+import { DayMark, FULL, OFF_TRIGGER, TINY, missed } from "../domain/DayMark";
 import { DomainError } from "../domain/DomainError";
 import { Habit, TEXT_PARTS, TextPart, sameSchedule } from "../domain/Habit";
 import { HabitColor, isHabitColor } from "../domain/HabitColor";
@@ -79,7 +79,7 @@ export function encodeHabit(habit: Habit, frontmatter: Frontmatter, keys: Proper
 	frontmatter[keys.schedule] = encodeVersions(habit.schedule.versions, (schedule) => schedule.weekdays);
 	for (const part of TEXT_PARTS) put(frontmatter, keys[part], nonEmpty(encodeVersions(habit.text(part).versions, (value) => value)));
 	const marks = habit.marks();
-	const datesOf = (kind: "tiny" | "full") => marks.filter(([, mark]) => mark.kind === kind).map(([date]) => date.toString());
+	const datesOf = (kind: "tiny" | "full" | "offTrigger") => marks.filter(([, mark]) => mark.kind === kind).map(([date]) => date.toString());
 	put(frontmatter, keys.doneTiny, nonEmpty(datesOf("tiny")));
 	put(frontmatter, keys.doneFull, nonEmpty(datesOf("full")));
 	put(
@@ -89,7 +89,7 @@ export function encodeHabit(habit: Habit, frontmatter: Frontmatter, keys: Proper
 	);
 	put(frontmatter, keys.archived, habit.archived ? true : undefined);
 	put(frontmatter, keys.anytime, habit.anytime ? true : undefined);
-	put(frontmatter, keys.offTrigger, nonEmpty(marks.filter(([, mark]) => isOffTrigger(mark)).map(([date]) => date.toString())));
+	put(frontmatter, keys.offTrigger, nonEmpty(datesOf("offTrigger")));
 }
 
 function put(frontmatter: Frontmatter, key: string, value: unknown): void {
@@ -200,9 +200,11 @@ function readMarks(frontmatter: Frontmatter, keys: PropertyNames): Map<string, D
 		add(readDate(item.date, keys.missed), missed(typeof item.reason === "string" ? item.reason : undefined), keys.missed);
 	}
 	for (const value of list(frontmatter, keys.offTrigger)) {
-		const id = readDate(value, keys.offTrigger).toString();
-		const mark = marks.get(id);
-		if (mark && mark.kind !== "missed") marks.set(id, done(mark.kind, true));
+		const date = readDate(value, keys.offTrigger);
+		// Up to 1.25 such a day was also listed as done tiny or full.
+		const kind = marks.get(date.toString())?.kind;
+		if (kind === "tiny" || kind === "full") marks.delete(date.toString());
+		add(date, OFF_TRIGGER, keys.offTrigger);
 	}
 	return marks;
 }
