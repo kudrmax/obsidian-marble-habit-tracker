@@ -635,7 +635,7 @@ export class TodayView extends ItemView {
 		const main = row.querySelector<HTMLElement>(".th-row-main");
 		if (main && this.menu === path) this.renderChoices(main, path, habit, mark);
 		if (main && this.closing === path) {
-			this.motion.refold(main, this.contentOf(main), this.leavingChoices);
+			this.motion.refold(main, this.contentOf(main), this.leavingChoices, this.contentEl);
 			this.leavingChoices = null;
 			this.closing = null;
 		}
@@ -668,7 +668,7 @@ export class TodayView extends ItemView {
 		main.addClass("is-choosing");
 		if (!this.menuOpening) return;
 		this.menuOpening = false;
-		this.unfolding = this.motion.slideChoices(bar, this.contentOf(main));
+		this.unfolding = this.motion.slideChoices(bar, this.contentOf(main), this.contentEl);
 	}
 
 	/** The answers a habit offers, in order, each looking as the circle will once it is chosen. */
