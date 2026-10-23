@@ -98,7 +98,7 @@ export class SettingsTab extends PluginSettingTab {
 		const sizes = settings.marbleSizes;
 		new Setting(containerEl)
 			.setName("Marble sizes")
-			.setDesc(`Small ${sizes.small}, medium ${sizes.medium}, big ${sizes.big} px. Pick them on Today, on your own marbles.`)
+			.setDesc(`Small ${sizes.small}, medium ${sizes.medium}, big ${sizes.big} px. Pick them on Today, on your own marbles. A wide tab on a computer draws them bigger, in proportion.`)
 			.addButton((button) => button.setButtonText("Adjust").onClick(() => this.stepOut((back) => void this.host.calibrateMarbleSizes(back))));
 		new Setting(containerEl)
 			.setName("Speed")

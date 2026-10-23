@@ -16,7 +16,7 @@ import { Haptics } from "./Haptics";
 import { helpRows } from "./help";
 import { HelpModal } from "./HelpModal";
 import { Hsl, parseColor } from "./jar/color";
-import { MarbleSizes } from "./jar/JarAssets";
+import { MarbleSizes, floorScale, scaleSizes } from "./jar/JarAssets";
 import { JarCanvas, JarItem } from "./jar/JarCanvas";
 import { KeyboardWatch } from "./KeyboardWatch";
 import { LEAVE_MS, Motion, Slide } from "./Motion";
@@ -30,6 +30,7 @@ import { Drop, RowDrag } from "./RowDrag";
 import { SectionNameModal } from "./SectionNameModal";
 import { SizeCalibration } from "./SizeCalibration";
 import { ScreenChrome } from "./ScreenChrome";
+import { WeekCalendar } from "./WeekCalendar";
 import { closedDayLine, dayStrip, dayTitle, winsLabel, offersShrink, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
 
@@ -94,7 +95,11 @@ export class TodayView extends ItemView {
 	private opening: string | null = null;
 	private menuOpening = false;
 	private panel: TodayPanel | null = null;
+	/** The days: in a tray on a phone, over the list on a computer. */
 	private tray: CalendarTray | null = null;
+	private week: WeekCalendar | null = null;
+	/** How much bigger than their set size the marbles are on this view's floor. */
+	private marbleScale = 1;
 	/** The choices' arrival while it plays, so a cancel mid-way stops it. */
 	private unfolding: { stop(): void } | null = null;
 	/** The row whose choices just closed, to bring its circle and name back. */
@@ -146,11 +151,15 @@ export class TodayView extends ItemView {
 			(drop) => this.dropped(drop),
 		);
 		this.jar = new JarCanvas(root, this.jarOptions());
-		this.tray = new CalendarTray(
-			root,
-			() => this.haptics.tap(),
-			() => this.updateFloor(),
-		);
+		// A phone keeps the days in a tray to pull up; a computer has the room to show them over the list, and a wide view
+		// grows the marbles so they still make a pile on its floor.
+		if (Platform.isMobile) this.tray = new CalendarTray(root, () => this.haptics.tap(), () => this.updateFloor());
+		else {
+			this.week = new WeekCalendar(panel.sheet, panel.head);
+			const sizer = new ResizeObserver(() => this.fitMarbles());
+			sizer.observe(root);
+			this.register(() => sizer.disconnect());
+		}
 		this.updateFloor();
 		this.chrome = new ScreenChrome(root, this.containerEl, (shelves, ledges) => {
 			this.shelves = shelves;
@@ -164,7 +173,7 @@ export class TodayView extends ItemView {
 		});
 		this.keyboard = keyboard;
 		this.jar.holdWhile(() => keyboard.isOpen());
-		this.tray.holdWhile(() => keyboard.isOpen());
+		this.tray?.holdWhile(() => keyboard.isOpen());
 		this.registerEvent(this.app.workspace.on("layout-change", () => this.chrome?.measure()));
 		this.registerDomEvent(window, "resize", () => this.chrome?.measure());
 		this.registerEvent(
@@ -176,6 +185,7 @@ export class TodayView extends ItemView {
 		this.registerDomEvent(root, "click", (event) => this.closeMenuOutside(event));
 		if (!Platform.isMobile) {
 			this.registerDomEvent(root, "pointermove", (event) => {
+				root.removeClass("th-quick-hold");
 				if (event.pointerType === "mouse" && this.cursorPushEnabled()) this.jar?.setPusher({ x: event.clientX, y: event.clientY });
 			});
 			this.registerDomEvent(root, "pointerleave", () => this.jar?.setPusher(null));
@@ -205,6 +215,7 @@ export class TodayView extends ItemView {
 		this.jar = null;
 		this.tray?.destroy();
 		this.tray = null;
+		this.week = null;
 		this.panel = null;
 		window.clearTimeout(this.captionTimer);
 		window.clearTimeout(this.stylesTimer);
@@ -274,7 +285,7 @@ export class TodayView extends ItemView {
 		if (this.screen === "all") {
 			this.renderCalendar(all);
 			this.renderAll(column, all);
-			this.tray?.setTools(this.renderTools(0, false));
+			this.showTools(this.renderTools(0, false));
 			this.playMotion(column);
 			return;
 		}
@@ -288,7 +299,7 @@ export class TodayView extends ItemView {
 		this.renderDayChip(column);
 		const hideDone = this.ui.settings().hideDone;
 		const hidden = hideDone && !this.showDone ? answeredHabits.filter((entry) => !this.leaving.has(entry.path)).length : 0;
-		this.tray?.setTools(this.renderTools(hidden, hideDone && answeredHabits.length > 0));
+		this.showTools(this.renderTools(hidden, hideDone && answeredHabits.length > 0));
 		if (closed) this.renderRing(column, habits.map((entry) => entry.habit), this.wasClosed === false);
 		this.wasClosed = closed;
 		if (habits.length === 0) column.createDiv("th-ring-block").createEl("h2", { cls: "th-title", text: "Nothing for today" });
@@ -430,7 +441,15 @@ export class TodayView extends ItemView {
 	/** The calendar in the tray, on Today and in All habits, with the shown day picked; a tap on a day shows it on Today. */
 	private renderCalendar(all: readonly HabitEntry[]): void {
 		const today = this.ui.service.today();
-		this.tray?.show(dayStrip(all, today, this.ui.settings().wins), this.shownDay(), today, (day) => this.showDay(day));
+		const days = dayStrip(all, today, this.ui.settings().wins);
+		this.tray?.show(days, this.shownDay(), today, (day) => this.showDay(day));
+		this.week?.show(days, this.shownDay(), today, (day) => this.showDay(day));
+	}
+
+	/** Today's buttons, on the month's line wherever the calendar is. */
+	private showTools(tools: HTMLElement): void {
+		this.tray?.setTools(tools);
+		this.week?.setTools(tools);
 	}
 
 	/** On a past day, a chip at the top says which one, and its cross goes back to today. */
@@ -615,6 +634,8 @@ export class TodayView extends ItemView {
 		row.toggleClass("is-new", !this.shownRows.has(path));
 		this.renderingRows.add(path);
 		const main = row.querySelector<HTMLElement>(".th-row-main");
+		const settled = this.menu !== path && this.asking !== path && !this.leaving.has(path);
+		if (main && settled && !Platform.isMobile) this.renderQuickAnswers(main, path, habit, mark);
 		if (main && this.menu === path) this.renderChoices(main, path, habit, mark);
 		if (main && this.closing === path) {
 			this.motion.refold(main, this.contentOf(main), this.leavingChoices);
@@ -632,25 +653,11 @@ export class TodayView extends ItemView {
 	 * row back.
 	 */
 	private renderChoices(main: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
-		const labels = this.ui.labels();
 		const bar = main.createDiv("th-row-choices");
-		const marble = (label: string, look: string[], sign: IconName | null, word?: string) => {
-			// A button that shows its word needs no tooltip saying it again.
-			const button = bar.createEl("button", { cls: "th-choice", attr: word ? { "aria-label": label } : { "aria-label": label, title: label } });
-			const ball = button.createSpan("th-choice-ball");
-			const face = ball.createSpan({ cls: ["th-mark", ...look] });
-			if (sign) icon(face, sign);
-			if (word) {
-				button.addClass("has-word");
-				ball.addClasses(["is-word", ...look]);
-				ball.createSpan({ cls: "th-choice-word", text: word });
-			}
-			return button;
-		};
-		const cancel = marble("Cancel", ["th-choice-cancel"], "x");
+		const cancel = this.answerButton(bar, "Cancel", ["th-choice-cancel"], "x");
 		cancel.addEventListener("click", () => this.closeChoices());
-		const option = (answer: Answer, label: string, look: string[], sign: IconName | null) => {
-			const button = marble(label, look, sign, CHOICE_WORDS[answer]);
+		for (const { answer, label, look, sign } of this.answers(habit)) {
+			const button = this.answerButton(bar, label, look, sign, CHOICE_WORDS[answer]);
 			button.setAttr("aria-pressed", String(mark?.kind === ANSWER_MARKS[answer].kind));
 			button.addEventListener("click", (event) => {
 				this.unfolding?.stop();
@@ -659,16 +666,60 @@ export class TodayView extends ItemView {
 				this.haptics.tap();
 				void this.choose(path, answer, mark, event);
 			});
-		};
-		if (habit.hasFull) option("full", labels.title("full"), ["is-done"], "check");
-		if (habit.hasTiny) option("tiny", labels.title("tiny"), ["is-done", "is-tiny"], "check");
-		if (this.canGoOffTrigger(habit)) option("offTrigger", `Not at ${labels.of("anchor")}`, ["is-off-trigger"], "check");
-		option("skip", "Skip", ["is-missed"], null);
+		}
 		bar.toggleClass("is-crowded", bar.querySelectorAll(".has-word").length > 3);
 		main.addClass("is-choosing");
 		if (!this.menuOpening) return;
 		this.menuOpening = false;
 		this.unfolding = this.motion.slideChoices(bar, this.contentOf(main));
+	}
+
+	/**
+	 * On a computer the same answers wait at the row's right end and show while the pointer is over the row, so one
+	 * click marks the habit without opening the choices first. The circle still opens them. Once answered, the row folds
+	 * away and the next one slides under the pointer: its answers wait for the mouse to move, so a double click marks
+	 * one habit, not two.
+	 */
+	private renderQuickAnswers(main: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
+		const bar = main.createDiv("th-row-quick");
+		for (const { answer, label, look, sign } of this.answers(habit)) {
+			const button = this.answerButton(bar, label, look, sign, CHOICE_WORDS[answer]);
+			button.setAttr("aria-pressed", String(mark?.kind === ANSWER_MARKS[answer].kind));
+			button.addEventListener("click", (event) => {
+				button.addClass("is-picked");
+				this.contentEl.addClass("th-quick-hold");
+				void this.choose(path, answer, mark, event);
+			});
+		}
+	}
+
+	/** The answers a habit offers, in order, each looking as the circle will once it is chosen. */
+	private answers(habit: Habit): { answer: Answer; label: string; look: string[]; sign: IconName | null }[] {
+		const labels = this.ui.labels();
+		const answers: { answer: Answer; label: string; look: string[]; sign: IconName | null }[] = [];
+		if (habit.hasFull) answers.push({ answer: "full", label: labels.title("full"), look: ["is-done"], sign: "check" });
+		if (habit.hasTiny) answers.push({ answer: "tiny", label: labels.title("tiny"), look: ["is-done", "is-tiny"], sign: "check" });
+		if (this.canGoOffTrigger(habit)) answers.push({ answer: "offTrigger", label: `Not at ${labels.of("anchor")}`, look: ["is-off-trigger"], sign: "check" });
+		answers.push({ answer: "skip", label: "Skip", look: ["is-missed"], sign: null });
+		return answers;
+	}
+
+	/**
+	 * An answer as a capsule with its word, or a bare round sign. A worded one is named by its word: on a computer Obsidian
+	 * shows an aria-label as a tooltip, and one saying the word again would cover the row below. A bare sign keeps its
+	 * name, shown off to the side.
+	 */
+	private answerButton(bar: HTMLElement, label: string, look: string[], sign: IconName | null, word?: string): HTMLButtonElement {
+		const button = bar.createEl("button", { cls: "th-choice", attr: word ? {} : { "aria-label": label, "data-tooltip-position": "left" } });
+		const ball = button.createSpan("th-choice-ball");
+		const face = ball.createSpan({ cls: ["th-mark", ...look] });
+		if (sign) icon(face, sign);
+		if (word) {
+			button.addClass("has-word");
+			ball.addClasses(["is-word", ...look]);
+			ball.createSpan({ cls: "th-choice-word", text: word });
+		}
+		return button;
 	}
 
 	/** Back from the choices to the row; anything still unfolding stops at once, so cancel works mid-animation. */
@@ -914,12 +965,20 @@ export class TodayView extends ItemView {
 		return {
 			material: settings.material,
 			reduceMotion: settings.reduceMotion,
-			sizes: this.trialSizes ?? settings.marbleSizes,
+			sizes: scaleSizes(this.trialSizes ?? settings.marbleSizes, this.marbleScale),
 			speed: settings.speed / 100,
 			screenCorners: this.ui.screenCorners(),
 			background: this.resolveVar("--background-primary"),
 			onImpact: (strength: number) => this.haptics.impact(strength),
 		};
+	}
+
+	/** On a computer the marbles grow with the view's width, so a wide floor still holds a pile and not a sparse line. */
+	private fitMarbles(): void {
+		const scale = floorScale(this.contentEl.clientWidth);
+		if (scale === this.marbleScale) return;
+		this.marbleScale = scale;
+		this.jar?.setOptions(this.jarOptions());
 	}
 
 	/** "Not at trigger" means something only when it is turned on, for a habit that allows it and has a trigger to miss. */

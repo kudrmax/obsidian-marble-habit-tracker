@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AssetSpec, assetKey, assetSvg, isJarMaterial } from "../src/ui/jar/JarAssets";
+import { AssetSpec, assetKey, assetSvg, floorScale, isJarMaterial, scaleSizes } from "../src/ui/jar/JarAssets";
 import { hsl, parseColor } from "../src/ui/jar/color";
 
 const purple = parseColor("#a882ff")!;
@@ -43,6 +43,20 @@ describe("assetSvg", () => {
 	it("keys every variant separately", () => {
 		expect(assetKey(spec())).not.toBe(assetKey(spec({ full: true })));
 		expect(assetKey(spec())).not.toBe(assetKey(spec({ material: "aura" })));
+	});
+});
+
+describe("floorScale", () => {
+	it("keeps the marbles' size on a phone-like floor and grows them on a wide one, up to half again", () => {
+		expect(floorScale(402)).toBe(1);
+		expect(floorScale(730)).toBe(1);
+		expect(floorScale(1095)).toBeCloseTo(1.5);
+		expect(floorScale(2400)).toBe(1.5);
+	});
+
+	it("scales every size and keeps them whole pixels", () => {
+		expect(scaleSizes({ small: 24, medium: 44, big: 68 }, 1.5)).toEqual({ small: 36, medium: 66, big: 102 });
+		expect(scaleSizes({ small: 25, medium: 44, big: 68 }, 1.1)).toEqual({ small: 28, medium: 48, big: 75 });
 	});
 });
 

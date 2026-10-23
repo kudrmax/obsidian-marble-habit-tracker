@@ -474,7 +474,8 @@ button.th-card-open { grid-column: 1 / -1; justify-self: start; display: inline-
 .th-sheet.is-scrolled .th-today-scroll { -webkit-mask-image: linear-gradient(to bottom, transparent, #000 26px); mask-image: linear-gradient(to bottom, transparent, #000 26px); }
 .th-sheet .th-today-scroll { position: relative; inset: auto; flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: none; }
 .th-sheet .th-column { padding: 4px var(--th-gutter) calc(var(--th-tray-rest) + 140px); }
-.th-sheet-head { flex: 0 0 auto; padding: 0 var(--th-gutter); }
+/* The header keeps to the list's column, so All habits' way back starts at the habits' edge on a wide tab too. */
+.th-sheet-head { flex: 0 0 auto; box-sizing: border-box; width: 100%; max-width: var(--th-column); margin: 0 auto; padding: 0 var(--th-gutter); }
 .th-sheet-head .th-head-line { display: flex; align-items: center; min-height: 44px; }
 .th-sheet-title { flex: 1; min-width: 0; margin: 0; font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: -0.01em; color: var(--text-normal); }
 .th-sheet-head button.th-back { margin-right: 8px; font-size: 17px; color: var(--text-accent); }
@@ -534,6 +535,43 @@ button.th-tool.th-has-dot::after { content: ""; position: absolute; top: -1px; r
 button.th-day-chip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 6px 0 12px; border: none; border-radius: 15px; corner-shape: round; box-shadow: none; background: hsla(var(--interactive-accent-hsl), 0.14); color: var(--text-accent); font-size: 14px; font-weight: 600; cursor: pointer; }
 .th-day-chip-x { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: hsla(var(--interactive-accent-hsl), 0.2); }
 .th-day-chip-x svg { width: 10px; height: 10px; stroke-width: 3.2px; }
+
+/*
+ * A computer's calendar sits over the list instead of in a tray: the month's line with its arrows and Today's buttons,
+ * the weekday letters, then the shown day's week, or the whole month once the month's name is clicked. Its days are the
+ * tray's days.
+ */
+.th-week { flex: 0 0 auto; box-sizing: border-box; width: 100%; max-width: var(--th-column); margin: 0 auto; padding: 4px var(--th-gutter) 6px; }
+.th-week-line { display: flex; align-items: center; gap: 2px; height: 44px; }
+button.th-week-title { flex: none; display: inline-flex; align-items: center; gap: 4px; height: 32px; margin: 0 4px 0 -6px; padding: 0 6px; border: none; border-radius: 8px; box-shadow: none; background: transparent; color: var(--text-normal); font-size: 20px; line-height: 25px; font-weight: 700; cursor: pointer; }
+button.th-week-title:hover { background: var(--background-modifier-hover); }
+.th-week-chevron { display: inline-flex; color: var(--text-muted); transition: transform 150ms ease; }
+.th-week-chevron svg { width: 16px; height: 16px; stroke-width: 2.5px; }
+.th-week.is-open .th-week-chevron { transform: rotate(180deg); }
+.th-week-tools { margin-left: auto; }
+.th-week-tools .th-tools { margin: 0; }
+.th-week-labels, .th-week-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.th-week-label { padding-top: 6px; text-align: center; font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); }
+.th-week-row button.th-cal-day { height: 50px; }
+@media (hover: hover) { .th-week button.th-cal-day:not(:disabled):not(.is-selected):hover .th-cal-date { background: var(--background-modifier-hover); } }
+
+/* On a computer a row's answers wait at its right end and show while the pointer is over the row; a long name fades under them. */
+.th-today { --th-ground: var(--background-primary); }
+.mod-sidedock .th-today { --th-ground: var(--background-secondary); }
+.th-row-quick { position: absolute; top: 0; bottom: 0; right: 0; display: flex; align-items: center; padding: 0 calc(var(--th-gutter) - 4px) 0 32px; border-radius: 0 10px 10px 0; background: linear-gradient(to right, transparent, var(--background-modifier-hover) 28px), linear-gradient(to right, transparent, var(--th-ground) 28px); opacity: 0; pointer-events: none; transition: opacity 120ms ease; }
+@media (hover: hover) {
+	.th-row:hover .th-row-quick { opacity: 1; pointer-events: auto; }
+	.th-row:has(.th-row-quick):hover > .th-row-main { border-radius: 10px; background: var(--background-modifier-hover); }
+}
+.th-row-quick:focus-within { opacity: 1; pointer-events: auto; }
+.th-today.th-quick-hold .th-row .th-row-quick { opacity: 0; pointer-events: none; }
+.th-today.th-quick-hold .th-row > .th-row-main { background: none; }
+.th-row-quick button.th-choice.has-word { height: 32px; margin-right: 6px; }
+.th-row-quick button.th-choice.has-word:last-child { margin-right: 0; }
+.th-row-quick .th-choice-ball.is-word { width: auto; height: 30px; padding: 0 2px 0 4px; }
+.th-row-quick .th-choice-ball.is-word .th-mark { width: 22px; height: 22px; }
+.th-row-quick .th-choice-ball .th-mark svg { width: 13px; height: 13px; }
+.th-row-quick .th-choice-word { padding-right: 8px; font-size: 13px; }
 
 /* The list: Reminders' rows, a circle in the habit's color, the name, a hairline from the name to the edge. */
 .th-sheet .th-group { display: flex; align-items: center; padding: 26px 0 8px; font-size: 20px; line-height: 25px; font-weight: 700; color: var(--text-normal); }

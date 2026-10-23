@@ -114,6 +114,20 @@ export function monthWeeks(days: readonly StripDay[], month: CalendarMonth, toda
 	return weeks;
 }
 
+/**
+ * The week from Monday that `day` is in, as the week over a computer's list shows it: the calendar's days keep their
+ * counts, and days before the calendar starts are outside.
+ */
+export function calendarWeek(days: readonly StripDay[], day: LocalDate, today: LocalDate): CalendarDay[] {
+	const known = new Map(days.map((strip) => [strip.date.toString(), strip]));
+	const start = day.addDays(-WEEKDAYS.indexOf(day.weekday()));
+	return WEEKDAYS.map((_, index) => {
+		const date = start.addDays(index);
+		const strip = known.get(date.toString());
+		return strip ? { ...strip, outside: false } : { date, due: 0, done: 0, future: date.isAfter(today), outside: true };
+	});
+}
+
 /** How much room a month's name gets: its whole name, or its first three letters. */
 export type MonthLength = "long" | "short";
 
