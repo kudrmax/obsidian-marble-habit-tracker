@@ -70,7 +70,7 @@ export class WeekCalendar {
 	}
 
 	private arrow(line: HTMLElement, path: string, step: number): HTMLButtonElement {
-		const button = line.createEl("button", { cls: "th-cal-arrow" });
+		const button = line.createEl("button", { cls: "th-cal-arrow", attr: { "data-tooltip-position": "top" } });
 		const svg = button.appendChild(document.createElementNS(SVG_NS, "svg"));
 		svg.setAttribute("viewBox", "0 0 24 24");
 		svg.setAttribute("aria-hidden", "true");
@@ -147,7 +147,7 @@ export class WeekCalendar {
 		const percent = off ? null : donePercent(day);
 		const title = dayTitle(day.date, today);
 		const selected = this.shown?.equals(day.date) ?? false;
-		const button = row.createEl("button", { cls: "th-cal-day", attr: { "aria-label": percent === null ? title : `${title}, ${percent}% done`, "aria-pressed": String(selected) } });
+		const button = row.createEl("button", { cls: "th-cal-day", attr: { "aria-label": percent === null ? title : `${title}, ${percent}% done`, "aria-pressed": String(selected), "data-tooltip-position": "top" } });
 		button.toggleClass("is-selected", selected);
 		button.toggleClass("is-today", day.date.equals(today));
 		button.toggleClass("is-off", off);

@@ -11,12 +11,11 @@ describe("helpRows", () => {
 		expect(helpRows(false, merge).map((row) => row.action)).toContain("Click the circle");
 	});
 
-	it("tells a phone to pull the days up and a computer where its week and its quick answers are", () => {
+	it("tells a phone to pull the days up and a computer that its week is over the list", () => {
 		const phone = helpRows(true, merge).map((row) => row.action);
 		const computer = helpRows(false, merge).map((row) => row.action);
 		expect(phone).toContain("Pull the days up");
-		expect(phone).not.toContain("Point at a habit");
-		expect(computer).toEqual(expect.arrayContaining(["Point at a habit", "The week above the list"]));
+		expect(computer).toContain("The week above the list");
 		expect(computer).not.toContain("Pull the days up");
 	});
 

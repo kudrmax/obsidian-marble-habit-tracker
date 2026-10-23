@@ -185,7 +185,6 @@ export class TodayView extends ItemView {
 		this.registerDomEvent(root, "click", (event) => this.closeMenuOutside(event));
 		if (!Platform.isMobile) {
 			this.registerDomEvent(root, "pointermove", (event) => {
-				root.removeClass("th-quick-hold");
 				if (event.pointerType === "mouse" && this.cursorPushEnabled()) this.jar?.setPusher({ x: event.clientX, y: event.clientY });
 			});
 			this.registerDomEvent(root, "pointerleave", () => this.jar?.setPusher(null));
@@ -473,7 +472,7 @@ export class TodayView extends ItemView {
 		const tools = createDiv("th-tools");
 		if (foldable) {
 			const count = this.showDone ? "" : String(hidden);
-			const done = tools.createEl("button", { cls: "th-tool th-tool-done", attr: { "aria-label": this.showDone ? "Hide answered" : "Show answered", "aria-pressed": String(this.showDone) } });
+			const done = tools.createEl("button", { cls: "th-tool th-tool-done", attr: { "aria-label": this.showDone ? "Hide answered" : "Show answered", "aria-pressed": String(this.showDone), "data-tooltip-position": "top" } });
 			setIcon(done.createSpan("th-tool-icon"), this.showDone ? "eye-off" : "check");
 			if (count) done.createSpan({ cls: "th-tool-count", text: count });
 			done.addEventListener("click", () => {
@@ -482,14 +481,14 @@ export class TodayView extends ItemView {
 			});
 		}
 		const button = (label: string, iconName: string, onClick: () => void) => {
-			const element = tools.createEl("button", { cls: "th-tool", attr: { "aria-label": label } });
+			const element = tools.createEl("button", { cls: "th-tool", attr: { "aria-label": label, "data-tooltip-position": "top" } });
 			setIcon(element.createSpan("th-tool-icon"), iconName);
 			element.addEventListener("click", onClick);
 			return element;
 		};
 		if (this.screen === "today") button("All habits", "list", () => this.showAll());
 		button("New habit", "plus", () => this.ui.newHabit());
-		const help = tools.createEl("button", { cls: "th-tool th-tool-help", text: "?", attr: { "aria-label": "How it works" } });
+		const help = tools.createEl("button", { cls: "th-tool th-tool-help", text: "?", attr: { "aria-label": "How it works", "data-tooltip-position": "top" } });
 		help.toggleClass("th-has-dot", !this.ui.settings().hintsSeen);
 		help.addEventListener("click", () => {
 			const settings = this.ui.settings();
@@ -634,8 +633,6 @@ export class TodayView extends ItemView {
 		row.toggleClass("is-new", !this.shownRows.has(path));
 		this.renderingRows.add(path);
 		const main = row.querySelector<HTMLElement>(".th-row-main");
-		const settled = this.menu !== path && this.asking !== path && !this.leaving.has(path);
-		if (main && settled && !Platform.isMobile) this.renderQuickAnswers(main, path, habit, mark);
 		if (main && this.menu === path) this.renderChoices(main, path, habit, mark);
 		if (main && this.closing === path) {
 			this.motion.refold(main, this.contentOf(main), this.leavingChoices);
@@ -672,25 +669,6 @@ export class TodayView extends ItemView {
 		if (!this.menuOpening) return;
 		this.menuOpening = false;
 		this.unfolding = this.motion.slideChoices(bar, this.contentOf(main));
-	}
-
-	/**
-	 * On a computer the same answers wait at the row's right end and show while the pointer is over the row, so one
-	 * click marks the habit without opening the choices first. The circle still opens them. Once answered, the row folds
-	 * away and the next one slides under the pointer: its answers wait for the mouse to move, so a double click marks
-	 * one habit, not two.
-	 */
-	private renderQuickAnswers(main: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
-		const bar = main.createDiv("th-row-quick");
-		for (const { answer, label, look, sign } of this.answers(habit)) {
-			const button = this.answerButton(bar, label, look, sign, CHOICE_WORDS[answer]);
-			button.setAttr("aria-pressed", String(mark?.kind === ANSWER_MARKS[answer].kind));
-			button.addEventListener("click", (event) => {
-				button.addClass("is-picked");
-				this.contentEl.addClass("th-quick-hold");
-				void this.choose(path, answer, mark, event);
-			});
-		}
 	}
 
 	/** The answers a habit offers, in order, each looking as the circle will once it is chosen. */
