@@ -11,6 +11,20 @@ export const DEFAULT_MARBLE_SIZES: MarbleSizes = { small: 24, medium: 44, big: 6
 export const MIN_MARBLE = 12;
 export const MAX_MARBLE = 100;
 
+/** About the widest floor the marbles' sizes were tuned on; wider ones get bigger marbles, so the pile stays a pile. */
+const TUNED_FLOOR = 730;
+/** The most a wide floor grows the marbles. */
+const MAX_FLOOR_SCALE = 1.5;
+
+/** How much bigger the marbles are on a floor this wide: not at all on a phone-like one, half again at most. */
+export function floorScale(width: number): number {
+	return Math.min(MAX_FLOOR_SCALE, Math.max(1, width / TUNED_FLOOR));
+}
+
+export function scaleSizes(sizes: MarbleSizes, scale: number): MarbleSizes {
+	return { small: Math.round(sizes.small * scale), medium: Math.round(sizes.medium * scale), big: Math.round(sizes.big * scale) };
+}
+
 export interface AssetSpec {
 	readonly material: JarMaterial;
 	readonly color: Hsl;

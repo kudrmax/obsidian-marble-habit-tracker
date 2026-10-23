@@ -474,7 +474,8 @@ button.th-card-open { grid-column: 1 / -1; justify-self: start; display: inline-
 .th-sheet.is-scrolled .th-today-scroll { -webkit-mask-image: linear-gradient(to bottom, transparent, #000 26px); mask-image: linear-gradient(to bottom, transparent, #000 26px); }
 .th-sheet .th-today-scroll { position: relative; inset: auto; flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: none; }
 .th-sheet .th-column { padding: 4px var(--th-gutter) calc(var(--th-tray-rest) + 140px); }
-.th-sheet-head { flex: 0 0 auto; padding: 0 var(--th-gutter); }
+/* The header keeps to the list's column, so All habits' way back starts at the habits' edge on a wide tab too. */
+.th-sheet-head { flex: 0 0 auto; box-sizing: border-box; width: 100%; max-width: var(--th-column); margin: 0 auto; padding: 0 var(--th-gutter); }
 .th-sheet-head .th-head-line { display: flex; align-items: center; min-height: 44px; }
 .th-sheet-title { flex: 1; min-width: 0; margin: 0; font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: -0.01em; color: var(--text-normal); }
 .th-sheet-head button.th-back { margin-right: 8px; font-size: 17px; color: var(--text-accent); }
@@ -534,6 +535,34 @@ button.th-tool.th-has-dot::after { content: ""; position: absolute; top: -1px; r
 button.th-day-chip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 6px 0 12px; border: none; border-radius: 15px; corner-shape: round; box-shadow: none; background: hsla(var(--interactive-accent-hsl), 0.14); color: var(--text-accent); font-size: 14px; font-weight: 600; cursor: pointer; }
 .th-day-chip-x { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: hsla(var(--interactive-accent-hsl), 0.2); }
 .th-day-chip-x svg { width: 10px; height: 10px; stroke-width: 3.2px; }
+
+/*
+ * A computer's calendar sits over the list instead of in a tray: the month's line with its arrows and Today's buttons,
+ * the weekday letters, then the shown day's week, or the whole month once the month's name is clicked. Its days are the
+ * tray's days.
+ */
+.th-week { flex: 0 0 auto; box-sizing: border-box; width: 100%; max-width: var(--th-column); margin: 0 auto; padding: 14px var(--th-gutter) 0; }
+/* The month's line and the weeks keep the tray's measures: a 30px line, 12px down to the days, 54px weeks. */
+.th-week-line { display: flex; align-items: center; gap: 2px; height: 30px; margin-bottom: 12px; }
+button.th-week-title { height: 30px; padding: 0; border: none; border-radius: 0; box-shadow: none; background: transparent; cursor: pointer; }
+button.th-week-title:hover { background: transparent; }
+.th-week-tools { margin-left: auto; }
+.th-week-tools .th-tools { margin: 0; }
+/*
+ * One left edge and one right edge with the list: the first day's ring starts where the habits' circles start, the
+ * last one ends where Today's last button ends, the rest spread evenly between.
+ */
+.th-week { --th-circle-edge: calc((44px - var(--th-mark)) / 2 - 10px); }
+/* The month's letters and the section headers' start where the circles do, not their boxes; the past day's chip and All habits' way back too. */
+body:not(.is-mobile) .th-today button.th-week-title { margin-left: -3px; }
+body:not(.is-mobile) .th-today .th-sheet .th-group { margin-left: -3px; }
+body:not(.is-mobile) .th-today .th-day-chip-line { margin-left: -2px; }
+body:not(.is-mobile) .th-today .th-sheet-head button.th-back { margin-left: -9px; }
+.th-week-row { display: flex; justify-content: space-between; margin-left: var(--th-circle-edge); }
+.th-week-row button.th-cal-day { flex: 0 0 40px; width: 40px; height: 54px; }
+
+/* On a computer the answers that slide into a row are the phone's size: a computer's bigger circle must not grow them. */
+body:not(.is-mobile) .th-today .th-row-choices { --th-mark: 24px; }
 
 /* The list: Reminders' rows, a circle in the habit's color, the name, a hairline from the name to the edge. */
 .th-sheet .th-group { display: flex; align-items: center; padding: 26px 0 8px; font-size: 20px; line-height: 25px; font-weight: 700; color: var(--text-normal); }

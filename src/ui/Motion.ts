@@ -17,7 +17,7 @@ const BUMP_MS = 420;
  */
 const SLIDE_MS = 320;
 const FADE_MS = 160;
-/** How far past the row's left edge the choices wait. */
+/** How far past the view's left edge the choices wait. */
 const OFF_EDGE = 4;
 
 /** Stepping a day back or forward, opening All habits, or going back from it. */
@@ -87,12 +87,13 @@ export class Motion {
 	}
 
 	/**
-	 * The choices slide in ready-made: `bar` starts just past the row's left edge and moves into place in one move, while
+	 * The choices slide in ready-made: `bar` starts just past the left edge of `view`, the screen's on a phone or the tab's
+	 * on a computer, where the row may start far from it, and moves into place in one move, while
 	 * `content` — the circle and the name — fades where it is. Until the choices are in, a tap goes through them to the
 	 * row, which brings the row back, so nothing passing under the finger gets picked. `stop` ends all of it at once and
 	 * leaves the row as it is drawn.
 	 */
-	slideChoices(bar: HTMLElement, content: readonly HTMLElement[]): { stop(): void } {
+	slideChoices(bar: HTMLElement, content: readonly HTMLElement[], view: HTMLElement): { stop(): void } {
 		const running: Animation[] = [];
 		const stop = () => {
 			for (const animation of running) animation.cancel();
@@ -100,7 +101,7 @@ export class Motion {
 		};
 		const last = bar.lastElementChild;
 		if (this.reduced() || !last) return { stop };
-		const distance = last.getBoundingClientRect().right - bar.getBoundingClientRect().left + OFF_EDGE;
+		const distance = last.getBoundingClientRect().right - view.getBoundingClientRect().left + OFF_EDGE;
 		bar.addClass("is-arriving");
 		const slide = bar.animate([{ transform: `translateX(${-distance}px)` }, { transform: "none" }], { duration: SLIDE_MS, easing: SETTLE });
 		running.push(slide);
@@ -114,10 +115,10 @@ export class Motion {
 
 	/**
 	 * Closing the choices without an answer: `choices`, a copy of them as they stood, slides from there back past the
-	 * row's left edge, moving from the first frame, and the circle and the name fade in at once. Without a copy, they
+	 * left edge of `view`, as far as they came, moving from the first frame, and the circle and the name fade in at once. Without a copy, they
 	 * just fade in.
 	 */
-	refold(surface: HTMLElement, content: readonly HTMLElement[], choices: HTMLElement | null): void {
+	refold(surface: HTMLElement, content: readonly HTMLElement[], choices: HTMLElement | null, view: HTMLElement): void {
 		if (this.reduced()) return;
 		if (!choices) {
 			for (const element of content) element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: FADE_MS });
@@ -128,7 +129,8 @@ export class Motion {
 		surface.append(choices);
 		const last = choices.lastElementChild as HTMLElement | null;
 		const from = new DOMMatrix(choices.style.transform).m41;
-		const distance = last ? last.offsetLeft + last.offsetWidth + OFF_EDGE : 0;
+		const start = surface.getBoundingClientRect().left - view.getBoundingClientRect().left;
+		const distance = last ? start + last.offsetLeft + last.offsetWidth + OFF_EDGE : 0;
 		const duration = distance > 0 ? SLIDE_MS * ((distance + from) / distance) : 0;
 		for (const element of content) element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: FADE_MS });
 		const leave = choices.animate([{ transform: `translateX(${from}px)` }, { transform: `translateX(${-distance}px)` }], { duration, easing: SETTLE, fill: "forwards" });

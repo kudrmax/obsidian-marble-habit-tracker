@@ -11,6 +11,14 @@ describe("helpRows", () => {
 		expect(helpRows(false, merge).map((row) => row.action)).toContain("Click the circle");
 	});
 
+	it("tells a phone to pull the days up and a computer that its week is over the list", () => {
+		const phone = helpRows(true, merge).map((row) => row.action);
+		const computer = helpRows(false, merge).map((row) => row.action);
+		expect(phone).toContain("Pull the days up");
+		expect(computer).toContain("The week above the list");
+		expect(computer).not.toContain("Pull the days up");
+	});
+
 	it("takes the merge counts from settings", () => {
 		const marbles = helpRows(true, { smallPerMedium: 5, mediumPerBig: 3 }).find((row) => row.action === "Marbles");
 		expect(marbles?.result).toContain("5 small ones merge into a medium, 3 medium into a big");
