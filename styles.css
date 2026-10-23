@@ -541,29 +541,25 @@ button.th-day-chip { display: inline-flex; align-items: center; gap: 6px; height
  * the weekday letters, then the shown day's week, or the whole month once the month's name is clicked. Its days are the
  * tray's days.
  */
-.th-week { flex: 0 0 auto; box-sizing: border-box; width: 100%; max-width: var(--th-column); margin: 0 auto; padding: 4px var(--th-gutter) 6px; }
-.th-week-line { display: flex; align-items: center; gap: 2px; height: 44px; }
-button.th-week-title { flex: none; display: inline-flex; align-items: center; gap: 4px; height: 32px; margin: 0 4px 0 -6px; padding: 0 6px; border: none; border-radius: 8px; box-shadow: none; background: transparent; color: var(--text-normal); font-size: 20px; line-height: 25px; font-weight: 700; cursor: pointer; }
-button.th-week-title:hover { background: var(--background-modifier-hover); }
-.th-week-chevron { display: inline-flex; color: var(--text-muted); transition: transform 150ms ease; }
-.th-week-chevron svg { width: 16px; height: 16px; stroke-width: 2.5px; }
-.th-week.is-open .th-week-chevron { transform: rotate(180deg); }
+.th-week { flex: 0 0 auto; box-sizing: border-box; width: 100%; max-width: var(--th-column); margin: 0 auto; padding: 14px var(--th-gutter) 0; }
+/* The month's line and the weeks keep the tray's measures: a 30px line, 12px down to the days, 54px weeks. */
+.th-week-line { display: flex; align-items: center; gap: 2px; height: 30px; margin-bottom: 12px; }
+button.th-week-title { height: 30px; padding: 0; border: none; border-radius: 0; box-shadow: none; background: transparent; cursor: pointer; }
+button.th-week-title:hover { background: transparent; }
 .th-week-tools { margin-left: auto; }
 .th-week-tools .th-tools { margin: 0; }
 /*
  * One left edge and one right edge with the list: the first day's ring starts where the habits' circles start, the
- * last one ends where Today's last button ends, the rest spread evenly between, each weekday letter over its ring.
+ * last one ends where Today's last button ends, the rest spread evenly between.
  */
 .th-week { --th-circle-edge: calc((44px - var(--th-mark)) / 2 - 10px); }
-/* The letters of the month and of the section headers start where the circles do, not their boxes; the past day's chip and All habits' way back too. */
-body:not(.is-mobile) .th-today button.th-week-title { margin-left: -9px; }
+/* The month's letters and the section headers' start where the circles do, not their boxes; the past day's chip and All habits' way back too. */
+body:not(.is-mobile) .th-today button.th-week-title { margin-left: -3px; }
 body:not(.is-mobile) .th-today .th-sheet .th-group { margin-left: -3px; }
 body:not(.is-mobile) .th-today .th-day-chip-line { margin-left: -2px; }
 body:not(.is-mobile) .th-today .th-sheet-head button.th-back { margin-left: -9px; }
-.th-week-labels, .th-week-row { display: flex; justify-content: space-between; margin-left: var(--th-circle-edge); }
-.th-week-label { flex: 0 0 40px; padding-top: 6px; text-align: center; font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); }
-.th-week-row button.th-cal-day { flex: 0 0 40px; width: 40px; height: 50px; }
-@media (hover: hover) { .th-week button.th-cal-day:not(:disabled):not(.is-selected):hover .th-cal-date { background: var(--background-modifier-hover); } }
+.th-week-row { display: flex; justify-content: space-between; margin-left: var(--th-circle-edge); }
+.th-week-row button.th-cal-day { flex: 0 0 40px; width: 40px; height: 54px; }
 
 /*
  * On a computer a row's answers wait at its right end and show while the pointer is over the row, a long name fading

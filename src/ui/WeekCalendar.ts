@@ -1,4 +1,3 @@
-import { setIcon } from "obsidian";
 import { LocalDate, WEEKDAYS } from "../domain/LocalDate";
 import { CalendarDay, CalendarMonth, StripDay, calendarMonths, calendarWeek, dayTitle, donePercent, monthTitle, monthWeeks } from "./today";
 
@@ -19,7 +18,6 @@ const CHEVRON_RIGHT = "m9 18 6-6-6-6";
 export class WeekCalendar {
 	readonly el: HTMLElement;
 	private readonly title: HTMLButtonElement;
-	private readonly titleText: HTMLElement;
 	private readonly previous: HTMLButtonElement;
 	private readonly next: HTMLButtonElement;
 	private readonly tools: HTMLElement;
@@ -39,15 +37,11 @@ export class WeekCalendar {
 		this.el = createDiv("th-week");
 		parent.insertBefore(this.el, before);
 		const line = this.el.createDiv("th-week-line");
-		this.title = line.createEl("button", { cls: "th-week-title" });
-		this.titleText = this.title.createSpan();
-		setIcon(this.title.createSpan("th-week-chevron"), "chevron-down");
+		this.title = line.createEl("button", { cls: ["th-week-title", "th-cal-month"] });
 		this.title.addEventListener("click", () => this.toggle());
 		this.previous = this.arrow(line, CHEVRON_LEFT, -1);
 		this.next = this.arrow(line, CHEVRON_RIGHT, 1);
 		this.tools = line.createDiv("th-week-tools");
-		const labels = this.el.createDiv("th-week-labels");
-		for (const weekday of WEEKDAYS) labels.createSpan({ cls: "th-week-label", text: weekday.slice(0, 2) });
 		this.weeks = this.el.createDiv("th-week-days");
 	}
 
@@ -129,7 +123,7 @@ export class WeekCalendar {
 		this.title.setAttr("aria-expanded", String(this.open));
 		this.title.setAttr("aria-label", this.open ? "Show one week" : "Show the whole month");
 		const month = this.open ? this.months[this.monthIndex] : this.monthOfWeek(week);
-		if (month) this.titleText.setText(monthTitle(month, today));
+		if (month) this.title.setText(monthTitle(month, today));
 		const rows = this.open && month ? monthWeeks(this.days, month, today) : [calendarWeek(this.days, week, today)];
 		this.weeks.empty();
 		for (const days of rows) {
