@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TINY, missed } from "../src/domain/DayMark";
+import { OFF_TRIGGER, TINY, missed } from "../src/domain/DayMark";
 import { Habit } from "../src/domain/Habit";
 import { WEEKDAYS } from "../src/domain/LocalDate";
 import { missesInARow, needsRedesign } from "../src/domain/RedesignRule";
@@ -23,6 +23,10 @@ describe("RedesignRule", () => {
 
 	it("resets after a done day", () => {
 		expect(missesInARow(struggling.withMark(d("2026-10-07"), TINY, today))).toBe(0);
+	});
+
+	it("resets after a day done not at the trigger, which is no miss", () => {
+		expect(missesInARow(struggling.withMark(d("2026-10-07"), OFF_TRIGGER, today))).toBe(0);
 	});
 
 	it("counts from the start when nothing was done yet", () => {

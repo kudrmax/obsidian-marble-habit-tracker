@@ -1,13 +1,13 @@
 import { ItemView, Notice, Platform, WorkspaceLeaf, setIcon } from "obsidian";
 import { HabitEntry } from "../application/ports";
-import { DayMark, SKIPPED, done, isDone, isOffTrigger, missed } from "../domain/DayMark";
+import { DayMark, FULL, OFF_TRIGGER, SKIPPED, TINY, isWin, missed } from "../domain/DayMark";
 import { Habit } from "../domain/Habit";
 import { LocalDate } from "../domain/LocalDate";
 import { HabitColor } from "../domain/HabitColor";
 import { HabitBlock } from "./HabitBlock";
 import { buildJar } from "../domain/Jar";
 import { colorClass } from "./colors";
-import { chip, icon, iconButton } from "./components";
+import { IconName, chip, icon, iconButton } from "./components";
 import { recipeDays } from "./format";
 import { computeStats } from "../domain/Stats";
 import { DayWatcher } from "./DayWatcher";
@@ -42,7 +42,8 @@ const RING_GAP = 9;
 const POP_MS = 450;
 const CAPTION_MS = 2000;
 /** The word on each answer: short and the same whatever the recipe's fields are called. */
-const CHOICE_WORDS: Record<Answer, string> = { full: "Full", tiny: "Tiny", skip: "Skip" };
+const CHOICE_WORDS: Record<Answer, string> = { full: "Full", tiny: "Tiny", offTrigger: "Off", skip: "Skip" };
+const ANSWER_MARKS: Record<Answer, DayMark> = { full: FULL, tiny: TINY, offTrigger: OFF_TRIGGER, skip: SKIPPED };
 const DAY_CHECK_MS = 60_000;
 /** Obsidian re-reads a note a moment after it is written, so the tap point has to wait for the new mark. */
 const ORIGIN_TTL_MS = 4000;
@@ -50,7 +51,7 @@ const FALLBACK_COLOR: Hsl = { h: 258, s: 88, l: 66 };
 /** How long to wait for the plugin's stylesheet before reading the colors again. */
 const STYLES_RETRY_MS = 200;
 
-type Answer = "skip" | "full" | "tiny";
+type Answer = "full" | "tiny" | "offTrigger" | "skip";
 
 export class TodayView extends ItemView {
 	private scrollEl!: HTMLElement;
@@ -63,8 +64,6 @@ export class TodayView extends ItemView {
 	/** A redraw was asked for while a row was being dragged; it runs on drop. */
 	private stale = false;
 	private menu: string | null = null;
-	/** In the open menu, the next tiny or full answer is marked as done without the anchor. */
-	private offTrigger = false;
 	private asking: string | null = null;
 	private other: string | null = null;
 	private otherText = "";
@@ -383,7 +382,7 @@ export class TodayView extends ItemView {
 	private renderListed(column: HTMLElement, path: string, habit: Habit, archived: boolean): void {
 		this.renderCard(column, path, habit, {
 			dimmed: archived,
-			sub: `${recipeDays(habit.currentSchedule)} · ${winsLabel(computeStats(habit, this.ui.service.today()).total)}`,
+			sub: `${recipeDays(habit.currentSchedule)} · ${winsLabel(computeStats(habit, this.ui.service.today(), this.ui.settings().wins).total)}`,
 		});
 	}
 
@@ -431,7 +430,7 @@ export class TodayView extends ItemView {
 	/** The calendar in the tray, on Today and in All habits, with the shown day picked; a tap on a day shows it on Today. */
 	private renderCalendar(all: readonly HabitEntry[]): void {
 		const today = this.ui.service.today();
-		this.tray?.show(dayStrip(all, today), this.shownDay(), today, (day) => this.showDay(day));
+		this.tray?.show(dayStrip(all, today, this.ui.settings().wins), this.shownDay(), today, (day) => this.showDay(day));
 	}
 
 	/** On a past day, a chip at the top says which one, and its cross goes back to today. */
@@ -474,7 +473,9 @@ export class TodayView extends ItemView {
 		const help = tools.createEl("button", { cls: "th-tool th-tool-help", text: "?", attr: { "aria-label": "How it works" } });
 		help.toggleClass("th-has-dot", !this.ui.settings().hintsSeen);
 		help.addEventListener("click", () => {
-			new HelpModal(this.app, helpRows(Platform.isMobile, this.ui.settings().merge)).open();
+			const settings = this.ui.settings();
+			const offTrigger = settings.notAtTrigger ? { trigger: this.ui.labels().of("anchor"), win: settings.wins.offTrigger } : null;
+			new HelpModal(this.app, helpRows(Platform.isMobile, settings.merge, offTrigger)).open();
 			this.ui.markHintsSeen();
 		});
 		return tools;
@@ -494,10 +495,11 @@ export class TodayView extends ItemView {
 		line.createEl("h2", { cls: "th-sheet-title", text: "All habits" });
 	}
 
-	/** A closed day: a ring with an arc per habit, done in its color and skipped in grey. */
+	/** A closed day: a ring with an arc per habit, a win in its color and anything else in grey. */
 	private renderRing(column: HTMLElement, habits: readonly Habit[], justClosed: boolean): void {
 		const day = this.shownDay();
-		const done = habits.filter((habit) => isDone(habit.markOn(day))).length;
+		const wins = this.ui.settings().wins;
+		const done = habits.filter((habit) => isWin(habit.markOn(day), wins)).length;
 		const block = column.createDiv("th-ring-block");
 		block.toggleClass("is-fresh", justClosed);
 		const ring = block.createDiv("th-ring");
@@ -518,12 +520,12 @@ export class TodayView extends ItemView {
 		};
 		arc(["th-ring-track"], circumference, 0, 0);
 		habits.forEach((habit, index) => {
-			const classes = isDone(habit.markOn(day)) ? ["th-ring-arc", "th-habit", colorClass(habit.color)] : ["th-ring-arc", "is-missed"];
+			const classes = isWin(habit.markOn(day), wins) ? ["th-ring-arc", "th-habit", colorClass(habit.color)] : ["th-ring-arc", "is-missed"];
 			arc(classes, share - gap, index * share + gap / 2, index);
 		});
 		ring.createDiv({ cls: "th-ring-count", text: `${done}/${habits.length}` });
 		block.createEl("h2", { cls: "th-title", text: "Day closed" });
-		block.createDiv({ cls: "th-ring-sub", text: closedDayLine(habits.length - done) });
+		block.createDiv({ cls: "th-ring-sub", text: closedDayLine(habits.filter((habit) => habit.markOn(day)?.kind === "missed").length) });
 		if (justClosed) this.haptics.merge();
 	}
 
@@ -624,17 +626,15 @@ export class TodayView extends ItemView {
 	}
 
 	/**
-	 * The answers in the row as capsules: the circle as it will look once chosen — full, tiny, skip — with the answer's
+	 * The answers in the row as capsules: the circle as it will look once chosen — full, tiny, not at trigger, skip — with the answer's
 	 * word beside it, and cancel where the circle was, under the finger. They wait ready past the row's left edge and
 	 * slide in together in one move while the circle and the name fade where they are. A tap anywhere else brings the
 	 * row back.
 	 */
 	private renderChoices(main: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
 		const labels = this.ui.labels();
-		const offTrigger = this.offTrigger && this.canGoOffTrigger(habit);
-		const chosen = (kind: "full" | "tiny") => mark?.kind === kind && isOffTrigger(mark) === offTrigger;
 		const bar = main.createDiv("th-row-choices");
-		const marble = (label: string, look: string[], sign: "x" | "check" | null, word?: string) => {
+		const marble = (label: string, look: string[], sign: IconName | null, word?: string) => {
 			// A button that shows its word needs no tooltip saying it again.
 			const button = bar.createEl("button", { cls: "th-choice", attr: word ? { "aria-label": label } : { "aria-label": label, title: label } });
 			const ball = button.createSpan("th-choice-ball");
@@ -649,9 +649,9 @@ export class TodayView extends ItemView {
 		};
 		const cancel = marble("Cancel", ["th-choice-cancel"], "x");
 		cancel.addEventListener("click", () => this.closeChoices());
-		const option = (answer: Answer, label: string, look: string[], sign: "check" | null, selected: boolean) => {
+		const option = (answer: Answer, label: string, look: string[], sign: IconName | null) => {
 			const button = marble(label, look, sign, CHOICE_WORDS[answer]);
-			button.setAttr("aria-pressed", String(selected));
+			button.setAttr("aria-pressed", String(mark?.kind === ANSWER_MARKS[answer].kind));
 			button.addEventListener("click", (event) => {
 				this.unfolding?.stop();
 				this.unfolding = null;
@@ -660,17 +660,10 @@ export class TodayView extends ItemView {
 				void this.choose(path, answer, mark, event);
 			});
 		};
-		if (habit.hasFull) option("full", labels.title("full"), ["is-done"], "check", chosen("full"));
-		if (habit.hasTiny) option("tiny", labels.title("tiny"), ["is-done", "is-tiny"], "check", chosen("tiny"));
-		option("skip", "Skip", ["is-missed"], null, mark?.kind === "missed");
-		if (this.canGoOffTrigger(habit)) {
-			const toggle = bar.createEl("button", { cls: "th-choices-toggle", attr: { "aria-pressed": String(this.offTrigger), "aria-label": "Not at trigger", title: "Not at trigger" } });
-			setIcon(toggle, "unlink");
-			toggle.addEventListener("click", () => {
-				this.offTrigger = !this.offTrigger;
-				this.render();
-			});
-		}
+		if (habit.hasFull) option("full", labels.title("full"), ["is-done"], "check");
+		if (habit.hasTiny) option("tiny", labels.title("tiny"), ["is-done", "is-tiny"], "check");
+		if (this.canGoOffTrigger(habit)) option("offTrigger", `Not at ${labels.of("anchor")}`, ["is-off-trigger"], "unlink");
+		option("skip", "Skip", ["is-missed"], null);
 		main.addClass("is-choosing");
 		if (!this.menuOpening) return;
 		this.menuOpening = false;
@@ -719,16 +712,19 @@ export class TodayView extends ItemView {
 
 	private renderMark(parent: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
 		const labels = this.ui.labels();
-		const first = habit.hasTiny ? labels.of("tiny") : "done";
-		const hint = mark ? "Clear the mark" : `Choose: ${first}, ${labels.of("full")} or skipped`;
+		const choices = [habit.hasTiny ? labels.of("tiny") : "done", labels.of("full"), ...(this.canGoOffTrigger(habit) ? [`not at ${labels.of("anchor")}`] : [])];
+		const hint = mark ? "Clear the mark" : `Choose: ${choices.join(", ")} or skipped`;
 		const button = parent.createEl("button", { cls: "th-mark-button", attr: { title: hint } });
 		button.createSpan({ cls: "th-sr-only", text: hint });
 		const circle = button.createSpan("th-mark");
-		if (isDone(mark)) {
+		circle.toggleClass("is-popping", this.celebrating.has(path));
+		if (mark?.kind === "full" || mark?.kind === "tiny") {
 			circle.addClass("is-done");
-			circle.toggleClass("is-tiny", mark?.kind === "tiny");
-			if (this.celebrating.has(path)) circle.addClass("is-popping");
+			circle.toggleClass("is-tiny", mark.kind === "tiny");
 			icon(circle, "check");
+		} else if (mark?.kind === "offTrigger") {
+			circle.addClass("is-off-trigger");
+			icon(circle, "unlink");
 		} else if (mark?.kind === "missed") circle.addClass("is-missed");
 		else if (this.asking === path) circle.addClass("is-asking");
 
@@ -789,8 +785,6 @@ export class TodayView extends ItemView {
 		this.menu = path;
 		this.menuOpening = true;
 		this.haptics.tap();
-		const entry = this.ui.repository.get(path);
-		this.offTrigger = entry?.kind === "ok" && isOffTrigger(entry.habit.markOn(this.shownDay()));
 		this.render();
 	}
 
@@ -811,23 +805,22 @@ export class TodayView extends ItemView {
 	}
 
 	private async choose(path: string, answer: Answer, current: DayMark | undefined, event: MouseEvent): Promise<void> {
-		const entry = this.ui.repository.get(path);
-		const offTrigger = this.offTrigger && entry?.kind === "ok" && this.canGoOffTrigger(entry.habit);
-		const same = (answer === "skip" && current?.kind === "missed") || (answer !== "skip" && current?.kind === answer && isOffTrigger(current) === offTrigger);
-		if (same) return this.answer(path, undefined);
+		const mark = ANSWER_MARKS[answer];
+		if (current?.kind === mark.kind) return this.answer(path, undefined);
 		if (answer === "skip") {
-			await this.answer(path, SKIPPED, undefined, false);
+			await this.answer(path, mark, undefined, false);
 			this.asking = path;
 			this.render();
 			return;
 		}
-		return this.answer(path, done(answer, offTrigger), event);
+		return this.answer(path, mark, event);
 	}
 
 	private async answer(path: string, mark: DayMark | undefined, event?: MouseEvent, leave = true): Promise<void> {
-		if (!isDone(mark)) this.origins.delete(path);
+		const win = isWin(mark, this.ui.settings().wins);
+		if (!win) this.origins.delete(path);
 		const target = event?.currentTarget as HTMLElement | null | undefined;
-		if (target && isDone(mark)) {
+		if (target && win) {
 			const box = target.getBoundingClientRect();
 			this.origins.set(path, { point: { x: box.left + box.width / 2, y: box.top + box.height / 2 }, at: Date.now() });
 		}
@@ -840,7 +833,7 @@ export class TodayView extends ItemView {
 			this.shrink = mark && offersShrink(habit, mark, this.ui.settings().redesignThreshold, this.ui.settings().shrinkReason) ? path : null;
 			if (mark && leave && this.ui.settings().hideDone && !this.showDone) this.startLeaving(path);
 			else this.leaving.delete(path);
-			if (mark && isDone(mark)) {
+			if (win) {
 				this.haptics.tap();
 				this.celebrate(path);
 				const phrase = habit.current("celebration");
@@ -887,7 +880,7 @@ export class TodayView extends ItemView {
 			if (entry.kind !== "ok") return [];
 			names.set(entry.path, entry.habit);
 			const color = this.resolve(entry.habit.color);
-			return buildJar(entry.habit, today, this.ui.settings().merge).map((piece) => ({ ...piece, key: `${entry.path}|${piece.id}`, group: entry.path, color }));
+			return buildJar(entry.habit, today, this.ui.settings().merge, this.ui.settings().wins).map((piece) => ({ ...piece, key: `${entry.path}|${piece.id}`, group: entry.path, color }));
 		});
 		this.jar.setOptions({
 			...this.jarOptions(),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DayMark, FULL, TINY, missed } from "../src/domain/DayMark";
+import { DayMark, FULL, OFF_TRIGGER, TINY, missed } from "../src/domain/DayMark";
 import { Habit } from "../src/domain/Habit";
 import { LocalDate, WEEKDAYS, Weekday } from "../src/domain/LocalDate";
 import { Schedule } from "../src/domain/Schedule";
@@ -24,7 +24,7 @@ describe("computeStats window", () => {
 			done: 2,
 			scheduled: 29,
 			percent: 7,
-			breakdown: { tiny: 1, full: 1, missed: 1, empty: 26 },
+			breakdown: { tiny: 1, full: 1, offTrigger: 0, missed: 1, empty: 26 },
 		});
 	});
 
@@ -44,18 +44,24 @@ describe("computeStats window", () => {
 			}),
 			today,
 		);
-		expect(stats.window).toEqual({ done: 1, scheduled: 4, percent: 25, breakdown: { tiny: 1, full: 0, missed: 1, empty: 2 } });
+		expect(stats.window).toEqual({ done: 1, scheduled: 4, percent: 25, breakdown: { tiny: 1, full: 0, offTrigger: 0, missed: 1, empty: 2 } });
 		expect(stats.total).toBe(2);
 	});
 
 	it("does not count days before the habit existed", () => {
 		const stats = computeStats(habit("2026-10-05"), today);
-		expect(stats.window).toEqual({ done: 0, scheduled: 4, percent: 0, breakdown: { tiny: 0, full: 0, missed: 0, empty: 4 } });
+		expect(stats.window).toEqual({ done: 0, scheduled: 4, percent: 0, breakdown: { tiny: 0, full: 0, offTrigger: 0, missed: 0, empty: 4 } });
 	});
 
 	it("uses the schedule that was active on each past day", () => {
 		const changed = habit("2026-09-01").replaceSchedule(new Schedule(["sat"]), d("2026-10-01"));
 		expect(computeStats(changed, today).window.scheduled).toBe(22);
+	});
+
+	it("counts a day done not at the trigger as done only when it is a win", () => {
+		const marked = withMarks(habit("2026-10-06"), today, { "2026-10-08": FULL, "2026-10-07": OFF_TRIGGER });
+		expect(computeStats(marked, today).window).toEqual({ done: 1, scheduled: 3, percent: 33, breakdown: { tiny: 0, full: 1, offTrigger: 1, missed: 0, empty: 1 } });
+		expect(computeStats(marked, today, { offTrigger: true }).window).toMatchObject({ done: 2, scheduled: 3, percent: 67 });
 	});
 
 	it("has no percent when nothing was scheduled", () => {
@@ -97,6 +103,18 @@ describe("computeStats streaks", () => {
 		const withMonday = weekend.withMark(d("2026-10-05"), FULL, today);
 		expect(computeStats(withMonday, today).current?.length).toBe(2);
 		expect(computeStats(withMonday, today).total).toBe(3);
+	});
+
+	it("lets a day done not at the trigger break a streak, or grow it when it is a win", () => {
+		const today = d("2026-09-05");
+		const marked = withMarks(habit("2026-09-01"), today, { "2026-09-02": TINY, "2026-09-03": OFF_TRIGGER, "2026-09-04": FULL, "2026-09-05": TINY });
+		const strict = computeStats(marked, today);
+		expect(strict.current?.length).toBe(2);
+		expect(strict.best).toBe(2);
+		expect(strict.total).toBe(3);
+		const lenient = computeStats(marked, today, { offTrigger: true });
+		expect(lenient.current?.length).toBe(4);
+		expect(lenient.total).toBe(4);
 	});
 
 	it("shows the five longest streaks plus the current one", () => {

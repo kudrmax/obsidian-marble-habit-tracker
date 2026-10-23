@@ -245,10 +245,15 @@ export class SettingsTab extends PluginSettingTab {
 				text.setPlaceholder(DEFAULT_SETTINGS.folder).setValue(settings.folder).onChange(save);
 				new FolderSuggest(this.app, text.inputEl, save);
 			});
+		const trigger = new RecipeLabels(settings.labels).of("anchor");
 		new Setting(containerEl)
-			.setName("Done without the trigger")
-			.setDesc("Lets a habit with a trigger also count when you did it at another moment. Adds a switch to the habit and a “Not at trigger” chip when you hold its circle.")
+			.setName(`Done without the ${trigger}`)
+			.setDesc(`Lets a habit with a ${trigger} also be marked as done at another moment. Adds a switch to the habit, and to its answers a fourth one, Off, next to Full, Tiny and Skip.`)
 			.addToggle((toggle) => toggle.setValue(settings.notAtTrigger).onChange((value) => void this.save((next) => (next.notAtTrigger = value))));
+		new Setting(containerEl)
+			.setName(`Not at the ${trigger} is a win`)
+			.setDesc(`A day done not at the ${trigger} drops a marble and counts toward wins and streaks. When off, the day stays in the note but drops no marble and breaks the streak.`)
+			.addToggle((toggle) => toggle.setValue(settings.wins.offTrigger).onChange((value) => void this.save((next) => (next.wins = { offTrigger: value }))));
 		new Setting(containerEl)
 			.setName("Habit block in notes")
 			.setDesc("Show the recipe, progress and history at the top of each habit note, above your own text.")

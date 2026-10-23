@@ -162,7 +162,7 @@ export class HabitBlock {
 
 	private renderProgress(rows: HTMLElement, habit: Habit): void {
 		const today = this.ui.service.today();
-		const stats = computeStats(habit, today);
+		const stats = computeStats(habit, today, this.ui.settings().wins);
 		const numbers = this.property(rows, "flame", "progress").createDiv("th-panel-cell th-panel-stats");
 		const stat = (value: number, label: string) => {
 			const item = numbers.createSpan("th-panel-stat");
@@ -211,7 +211,7 @@ export class HabitBlock {
 				continue;
 			}
 			const mark = habit.markOn(date);
-			const state = mark ? mark.kind : date.isBefore(habit.createdOn) ? "before" : habit.isScheduled(date) ? "empty" : "off";
+			const state = mark ? (mark.kind === "offTrigger" ? "off-trigger" : mark.kind) : date.isBefore(habit.createdOn) ? "before" : habit.isScheduled(date) ? "empty" : "off";
 			day.addClass(`is-${state}`);
 			day.toggleClass("is-today", date.equals(today));
 			day.setAttribute("aria-label", dayMonth(date));

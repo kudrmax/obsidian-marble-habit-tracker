@@ -1,4 +1,4 @@
-import { isDone } from "./DayMark";
+import { DEFAULT_WIN_RULE, WinRule, isWin } from "./DayMark";
 import { Habit } from "./Habit";
 import { LocalDate } from "./LocalDate";
 
@@ -24,15 +24,15 @@ interface DoneDay {
 	readonly full: boolean;
 }
 
-/** A habit's done days become small marbles that merge by the rule into medium and big ones, gaps or not. */
-export function buildJar(habit: Habit, today: LocalDate, rule: MergeRule = DEFAULT_MERGE_RULE): JarPiece[] {
-	return piecesOf(doneDays(habit, today), today, rule);
+/** A habit's wins become small marbles that merge by the rule into medium and big ones, gaps or not. */
+export function buildJar(habit: Habit, today: LocalDate, rule: MergeRule = DEFAULT_MERGE_RULE, wins: WinRule = DEFAULT_WIN_RULE): JarPiece[] {
+	return piecesOf(winDays(habit, today, wins), today, rule);
 }
 
-function doneDays(habit: Habit, today: LocalDate): DoneDay[] {
+function winDays(habit: Habit, today: LocalDate, wins: WinRule): DoneDay[] {
 	return habit
 		.marks()
-		.filter(([date, mark]) => isDone(mark) && !date.isAfter(today))
+		.filter(([date, mark]) => isWin(mark, wins) && !date.isAfter(today))
 		.map(([date, mark]) => ({ date, full: mark.kind === "full" }))
 		.reverse();
 }
