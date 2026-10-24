@@ -22,7 +22,7 @@ export class EditSheet extends Sheet {
 		private readonly target: EditTarget,
 		private readonly labels: RecipeLabels,
 	) {
-		super(app, habit.name, habit.color);
+		super(app, habit.name);
 		this.text = target === "schedule" || target === "color" ? "" : (habit.current(target) ?? "");
 		this.days = habit.currentSchedule.weekdays;
 		this.color = habit.color;
@@ -39,7 +39,7 @@ export class EditSheet extends Sheet {
 			return;
 		}
 		if (target === "color") {
-			body.createDiv({ cls: "th-label", text: "Color" });
+			body.createDiv({ cls: "th-label", text: "Marble color" });
 			colorCircles(body, this.color, (color) => {
 				this.color = color;
 				this.refreshReady();

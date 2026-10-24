@@ -3,7 +3,6 @@ import { Habit, TextPart } from "../domain/Habit";
 import { LocalDate } from "../domain/LocalDate";
 import { computeStats } from "../domain/Stats";
 import { calendarStart, calendarWeeks } from "./calendar";
-import { colorClass } from "./colors";
 import { EditSheet } from "./EditSheet";
 import { dayMonth, monthShort, recipeDays } from "./format";
 import { UiContext } from "./UiContext";
@@ -68,7 +67,6 @@ export class HabitBlock {
 		panel.toggleClass("is-collapsed", folded.has(this.path));
 		const entry = this.ui.repository.get(this.path);
 		const habit = entry?.kind === "ok" ? entry.habit : undefined;
-		if (habit) panel.addClasses(["th-habit", colorClass(habit.color)]);
 		if (this.view === "recipe") {
 			if (habit) this.renderRecipeFields(panel.createDiv("metadata-content").createDiv("metadata-properties"), habit, true);
 			return;

@@ -37,7 +37,7 @@ export class HabitFormModal extends Sheet {
 		private readonly labels: RecipeLabels,
 		private readonly notAtTrigger: boolean,
 	) {
-		super(app, "New habit", undefined);
+		super(app, "New habit");
 	}
 
 	protected override fill(body: HTMLElement): void {
@@ -62,7 +62,7 @@ export class HabitFormModal extends Sheet {
 			this.refreshReady();
 		});
 		const colors = body.createDiv("th-sheet-group");
-		colors.createDiv({ cls: "th-label", text: "Color" });
+		colors.createDiv({ cls: "th-label", text: "Marble color" });
 		colorCircles(colors, this.color, (picked) => (this.color = picked));
 
 		this.renderRecipe(body, field);

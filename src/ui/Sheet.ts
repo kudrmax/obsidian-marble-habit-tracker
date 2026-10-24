@@ -1,6 +1,4 @@
 import { App, Modal, Notice } from "obsidian";
-import { HabitColor } from "../domain/HabitColor";
-import { colorClass } from "./colors";
 
 export abstract class Sheet extends Modal {
 	private save: HTMLButtonElement | null = null;
@@ -8,7 +6,6 @@ export abstract class Sheet extends Modal {
 	protected constructor(
 		app: App,
 		private readonly heading: string,
-		private readonly tint: HabitColor | undefined,
 	) {
 		super(app);
 	}
@@ -24,7 +21,7 @@ export abstract class Sheet extends Modal {
 	}
 
 	override onOpen(): void {
-		this.modalEl.addClass("th-sheet", "tiny-habits", "th-habit", colorClass(this.tint));
+		this.modalEl.addClass("th-sheet", "tiny-habits");
 		this.setTitle(this.heading);
 		this.fill(this.contentEl.createDiv("th-sheet-body"));
 		const buttons = this.contentEl.createDiv("modal-button-container");

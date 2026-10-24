@@ -129,7 +129,7 @@ export class HabitNotes extends Component {
 		const habit = entry.habit;
 		menu.addItem((item) =>
 			item
-				.setTitle("Habit color")
+				.setTitle("Marble color")
 				.setIcon("palette")
 				.onClick(() => new EditSheet(this.app, this.ui.service, file.path, habit, "color", this.ui.labels()).open()),
 		);

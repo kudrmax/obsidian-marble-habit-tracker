@@ -399,7 +399,7 @@ export class TodayView extends ItemView {
 	}
 
 	/**
-	 * A habit's card, the same on Today and in All habits: a circle in its color, then its name, which opens its recipe.
+	 * A habit's card, the same on Today and in All habits: a circle, then its name, which opens its recipe.
 	 * `lead` puts Today's working circle in front; the card is returned for what goes under it.
 	 */
 	private renderCard(
@@ -408,7 +408,7 @@ export class TodayView extends ItemView {
 		habit: Habit,
 		options: { dimmed: boolean; sub?: string; attrs?: Record<string, string>; lead?: (main: HTMLElement) => void },
 	): HTMLElement {
-		const row = column.createDiv({ cls: ["th-row", "th-habit", colorClass(habit.color)], attr: options.attrs ?? {} });
+		const row = column.createDiv({ cls: "th-row", attr: options.attrs ?? {} });
 		row.toggleClass("is-answered", options.dimmed);
 		const main = row.createDiv("th-row-main");
 		if (options.lead) options.lead(main);
@@ -540,7 +540,7 @@ export class TodayView extends ItemView {
 		};
 		arc(["th-ring-track"], circumference, 0, 0);
 		habits.forEach((habit, index) => {
-			const classes = isWin(habit.markOn(day), wins) ? ["th-ring-arc", "th-habit", colorClass(habit.color)] : ["th-ring-arc", "is-missed"];
+			const classes = isWin(habit.markOn(day), wins) ? ["th-ring-arc"] : ["th-ring-arc", "is-missed"];
 			arc(classes, share - gap, index * share + gap / 2, index);
 		});
 		ring.createDiv({ cls: "th-ring-count", text: `${done}/${habits.length}` });
@@ -929,11 +929,11 @@ export class TodayView extends ItemView {
 		for (const path of used) this.origins.delete(path);
 	}
 
-	/** A short line above the marbles in the habit's color; a new one replaces the one on screen. */
+	/** A short line above the marbles in their habit's color; a new one replaces the one on screen. */
 	private caption(habit: Habit, text: string): void {
 		this.captionEl?.remove();
 		window.clearTimeout(this.captionTimer);
-		this.captionEl = this.contentEl.createDiv({ cls: ["th-caption", "th-habit", colorClass(habit.color)], text });
+		this.captionEl = this.contentEl.createDiv({ cls: ["th-caption", colorClass(habit.color)], text });
 		this.captionTimer = window.setTimeout(() => {
 			this.captionEl?.remove();
 			this.captionEl = null;
@@ -995,7 +995,7 @@ export class TodayView extends ItemView {
 		const key = color ?? "accent";
 		const cached = this.colors.get(key);
 		if (cached) return cached;
-		const resolved = this.probe(["th-habit", colorClass(color)], "var(--th-habit)");
+		const resolved = this.probe([colorClass(color)], "var(--th-marble-color)");
 		if (!resolved) {
 			this.waitForStyles();
 			return FALLBACK_COLOR;
