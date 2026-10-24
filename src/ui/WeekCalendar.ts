@@ -28,7 +28,7 @@ export class WeekCalendar {
 	private pick: (day: LocalDate) => void = () => undefined;
 	/** The whole month on show, instead of one week. */
 	private open = false;
-	/** Over the grid: the seven days up to the shown day, and the arrows step the shown day seven days. */
+	/** Over the grid: the five days up to the shown day, and the arrows step the shown day five days. */
 	private grid = false;
 	/** Over the grid, the day being answered. */
 	private focus: LocalDate | null = null;
@@ -70,8 +70,8 @@ export class WeekCalendar {
 	}
 
 	/**
-	 * Over the grid: the seven days up to the shown day as its columns' dates, plain, with the day being answered picked.
-	 * The month's name names the shown day's month, and the arrows step seven days.
+	 * Over the grid: the five days up to the shown day as its columns' dates, plain, with the day being answered picked.
+	 * The month's name names the shown day's month, and the arrows step five days.
 	 */
 	follow(days: readonly StripDay[], shown: LocalDate, today: LocalDate, pick: (day: LocalDate) => void, focus: LocalDate | null): void {
 		this.grid = true;
@@ -109,7 +109,7 @@ export class WeekCalendar {
 
 	/**
 	 * A week or a month before or after the one on show, never past this week nor before the calendar starts. Over the
-	 * grid, the day seven days away is picked, today at the latest.
+	 * grid, the day five days away is picked, today at the latest.
 	 */
 	private turn(step: number): void {
 		const today = this.today;
@@ -129,7 +129,7 @@ export class WeekCalendar {
 		this.render();
 	}
 
-	/** Over the grid, seven days on is as far as today, and seven days back no earlier than the calendar's first day. */
+	/** Over the grid, five days on is as far as today, and five days back no earlier than the calendar's first day. */
 	private canStep(step: number): boolean {
 		const today = this.today;
 		const first = this.days[0]?.date;
@@ -167,8 +167,8 @@ export class WeekCalendar {
 			const row = this.weeks.createDiv("th-week-row");
 			for (const day of days) this.renderDay(row, day, today);
 		}
-		this.previous.setAttr("aria-label", this.grid ? "Seven days back" : this.open ? "Previous month" : "Previous week");
-		this.next.setAttr("aria-label", this.grid ? "Seven days on" : this.open ? "Next month" : "Next week");
+		this.previous.setAttr("aria-label", this.grid ? "Five days back" : this.open ? "Previous month" : "Previous week");
+		this.next.setAttr("aria-label", this.grid ? "Five days on" : this.open ? "Next month" : "Next week");
 		this.previous.disabled = this.grid ? !this.canStep(-1) : this.open ? this.monthIndex <= 0 : !this.canShowWeek(week.addDays(-WEEK_DAYS));
 		this.next.disabled = this.grid ? !this.canStep(1) : this.open ? this.monthIndex >= this.months.length - 1 : !this.canShowWeek(week.addDays(WEEK_DAYS));
 	}

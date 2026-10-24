@@ -34,9 +34,8 @@ const RUBBER_LOW = 0.15;
 const SETTLE_MS = 420;
 const SVG_NS = "http://www.w3.org/2000/svg";
 
-/** The days the folded tray shows over the week's grid, with the month they end in. */
+/** The days the folded tray shows over the week's grid. */
 export interface TrayStrip {
-	readonly title: string;
 	readonly days: readonly CalendarDay[];
 	/** The day being answered, picked among them. */
 	readonly focus: LocalDate | null;
@@ -60,7 +59,7 @@ const easeOut = (t: number) => 1 - Math.pow(1 - t, 3.4);
 
 /**
  * Today's calendar, in a tray at the bottom of the view over Obsidian's navbar. Folded, it shows this week's dates, or
- * over the week's grid the grid's own seven days; pulled up, the rest of the month comes in above them, each date in a ring of how much of that day was done, under a
+ * over the week's grid the grid's own five days; pulled up, the rest of the month comes in above them, each date in a ring of how much of that day was done, under a
  * line with the month, arrows to the months before and Today's buttons. Let go, it stays on the nearest whole week. Its
  * top edge is the floor the marbles stand on, wherever it is: rising, it carries them up and they hop off it.
  */
@@ -207,14 +206,13 @@ export class CalendarTray {
 	}
 
 	/**
-	 * Over the week's grid the folded tray shows the grid's own days, each under its column of circles, and their month
-	 * where the grid has its names. Pulled up, they fade away and the month comes in as always.
+	 * Over the week's grid the folded tray shows the grid's own days, each under its column of circles. Pulled up, they
+	 * fade away and the month comes in as always.
 	 */
 	setStrip(strip: TrayStrip | null): void {
 		this.strip.empty();
 		const today = this.today;
 		if (!strip || !today) return;
-		this.strip.createDiv({ cls: ["th-cal-month", "th-cal-strip-title"], text: strip.title });
 		const days = this.strip.createDiv("th-cal-strip-days");
 		for (const day of strip.days) {
 			const cell = days.createDiv("th-cal-day");

@@ -26,7 +26,7 @@ export interface WeekGridRow {
 }
 
 /**
- * The last seven days as Today's list: the sections and names as on Today, each name on one line with its seven
+ * The last five days as Today's list: the sections and names as on Today, each name on one line with its five
  * circles to its right, drawn as Today draws them. The dates are the calendar's own, over the circles on a computer
  * and under them in the folded tray on a phone, so the grid draws none.
  */

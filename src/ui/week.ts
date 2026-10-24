@@ -6,8 +6,8 @@ import { dayMonth } from "./format";
 import { groupBySection, visibleEntries } from "./order";
 import { CalendarDay, StripDay } from "./today";
 
-/** How many days the grid shows: a week's worth, up to the shown day. */
-export const GRID_DAYS = WEEKDAYS.length;
+/** How many days the grid shows, up to the shown day. */
+export const GRID_DAYS = 5;
 
 /** How a habit's day stands in the grid: still to come, or one to answer. */
 export type WeekCellKind = "future" | "due";
@@ -39,7 +39,7 @@ export function weekCell(habit: Habit, date: LocalDate, today: LocalDate): WeekC
 	return { date, kind: "due", mark: habit.markOn(date) };
 }
 
-/** Every habit that isn't archived, by section as on Today, each with its seven days up to `end`, oldest first. */
+/** Every habit that isn't archived, by section as on Today, each with its five days up to `end`, oldest first. */
 export function weekGroups(entries: readonly HabitEntry[], end: LocalDate, today: LocalDate): WeekGroup[] {
 	const habits = visibleEntries(entries).flatMap((entry) => (entry.kind === "ok" ? [entry] : []));
 	return groupBySection(habits, (entry) => entry.habit.section)
@@ -54,7 +54,7 @@ export function weekGroups(entries: readonly HabitEntry[], end: LocalDate, today
 		}));
 }
 
-/** The calendar's seven days up to `end`, for the dates over the grid's columns; days before the calendar starts are outside. */
+/** The calendar's five days up to `end`, for the dates over the grid's columns; days before the calendar starts are outside. */
 export function daysUpTo(days: readonly StripDay[], end: LocalDate, today: LocalDate): CalendarDay[] {
 	const known = new Map(days.map((day) => [day.date.toString(), day]));
 	return gridDates(end).map((date) => {
@@ -63,7 +63,7 @@ export function daysUpTo(days: readonly StripDay[], end: LocalDate, today: Local
 	});
 }
 
-/** The seven days up to `end` as dates, with the year when it is another year: "Oct 2 – 8", "Sep 27 – Oct 3". */
+/** The five days up to `end` as dates, with the year when it is another year: "Oct 4 – 8", "Sep 29 – Oct 3". */
 export function daysTitle(end: LocalDate, today: LocalDate): string {
 	const start = end.addDays(1 - GRID_DAYS);
 	const last = start.month === end.month ? String(end.day) : dayMonth(end);

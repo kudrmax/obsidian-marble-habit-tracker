@@ -19,7 +19,7 @@ import { Hsl, parseColor } from "./jar/color";
 import { MarbleSizes, floorScale, scaleSizes } from "./jar/JarAssets";
 import { JarCanvas, JarItem } from "./jar/JarCanvas";
 import { KeyboardWatch } from "./KeyboardWatch";
-import { LEAVE_MS, Motion, Slide } from "./Motion";
+import { LEAVE_MS, Motion, Side, Slide } from "./Motion";
 import { CalendarTray } from "./CalendarTray";
 import { TodayPanel } from "./TodayPanel";
 import { Box } from "./jar/JarPhysics";
@@ -32,7 +32,7 @@ import { SizeCalibration } from "./SizeCalibration";
 import { ScreenChrome } from "./ScreenChrome";
 import { WeekCalendar } from "./WeekCalendar";
 import { WeekGrid } from "./WeekGrid";
-import { closedDayLine, dayStrip, dayTitle, monthTitle, winsLabel, offersShrink, todayEntries } from "./today";
+import { closedDayLine, dayStrip, dayTitle, winsLabel, offersShrink, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
 import { daysTitle, daysUpTo, weekGroups } from "./week";
 
@@ -383,7 +383,7 @@ export class TodayView extends ItemView {
 	}
 
 	/**
-	 * The seven days up to the shown day as a grid: every habit by section, a circle for each day, answered right there as
+	 * The five days up to the shown day as a grid: every habit by section, a circle for each day, answered right there as
 	 * on the list, the answers sliding over the row while the calendar picks the day they are for.
 	 */
 	private renderWeek(column: HTMLElement, all: readonly HabitEntry[]): void {
@@ -401,8 +401,8 @@ export class TodayView extends ItemView {
 		});
 		for (const [path, { habit, row, line }] of rows ?? []) {
 			const mark = answering ? habit.markOn(answering) : undefined;
-			if (this.menu === path) this.renderChoices(line, path, habit, mark);
-			if (this.closing === path) this.refold(line);
+			if (this.menu === path && answering) this.renderChoices(line, path, habit, mark, shown.daysSince(answering));
+			if (this.closing === path) this.refold(line, "right");
 			if (this.asking === path) this.renderReasons(row, path);
 			if (this.shrink === path && mark?.kind === "missed") this.renderShrink(row, path, habit);
 		}
@@ -528,9 +528,9 @@ export class TodayView extends ItemView {
 
 	/**
 	 * The calendar in the tray, on Today and in All habits, with the shown day picked; a tap on a day shows it on Today,
-	 * or the seven days up to it on the grid. Over the grid the calendar's row is the grid's own seven days, a date over
+	 * or the five days up to it on the grid. Over the grid the calendar's row is the grid's own five days, a date over
 	 * or under each column, the day being answered picked: the folded tray's on a phone, the week over the list on a
-	 * computer, whose arrows step seven days.
+	 * computer, whose arrows step five days.
 	 */
 	private renderCalendar(all: readonly HabitEntry[]): void {
 		const today = this.ui.service.today();
@@ -540,7 +540,7 @@ export class TodayView extends ItemView {
 		const grid = this.showsWeek();
 		const focus = grid && (this.menu ?? this.asking) ? this.answering : null;
 		this.tray?.show(days, shown, today, pick, grid ? shown : today);
-		this.tray?.setStrip(grid ? { title: monthTitle({ year: shown.year, month: shown.month }, today), days: daysUpTo(days, shown, today), focus } : null);
+		this.tray?.setStrip(grid ? { days: daysUpTo(days, shown, today), focus } : null);
 		if (grid) this.week?.follow(days, shown, today, pick, focus);
 		else this.week?.show(days, shown, today, pick);
 	}
@@ -658,7 +658,7 @@ export class TodayView extends ItemView {
 		if (justClosed) this.haptics.merge();
 	}
 
-	/** Shows a day on Today, or the seven days up to it on the grid; a day picked in All habits takes the way back. */
+	/** Shows a day on Today, or the five days up to it on the grid; a day picked in All habits takes the way back. */
 	private showDay(day: LocalDate): void {
 		this.slide = this.screen === "all" ? "pop" : day.isBefore(this.shownDay()) ? "earlier" : "later";
 		this.screen = "today";
@@ -756,13 +756,18 @@ export class TodayView extends ItemView {
 	 * word beside it, and cancel where the circle was, under the finger. They wait ready past the row's left edge and
 	 * slide in together in one move while the circle and the name fade where they are. A tap anywhere else brings the
 	 * row back.
+	 *
+	 * On the grid, whose circles stand at the row's right end, it is the mirror of that: cancel lands on the circle
+	 * tapped, `later` columns from the last, the answers line up to its left — done next to it, skip furthest — and they
+	 * come in from past the view's right edge. Their words wouldn't fit beside an early day's circle, so there the answers
+	 * are bare circles, each as the day will look, named in a tooltip.
 	 */
-	private renderChoices(main: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
+	private renderChoices(main: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined, later: number | null = null): void {
 		const bar = main.createDiv("th-row-choices");
-		const cancel = this.answerButton(bar, "Cancel", ["th-choice-cancel"], "x");
-		cancel.addEventListener("click", () => this.closeChoices());
-		for (const { answer, label, look, sign } of this.answers(habit)) {
-			const button = this.answerButton(bar, label, look, sign, CHOICE_WORDS[answer]);
+		const mirrored = later !== null;
+		const addCancel = () => this.answerButton(bar, "Cancel", ["th-choice-cancel"], "x").addEventListener("click", () => this.closeChoices());
+		const addAnswer = ({ answer, label, look, sign }: ReturnType<TodayView["answers"]>[number]) => {
+			const button = this.answerButton(bar, label, look, sign, mirrored ? undefined : CHOICE_WORDS[answer]);
 			button.setAttr("aria-pressed", String(mark?.kind === ANSWER_MARKS[answer].kind));
 			button.addEventListener("click", (event) => {
 				this.unfolding?.stop();
@@ -771,12 +776,21 @@ export class TodayView extends ItemView {
 				this.haptics.tap();
 				void this.choose(path, answer, mark, event);
 			});
+		};
+		if (mirrored) {
+			for (const answer of this.answers(habit).reverse()) addAnswer(answer);
+			addCancel();
+			bar.addClass("is-mirrored");
+			bar.style.setProperty("--th-grid-later", String(later));
+		} else {
+			addCancel();
+			for (const answer of this.answers(habit)) addAnswer(answer);
 		}
 		bar.toggleClass("is-crowded", bar.querySelectorAll(".has-word").length > 3);
 		main.addClass("is-choosing");
 		if (!this.menuOpening) return;
 		this.menuOpening = false;
-		this.unfolding = this.motion.slideChoices(bar, this.contentOf(main), this.contentEl);
+		this.unfolding = this.motion.slideChoices(bar, this.contentOf(main), this.contentEl, mirrored ? "right" : "left");
 	}
 
 	/** The answers a habit offers, in order, each looking as the circle will once it is chosen. */
@@ -830,9 +844,9 @@ export class TodayView extends ItemView {
 		this.leavingChoices = copy;
 	}
 
-	/** The choices just closed without an answer slide back out of `surface`, and what they covered comes back. */
-	private refold(surface: HTMLElement): void {
-		this.motion.refold(surface, this.contentOf(surface), this.leavingChoices, this.contentEl);
+	/** The choices just closed without an answer slide back out of `surface` the way they came, and what they covered comes back. */
+	private refold(surface: HTMLElement, side: Side = "left"): void {
+		this.motion.refold(surface, this.contentOf(surface), this.leavingChoices, this.contentEl, side);
 		this.leavingChoices = null;
 		this.closing = null;
 	}

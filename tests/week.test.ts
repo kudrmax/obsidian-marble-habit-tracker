@@ -45,7 +45,7 @@ describe("weekCell", () => {
 });
 
 describe("weekGroups", () => {
-	it("lays every habit out by section, with the seven days up to the shown day, oldest first", () => {
+	it("lays every habit out by section, with the five days up to the shown day, oldest first", () => {
 		const read = ok("Read", { order: 0, section: "Morning" });
 		const floss = ok("Floss", { order: 1 });
 		const walk = ok("Walk", { order: 2, section: "Morning" });
@@ -54,7 +54,7 @@ describe("weekGroups", () => {
 			[undefined, ["Floss"]],
 			["Morning", ["Read", "Walk"]],
 		]);
-		expect(dates(groups[0].rows[0].cells)).toEqual(["2026-10-09", "2026-10-10", "2026-10-11", "2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15"]);
+		expect(dates(groups[0].rows[0].cells)).toEqual(["2026-10-11", "2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15"]);
 		expect(groups[0].rows[0].cells.every((cell) => cell.kind === "due")).toBe(true);
 		expect(groups[0].rows[0].path).toBe("Habits/Floss.md");
 	});
@@ -70,19 +70,19 @@ describe("weekGroups", () => {
 });
 
 describe("daysUpTo", () => {
-	it("gives the calendar's seven days up to a day, the ones before the calendar starts outside", () => {
+	it("gives the calendar's five days up to a day, the ones before the calendar starts outside", () => {
 		const strip = dayStrip([ok("Read", { done_tiny: ["2026-10-14"] })], thursday);
 		const days = daysUpTo(strip, d("2026-10-03"), thursday);
-		expect(dates(days)).toEqual(["2026-09-27", "2026-09-28", "2026-09-29", "2026-09-30", "2026-10-01", "2026-10-02", "2026-10-03"]);
-		expect(days.map((day) => day.outside)).toEqual([true, true, true, true, true, false, false]);
+		expect(dates(days)).toEqual(["2026-09-29", "2026-09-30", "2026-10-01", "2026-10-02", "2026-10-03"]);
+		expect(days.map((day) => day.outside)).toEqual([true, true, true, false, false]);
 		expect(daysUpTo(strip, thursday, thursday).find((day) => day.date.equals(d("2026-10-14")))).toMatchObject({ due: 1, done: 1, outside: false });
 	});
 });
 
 describe("daysTitle", () => {
-	it("dates the seven days up to a day, with the year when it is another year", () => {
-		expect(daysTitle(d("2026-10-08"), thursday)).toBe("Oct 2 – 8");
-		expect(daysTitle(d("2026-10-03"), thursday)).toBe("Sep 27 – Oct 3");
-		expect(daysTitle(d("2026-01-02"), d("2027-01-10"))).toBe("Dec 27 – Jan 2 2026");
+	it("dates the five days up to a day, with the year when it is another year", () => {
+		expect(daysTitle(d("2026-10-08"), thursday)).toBe("Oct 4 – 8");
+		expect(daysTitle(d("2026-10-03"), thursday)).toBe("Sep 29 – Oct 3");
+		expect(daysTitle(d("2026-01-02"), d("2027-01-10"))).toBe("Dec 29 – Jan 2 2026");
 	});
 });
