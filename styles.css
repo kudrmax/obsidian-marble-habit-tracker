@@ -458,6 +458,10 @@ button.th-choice.has-word:active .th-choice-ball { scale: var(--th-word-press-sc
 .th-row-choices.is-crowded button.th-choice.has-word:last-child { margin-right: 0; }
 .th-row-choices.is-crowded .th-choice-ball.is-word { width: auto; padding: 0 var(--th-space-2) 0 var(--th-space-5); }
 .th-row-choices.is-crowded .th-choice-ball.is-word .th-mark { width: var(--th-mark-phone); }
+/* Turned round on the grid, the gaps turn round too: each answer keeps its gap on the side away from cancel. */
+.th-row-choices.is-mirrored button.th-choice.has-word { margin-right: 0; margin-left: var(--th-space-8); }
+.th-row-choices.is-mirrored.is-crowded button.th-choice.has-word { margin-right: 0; margin-left: var(--th-space-6); }
+.th-row-choices.is-mirrored.is-crowded button.th-choice.has-word:first-child { margin-left: 0; }
 
 /* The marbles fall over the list; the celebration line stands over them. */
 .th-jar { position: absolute; top: 0; left: 0; z-index: var(--th-layer-marbles); width: 100%; height: 100%; pointer-events: none; }

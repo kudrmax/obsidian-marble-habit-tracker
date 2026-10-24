@@ -758,16 +758,15 @@ export class TodayView extends ItemView {
 	 * row back.
 	 *
 	 * On the grid, whose circles stand at the row's right end, it is the mirror of that: cancel lands on the circle
-	 * tapped, `later` columns from the last, the answers line up to its left — done next to it, skip furthest — and they
-	 * come in from past the view's right edge. Their words wouldn't fit beside an early day's circle, so there the answers
-	 * are bare circles, each as the day will look, named in a tooltip.
+	 * tapped, `later` columns from the last, the same answers line up to its left in the opposite order — done next to
+	 * it, skip furthest — and they come in from past the view's right edge.
 	 */
 	private renderChoices(main: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined, later: number | null = null): void {
 		const bar = main.createDiv("th-row-choices");
 		const mirrored = later !== null;
 		const addCancel = () => this.answerButton(bar, "Cancel", ["th-choice-cancel"], "x").addEventListener("click", () => this.closeChoices());
 		const addAnswer = ({ answer, label, look, sign }: ReturnType<TodayView["answers"]>[number]) => {
-			const button = this.answerButton(bar, label, look, sign, mirrored ? undefined : CHOICE_WORDS[answer]);
+			const button = this.answerButton(bar, label, look, sign, CHOICE_WORDS[answer]);
 			button.setAttr("aria-pressed", String(mark?.kind === ANSWER_MARKS[answer].kind));
 			button.addEventListener("click", (event) => {
 				this.unfolding?.stop();
