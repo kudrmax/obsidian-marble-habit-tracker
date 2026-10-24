@@ -19,6 +19,7 @@ describe("loadSettings", () => {
 			speed: 100,
 			merge: { smallPerMedium: 7, mediumPerBig: 4 },
 			dayStartHour: 5,
+			gridDays: 5,
 			hideDone: true,
 			showWins: true,
 			celebrationLine: true,
@@ -50,6 +51,7 @@ describe("loadSettings", () => {
 				speed: 150,
 				merge: { smallPerMedium: 5, mediumPerBig: 3 },
 				dayStartHour: 3,
+				gridDays: 7,
 				hideDone: false,
 				showWins: false,
 				celebrationLine: false,
@@ -76,6 +78,7 @@ describe("loadSettings", () => {
 			speed: 150,
 			merge: { smallPerMedium: 5, mediumPerBig: 3 },
 			dayStartHour: 3,
+			gridDays: 7,
 			hideDone: false,
 			showWins: false,
 			celebrationLine: false,
@@ -105,6 +108,14 @@ describe("loadSettings", () => {
 		expect(loadSettings({ dayStartHour: 13 }).dayStartHour).toBe(5);
 		expect(loadSettings({ dayStartHour: -1 }).dayStartHour).toBe(5);
 		expect(loadSettings({ dayStartHour: 0 }).dayStartHour).toBe(0);
+	});
+
+	it("keeps the week view's number of days between three and seven", () => {
+		expect(loadSettings({ gridDays: 7 }).gridDays).toBe(7);
+		expect(loadSettings({ gridDays: 3 }).gridDays).toBe(3);
+		expect(loadSettings({ gridDays: 2 }).gridDays).toBe(5);
+		expect(loadSettings({ gridDays: 8 }).gridDays).toBe(5);
+		expect(loadSettings({ gridDays: 4.5 }).gridDays).toBe(5);
 	});
 
 	it("replaces a speed outside 50–200% with the default", () => {

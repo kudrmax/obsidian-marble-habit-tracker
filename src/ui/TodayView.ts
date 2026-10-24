@@ -383,7 +383,7 @@ export class TodayView extends ItemView {
 	}
 
 	/**
-	 * The five days up to the shown day as a grid: every habit by section, a circle for each day, answered right there as
+	 * The days up to the shown day as a grid, as many as the settings say: every habit by section, a circle for each day, answered right there as
 	 * on the list, the answers sliding over the row while the calendar picks the day they are for.
 	 */
 	private renderWeek(column: HTMLElement, all: readonly HabitEntry[]): void {
@@ -391,17 +391,17 @@ export class TodayView extends ItemView {
 		const shown = this.shownDay();
 		this.renderCalendar(all);
 		this.renderHead();
-		if (!shown.equals(today)) column.appendChild(this.backChip(daysTitle(shown, today), "Back to today"));
+		if (!shown.equals(today)) column.appendChild(this.backChip(daysTitle(shown, today, this.ui.settings().gridDays), "Back to today"));
 		this.showTools(this.renderTools(0, false));
 		const answering = this.answering;
 		const rows = this.grid?.render(column, {
 			today,
-			groups: weekGroups(all, shown, today),
+			groups: weekGroups(all, shown, today, this.ui.settings().gridDays),
 			popping: (path, day) => this.celebrating.has(this.cellKey(path, day)),
 		});
 		for (const [path, { habit, row, line }] of rows ?? []) {
 			const mark = answering ? habit.markOn(answering) : undefined;
-			if (this.menu === path && answering) this.renderChoices(line, path, habit, mark, shown.daysSince(answering));
+			if (this.menu === path) this.renderChoices(line, path, habit, mark, "right");
 			if (this.closing === path) this.refold(line, "right");
 			if (this.asking === path) this.renderReasons(row, path);
 			if (this.shrink === path && mark?.kind === "missed") this.renderShrink(row, path, habit);
@@ -528,9 +528,9 @@ export class TodayView extends ItemView {
 
 	/**
 	 * The calendar in the tray, on Today and in All habits, with the shown day picked; a tap on a day shows it on Today,
-	 * or the five days up to it on the grid. Over the grid the calendar's row is the grid's own five days, a date over
+	 * or the days up to it on the grid. Over the grid the calendar's row is the grid's own days, a date over
 	 * or under each column, the day being answered picked: the folded tray's on a phone, the week over the list on a
-	 * computer, whose arrows step five days.
+	 * computer, whose arrows step as many days.
 	 */
 	private renderCalendar(all: readonly HabitEntry[]): void {
 		const today = this.ui.service.today();
@@ -540,8 +540,8 @@ export class TodayView extends ItemView {
 		const grid = this.showsWeek();
 		const focus = grid && (this.menu ?? this.asking) ? this.answering : null;
 		this.tray?.show(days, shown, today, pick, grid ? shown : today);
-		this.tray?.setStrip(grid ? { days: daysUpTo(days, shown, today), focus } : null);
-		if (grid) this.week?.follow(days, shown, today, pick, focus);
+		this.tray?.setStrip(grid ? { days: daysUpTo(days, shown, today, this.ui.settings().gridDays), focus } : null);
+		if (grid) this.week?.follow(days, shown, today, pick, focus, this.ui.settings().gridDays);
 		else this.week?.show(days, shown, today, pick);
 	}
 
@@ -604,7 +604,7 @@ export class TodayView extends ItemView {
 		help.addEventListener("click", () => {
 			const settings = this.ui.settings();
 			const offTrigger = settings.notAtTrigger ? { trigger: this.ui.labels().of("anchor"), win: settings.wins.offTrigger } : null;
-			new HelpModal(this.app, helpRows(Platform.isMobile, settings.merge, offTrigger)).open();
+			new HelpModal(this.app, helpRows(Platform.isMobile, settings.merge, offTrigger, settings.gridDays)).open();
 			this.ui.markHintsSeen();
 		});
 		return tools;
@@ -658,7 +658,7 @@ export class TodayView extends ItemView {
 		if (justClosed) this.haptics.merge();
 	}
 
-	/** Shows a day on Today, or the five days up to it on the grid; a day picked in All habits takes the way back. */
+	/** Shows a day on Today, or the days up to it on the grid; a day picked in All habits takes the way back. */
 	private showDay(day: LocalDate): void {
 		this.slide = this.screen === "all" ? "pop" : day.isBefore(this.shownDay()) ? "earlier" : "later";
 		this.screen = "today";
@@ -757,13 +757,13 @@ export class TodayView extends ItemView {
 	 * slide in together in one move while the circle and the name fade where they are. A tap anywhere else brings the
 	 * row back.
 	 *
-	 * On the grid, whose circles stand at the row's right end, it is the mirror of that: cancel lands on the circle
-	 * tapped, `later` columns from the last, the same answers line up to its left in the opposite order — done next to
-	 * it, skip furthest — and they come in from past the view's right edge.
+	 * On the grid, whose circles stand at the row's right end, `side` turns all of it round: cancel lands on the row's
+	 * last circle, whichever was tapped, the same answers line up to its left in the opposite order — done next to it,
+	 * skip furthest — and they come in from past the view's right edge.
 	 */
-	private renderChoices(main: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined, later: number | null = null): void {
+	private renderChoices(main: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined, side: Side = "left"): void {
 		const bar = main.createDiv("th-row-choices");
-		const mirrored = later !== null;
+		const mirrored = side === "right";
 		const addCancel = () => this.answerButton(bar, "Cancel", ["th-choice-cancel"], "x").addEventListener("click", () => this.closeChoices());
 		const addAnswer = ({ answer, label, look, sign }: ReturnType<TodayView["answers"]>[number]) => {
 			const button = this.answerButton(bar, label, look, sign, CHOICE_WORDS[answer]);
@@ -780,7 +780,6 @@ export class TodayView extends ItemView {
 			for (const answer of this.answers(habit).reverse()) addAnswer(answer);
 			addCancel();
 			bar.addClass("is-mirrored");
-			bar.style.setProperty("--th-grid-later", String(later));
 		} else {
 			addCancel();
 			for (const answer of this.answers(habit)) addAnswer(answer);
@@ -789,7 +788,7 @@ export class TodayView extends ItemView {
 		main.addClass("is-choosing");
 		if (!this.menuOpening) return;
 		this.menuOpening = false;
-		this.unfolding = this.motion.slideChoices(bar, this.contentOf(main), this.contentEl, mirrored ? "right" : "left");
+		this.unfolding = this.motion.slideChoices(bar, this.contentOf(main), this.contentEl, side);
 	}
 
 	/** The answers a habit offers, in order, each looking as the circle will once it is chosen. */

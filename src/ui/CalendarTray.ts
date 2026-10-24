@@ -59,7 +59,7 @@ const easeOut = (t: number) => 1 - Math.pow(1 - t, 3.4);
 
 /**
  * Today's calendar, in a tray at the bottom of the view over Obsidian's navbar. Folded, it shows this week's dates, or
- * over the week's grid the grid's own five days; pulled up, the rest of the month comes in above them, each date in a ring of how much of that day was done, under a
+ * over the week's grid the grid's own days; pulled up, the rest of the month comes in above them, each date in a ring of how much of that day was done, under a
  * line with the month, arrows to the months before and Today's buttons. Let go, it stays on the nearest whole week. Its
  * top edge is the floor the marbles stand on, wherever it is: rising, it carries them up and they hop off it.
  */

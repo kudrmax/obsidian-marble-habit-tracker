@@ -1,7 +1,7 @@
 import { LocalDate } from "../domain/LocalDate";
 import { dayRing } from "./components";
 import { CalendarDay, CalendarMonth, StripDay, calendarMonths, calendarWeek, dayTitle, donePercent, monthTitle, monthWeeks } from "./today";
-import { GRID_DAYS, daysUpTo, mondayOf } from "./week";
+import { daysUpTo, mondayOf } from "./week";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const CHEVRON_LEFT = "m15 18-6-6 6-6";
@@ -24,11 +24,13 @@ export class WeekCalendar {
 	private days: readonly StripDay[] = [];
 	private months: CalendarMonth[] = [];
 	private today: LocalDate | null = null;
+	/** Over the grid, how many days it shows. */
+	private count = 0;
 	private shown: LocalDate | null = null;
 	private pick: (day: LocalDate) => void = () => undefined;
 	/** The whole month on show, instead of one week. */
 	private open = false;
-	/** Over the grid: the five days up to the shown day, and the arrows step the shown day five days. */
+	/** Over the grid: the grid's days up to the shown day, and the arrows step the shown day as many days. */
 	private grid = false;
 	/** Over the grid, the day being answered. */
 	private focus: LocalDate | null = null;
@@ -70,13 +72,14 @@ export class WeekCalendar {
 	}
 
 	/**
-	 * Over the grid: the five days up to the shown day as its columns' dates, plain, with the day being answered picked.
-	 * The month's name names the shown day's month, and the arrows step five days.
+	 * Over the grid: the `count` days up to the shown day as its columns' dates, plain, with the day being answered picked.
+	 * The month's name names the shown day's month, and the arrows step `count` days.
 	 */
-	follow(days: readonly StripDay[], shown: LocalDate, today: LocalDate, pick: (day: LocalDate) => void, focus: LocalDate | null): void {
+	follow(days: readonly StripDay[], shown: LocalDate, today: LocalDate, pick: (day: LocalDate) => void, focus: LocalDate | null, count: number): void {
 		this.grid = true;
 		this.open = false;
 		this.focus = focus;
+		this.count = count;
 		this.take(days, shown, today, pick);
 		this.week = shown;
 		this.render();
@@ -109,13 +112,13 @@ export class WeekCalendar {
 
 	/**
 	 * A week or a month before or after the one on show, never past this week nor before the calendar starts. Over the
-	 * grid, the day five days away is picked, today at the latest.
+	 * grid, the day as many days away as the grid shows is picked, today at the latest.
 	 */
 	private turn(step: number): void {
 		const today = this.today;
 		if (!today || !this.week) return;
 		if (this.grid) {
-			const end = this.week.addDays(GRID_DAYS * step);
+			const end = this.week.addDays(this.count * step);
 			if (this.canStep(step)) this.pick(end.isAfter(today) ? today : end);
 			return;
 		}
@@ -129,13 +132,13 @@ export class WeekCalendar {
 		this.render();
 	}
 
-	/** Over the grid, five days on is as far as today, and five days back no earlier than the calendar's first day. */
+	/** Over the grid, a step on goes as far as today, and a step back no earlier than the calendar's first day. */
 	private canStep(step: number): boolean {
 		const today = this.today;
 		const first = this.days[0]?.date;
 		const end = this.week;
 		if (!today || !first || !end) return false;
-		return step > 0 ? end.isBefore(today) : !end.addDays(-GRID_DAYS).isBefore(first);
+		return step > 0 ? end.isBefore(today) : !end.addDays(-this.count).isBefore(first);
 	}
 
 	private canShowWeek(day: LocalDate): boolean {
@@ -161,7 +164,7 @@ export class WeekCalendar {
 		if (this.grid) this.title.removeAttribute("aria-expanded");
 		else this.title.setAttr("aria-expanded", String(this.open));
 		this.title.setAttr("aria-label", this.grid ? this.title.getText() : this.open ? "Show one week" : "Show the whole month");
-		const rows = this.grid ? [daysUpTo(this.days, week, today)] : this.open && month ? monthWeeks(this.days, month, today) : [calendarWeek(this.days, week, today)];
+		const rows = this.grid ? [daysUpTo(this.days, week, today, this.count)] : this.open && month ? monthWeeks(this.days, month, today) : [calendarWeek(this.days, week, today)];
 		this.weeks.empty();
 		for (const days of rows) {
 			const row = this.weeks.createDiv("th-week-row");

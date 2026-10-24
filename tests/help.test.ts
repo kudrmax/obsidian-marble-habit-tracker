@@ -22,9 +22,14 @@ describe("helpRows", () => {
 	it("explains the last five days, stepped with the bar's days on a phone and with the arrows on a computer", () => {
 		const week = (mobile: boolean) => helpRows(mobile, merge).find((row) => row.action === "The week button")?.result;
 		expect(week(true)).toContain("Tap a circle to answer for that day");
-		expect(week(true)).toContain("Pull the bar up and tap a day to see the five days up to it");
+		expect(week(true)).toContain("Pull the bar up and tap a day to see the 5 days up to it");
 		expect(week(false)).toContain("Click a circle to answer for that day");
-		expect(week(false)).toContain("The arrows by the month step five days");
+		expect(week(false)).toContain("The arrows by the month step 5 days");
+	});
+
+	it("takes the number of days on the week view from settings", () => {
+		const week = helpRows(true, merge, null, 3).find((row) => row.action === "The week button")?.result;
+		expect(week).toContain("Turns Today into the last 3 days");
 	});
 
 	it("takes the merge counts from settings", () => {

@@ -1,7 +1,7 @@
 import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
 import { JarSize } from "../domain/Jar";
 import { PropertyNames } from "../infrastructure/HabitCodec";
-import { DEFAULT_SETTINGS, HabitSettings, MAX_DAY_START, MAX_SPEED, MIN_SPEED, parseReasons } from "../settings";
+import { DEFAULT_SETTINGS, HabitSettings, MAX_DAY_START, MAX_GRID_DAYS, MAX_SPEED, MIN_GRID_DAYS, MIN_SPEED, parseReasons } from "../settings";
 import { DEFAULT_LABELS, LabelSet, RecipeLabels } from "./format";
 import { Hsl, parseColor } from "./jar/color";
 import { DEFAULT_MARBLE_SIZES, JAR_MATERIALS, JarMaterial, assetSvg } from "./jar/JarAssets";
@@ -164,6 +164,16 @@ export class SettingsTab extends PluginSettingTab {
 				for (let value = 0; value <= MAX_DAY_START; value++) dropdown.addOption(String(value), hour(value));
 				dropdown.setValue(String(settings.dayStartHour)).onChange((value) => void this.save((next) => (next.dayStartHour = Number(value))));
 			});
+		new Setting(containerEl)
+			.setName("Days on the week view")
+			.setDesc(`How many days the week button shows, up to today. On a phone each extra day takes room from the habits' names. Default ${DEFAULT_SETTINGS.gridDays}.`)
+			.addSlider((slider) =>
+				slider
+					.setLimits(MIN_GRID_DAYS, MAX_GRID_DAYS, 1)
+					.setDynamicTooltip()
+					.setValue(settings.gridDays)
+					.onChange((value) => void this.save((next) => (next.gridDays = value))),
+			);
 		new Setting(containerEl)
 			.setName("Fold answered habits")
 			.setDesc("Done and skipped habits leave the list; the ✓ button above it says how many and shows them again.")

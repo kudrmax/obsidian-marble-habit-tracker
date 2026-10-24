@@ -582,11 +582,11 @@ button.th-grid-cell:hover { background: transparent; }
 button.th-grid-cell:active .th-mark { transform: scale(var(--th-press-scale)); transition: transform var(--th-press-time) ease; }
 button.th-grid-cell:focus-visible { box-shadow: none; outline: none; }
 /*
- * The answers are Today's turned round: cancel lands on the circle tapped, the answers line up to its left, and the name
- * and the circles fade, as on Today. They come in from past the view's right edge, so the row doesn't cut them.
+ * The answers are Today's turned round: cancel lands on the row's last circle, whichever was tapped, the answers line up
+ * to its left, and the name and the circles fade, as on Today. They come in from past the view's right edge.
  */
 .th-grid-line.is-choosing .th-grid-name, .th-grid-line.is-choosing .th-grid-strip { opacity: 0; pointer-events: none; }
-.th-grid .th-row-choices { right: calc(var(--th-grid-later) * var(--th-grid-pitch) + (var(--th-grid-pitch) - var(--th-grid-gap) - var(--th-slot)) / 2); justify-content: flex-end; padding: 0; }
+.th-grid .th-row-choices { right: calc((var(--th-grid-pitch) - var(--th-grid-gap) - var(--th-slot)) / 2); justify-content: flex-end; padding: 0; }
 .th-grid .th-row-extra { padding: 0 0 var(--th-space-14); }
 /* On a computer the grid takes a wider column, so the names keep their line beside the five days. */
 body:not(.is-mobile) .th-today.is-week { --th-column: var(--th-grid-column); }
