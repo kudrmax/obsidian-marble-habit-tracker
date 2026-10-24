@@ -527,10 +527,10 @@ export class TodayView extends ItemView {
 	}
 
 	/**
-	 * The calendar in the tray, on Today and in All habits, with the shown day picked; a tap on a day shows it on Today,
-	 * or the days up to it on the grid. Over the grid the calendar's row is the grid's own days, a date over
-	 * or under each column, the day being answered picked: the folded tray's on a phone, the week over the list on a
-	 * computer, whose arrows step as many days.
+	 * The calendar in the tray, on Today and in All habits, with the shown day picked; a tap on a day shows it on Today.
+	 * Over the grid the calendar's row is the grid's own days, a date over or under each column, the day being answered
+	 * picked: the folded tray's on a phone, the week over the list on a computer, whose arrows step as many days. Pulled
+	 * up, the phone's tray marks them on the month with a band, and moving it moves the grid's days.
 	 */
 	private renderCalendar(all: readonly HabitEntry[]): void {
 		const today = this.ui.service.today();
@@ -538,10 +538,12 @@ export class TodayView extends ItemView {
 		const days = dayStrip(all, today, this.ui.settings().wins);
 		const pick = (day: LocalDate) => this.showDay(day);
 		const grid = this.showsWeek();
+		const count = this.ui.settings().gridDays;
 		const focus = grid && (this.menu ?? this.asking) ? this.answering : null;
-		this.tray?.show(days, shown, today, pick, grid ? shown : today);
-		this.tray?.setStrip(grid ? { days: daysUpTo(days, shown, today, this.ui.settings().gridDays), focus } : null);
-		if (grid) this.week?.follow(days, shown, today, pick, focus, this.ui.settings().gridDays);
+		if (grid) this.tray?.showRange(days, today, { end: shown, count, move: (end) => this.moveDays(end) });
+		else this.tray?.show(days, shown, today, pick);
+		this.tray?.setStrip(grid ? { days: daysUpTo(days, shown, today, count), focus } : null);
+		if (grid) this.week?.follow(days, shown, today, pick, focus, count);
 		else this.week?.show(days, shown, today, pick);
 	}
 
@@ -662,6 +664,16 @@ export class TodayView extends ItemView {
 	private showDay(day: LocalDate): void {
 		this.slide = this.screen === "all" ? "pop" : day.isBefore(this.shownDay()) ? "earlier" : "later";
 		this.screen = "today";
+		this.goTo(day);
+	}
+
+	/** The grid's days up to `end`, as the band in the tray moves over them: at once, without a slide. */
+	private moveDays(end: LocalDate): void {
+		this.slide = null;
+		this.goTo(end);
+	}
+
+	private goTo(day: LocalDate): void {
 		this.leaving.clear();
 		this.day = day.isBefore(this.ui.service.today()) ? day : null;
 		this.menu = null;

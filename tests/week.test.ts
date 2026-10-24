@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HabitEntry } from "../src/application/ports";
 import { dayStrip } from "../src/ui/today";
-import { daysTitle, daysUpTo, mondayOf, weekCell, weekGroups } from "../src/ui/week";
+import { bandWeeks, daysTitle, daysUpTo, mondayOf, weekCell, weekGroups } from "../src/ui/week";
 import { d } from "./support/dates";
 import { habitNote } from "./support/habits";
 
@@ -77,6 +77,26 @@ describe("daysUpTo", () => {
 		expect(dates(days)).toEqual(["2026-09-29", "2026-09-30", "2026-10-01", "2026-10-02", "2026-10-03"]);
 		expect(days.map((day) => day.outside)).toEqual([true, true, true, false, false]);
 		expect(daysUpTo(strip, thursday, thursday, 5).find((day) => day.date.equals(d("2026-10-14")))).toMatchObject({ due: 1, done: 1, outside: false });
+	});
+});
+
+describe("bandWeeks", () => {
+	it("lays the month out from the week before its first, this month up to this week", () => {
+		const weeks = bandWeeks(dayStrip([ok("Read")], thursday), { year: 2026, month: 10 }, thursday);
+		expect(weeks).toHaveLength(4);
+		expect(weeks.every((week) => week.length === 7)).toBe(true);
+		expect(weeks[0][0].date.toString()).toBe("2026-09-21");
+		expect(weeks[1][0].date.toString()).toBe("2026-09-28");
+		expect(weeks[3][6].date.toString()).toBe("2026-10-18");
+	});
+
+	it("keeps every day's counts, whichever month it is in, the other months' days outside", () => {
+		const read = ok("Read", { done_tiny: ["2026-09-27", "2026-10-14"] });
+		const weeks = bandWeeks(dayStrip([read], thursday), { year: 2026, month: 10 }, thursday);
+		const on = (text: string) => weeks.flat().find((day) => day.date.toString() === text);
+		expect(on("2026-09-27")).toMatchObject({ outside: true, done: 1 });
+		expect(on("2026-10-14")).toMatchObject({ outside: false, due: 1, done: 1 });
+		expect(on("2026-10-17")).toMatchObject({ outside: false, future: true });
 	});
 });
 

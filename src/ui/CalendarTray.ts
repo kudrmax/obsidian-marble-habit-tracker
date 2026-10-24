@@ -2,7 +2,7 @@ import { LocalDate } from "../domain/LocalDate";
 import { DAY_RING_LENGTH, DAY_RING_RADIUS, DESIGN } from "./design";
 import { Box } from "./jar/JarPhysics";
 import { CalendarDay, CalendarMonth, StripDay, calendarMonths, dayTitle, donePercent, monthTitle, monthWeeks } from "./today";
-import { mondayOf } from "./week";
+import { bandWeeks } from "./week";
 
 /** Over the weeks: room under the grabber, then one line with the month, its arrows and Today's buttons. */
 const HEAD_ROOM = 14;
@@ -20,8 +20,8 @@ const FIGURES = "0123456789";
 const ROW_WHOLE = DESIGN.weekRow + DESIGN.grip + BOTTOM_GAP - REST_HEIGHT;
 /** How far the tray rises while the rings draw themselves round: up to its first stop, with the head open. */
 const RINGS_DRAWN = ROW_WHOLE + HEAD;
-/** The furthest the tray goes up: enough for a month of six weeks. */
-const MAX_UP = 360;
+/** The furthest the tray goes up: enough for a month of six weeks, and over the week's grid the week before it. */
+const MAX_UP = 400;
 /** How far the tray rises before its shadow is at full strength. */
 const SHADOW_FADE = 60;
 /** A finger has to move this far before it is clear whether it moves the tray or taps a day. */
@@ -41,11 +41,31 @@ export interface TrayStrip {
 	readonly focus: LocalDate | null;
 }
 
+/** Over the week's grid, the days on show: `count` days up to `end`, which a finger moves along the month. */
+export interface TrayRange {
+	readonly end: LocalDate;
+	readonly count: number;
+	readonly move: (end: LocalDate) => void;
+}
+
+/** A day on show over the grid, its date and ring carried from its place in the folded row up to its own on the month. */
+interface Carried {
+	readonly cell: HTMLElement;
+	readonly week: number;
+	/** How far its place in the folded row lies from its own on the month. */
+	readonly across: number;
+	readonly down: number;
+}
+
 /** A date's ring: its track all the way round, and the part of it the day was done, if any. */
 interface Ring {
 	readonly track: SVGCircleElement;
 	readonly done: SVGCircleElement | null;
 	readonly share: number;
+	readonly date: LocalDate;
+	readonly week: number;
+	/** How far round it was last drawn. */
+	drawn: number;
 }
 const CHEVRON_LEFT = "m15 18-6-6 6-6";
 const CHEVRON_RIGHT = "m9 18 6-6-6-6";
@@ -59,9 +79,11 @@ const easeOut = (t: number) => 1 - Math.pow(1 - t, 3.4);
 
 /**
  * Today's calendar, in a tray at the bottom of the view over Obsidian's navbar. Folded, it shows this week's dates, or
- * over the week's grid the grid's own days; pulled up, the rest of the month comes in above them, each date in a ring of how much of that day was done, under a
- * line with the month, arrows to the months before and Today's buttons. Let go, it stays on the nearest whole week. Its
- * top edge is the floor the marbles stand on, wherever it is: rising, it carries them up and they hop off it.
+ * over the week's grid the grid's own days; pulled up, the rest of the month comes in above them, each date in a ring of
+ * how much of that day was done, under a line with the month, arrows to the months before and Today's buttons. Over the
+ * grid the month marks the grid's days with a band, which a finger moves along it. Let go, the tray stays on the
+ * nearest whole week. Its top edge is the floor the marbles stand on, wherever it is: rising, it carries them up and
+ * they hop off it.
  */
 export class CalendarTray {
 	readonly tray: HTMLElement;
@@ -83,7 +105,7 @@ export class CalendarTray {
 	private monthIndex = -1;
 	private shownDay: LocalDate | null = null;
 	private today: LocalDate | null = null;
-	/** A day of the week the folded tray shows; its month shows no week after it. */
+	/** The day whose month the folded tray rests on: today, or over the grid the last day on show. */
 	private rest: LocalDate | null = null;
 	private pick: (day: LocalDate) => void = () => undefined;
 	/** How far in from the grid's sides its outer rings start, so the month and the buttons line up with them. */
@@ -97,8 +119,20 @@ export class CalendarTray {
 	private inset = 0;
 	private rows = 1;
 	private rings: Ring[] = [];
-	/** How far round the rings were last drawn. */
-	private drawn = -1;
+	/** Over the week's grid, the days on show, marked on the month with a band. */
+	private range: TrayRange | null = null;
+	/** The dates of each week the month lays out, over the grid the week before it first. */
+	private weekDates: LocalDate[][] = [];
+	/** Each week's band, over the grid. */
+	private bands: HTMLElement[] = [];
+	/** How far up the tray was when the band was last drawn. */
+	private bandDrawn = -1;
+	private carried: Carried[] = [];
+	/** Over the grid, the day being answered, picked among the days on show. */
+	private focus: LocalDate | null = null;
+	/** The month whose week before it shows: once the days on show reach its first week, until the tray folds. */
+	private revealedIn: CalendarMonth | null = null;
+	private bandDrag: { pointer: number; x: number; y: number; column: number; from: LocalDate } | null = null;
 	/** How far above its rest the tray is. */
 	private raised = 0;
 	private restTop = 0;
@@ -116,7 +150,8 @@ export class CalendarTray {
 
 	constructor(
 		private readonly root: HTMLElement,
-		private readonly onSnap: () => void,
+		/** Taps when the tray opens or folds, and as the band moves a day. */
+		private readonly tap: () => void,
 		private readonly onMove: () => void,
 	) {
 		this.tray = root.createDiv("th-tray");
@@ -140,7 +175,7 @@ export class CalendarTray {
 		// A finger moving the tray moves only the tray: Obsidian's own gestures don't get it. Its taps still do, so
 		// Obsidian can take the pressed look off a date when the finger lifts.
 		this.tray.addEventListener("touchmove", (event) => {
-			if (this.drag?.moving) event.stopPropagation();
+			if (this.drag?.moving || this.bandDrag) event.stopPropagation();
 		});
 		this.resizer = new ResizeObserver(() => this.placeRest());
 		this.resizer.observe(root);
@@ -189,46 +224,67 @@ export class CalendarTray {
 	}
 
 	/**
-	 * Takes the calendar's days and draws the month on show: the month of `rest` unless another one was opened with the
-	 * arrows. Folded, the tray shows the week of `rest`: this week on Today, the week on show on the week's grid. The
-	 * shown day is picked; a tap on another day picks it.
+	 * Takes the calendar's days and draws the month on show: this month unless another one was opened with the arrows.
+	 * Folded, the tray shows this week. The shown day is picked; a tap on another day picks it.
 	 */
-	show(days: readonly StripDay[], shown: LocalDate, today: LocalDate, pick: (day: LocalDate) => void, rest: LocalDate = today): void {
+	show(days: readonly StripDay[], shown: LocalDate, today: LocalDate, pick: (day: LocalDate) => void): void {
+		this.range = null;
+		this.update(days, shown, today, pick, today);
+	}
+
+	/**
+	 * Over the week's grid: the month of the days on show, them marked on it with a band. A finger on the band moves it
+	 * along the days, a day for each column it crosses and a week for each week, never past today; each day it moves,
+	 * the grid follows. Folded, the tray shows the days over the grid's columns, see `setStrip`.
+	 */
+	showRange(days: readonly StripDay[], today: LocalDate, range: TrayRange): void {
+		const moving = this.bandDrag !== null && this.range !== null;
+		this.range = range;
+		if (!moving) return this.update(days, range.end, today, () => undefined, range.end);
+		this.shownDay = range.end;
+		this.rest = range.end;
+		this.placeBand();
+	}
+
+	/** The month the folded tray rests on is the one of `rest`. */
+	private update(days: readonly StripDay[], shown: LocalDate, today: LocalDate, pick: (day: LocalDate) => void, rest: LocalDate): void {
 		const restMoved = !this.rest?.equals(rest);
 		this.days = days;
 		this.shownDay = shown;
 		this.today = today;
 		this.rest = rest;
 		this.pick = pick;
+		const open = this.months[this.monthIndex];
 		this.months = calendarMonths(days, today);
-		if (this.monthIndex < 0 || this.monthIndex >= this.months.length || (restMoved && this.raised <= 1)) this.monthIndex = this.restIndex();
+		this.monthIndex = open ? this.indexOf(open) : -1;
+		if (this.monthIndex < 0 || (restMoved && this.raised <= 1)) this.monthIndex = this.restIndex();
 		this.renderMonth();
 	}
 
 	/**
-	 * Over the week's grid the folded tray shows the grid's own days, each under its column of circles. Pulled up, they
-	 * fade away and the month comes in as always.
+	 * Over the week's grid the folded tray shows the grid's own days, each under its column of circles, the day being
+	 * answered picked. They are the month's own days, carried down into a row of places under the columns; pulled up,
+	 * each travels to its place on the month, its ring and the band drawing round it, and the rest of the month comes in.
 	 */
 	setStrip(strip: TrayStrip | null): void {
 		this.strip.empty();
-		const today = this.today;
-		if (!strip || !today) return;
-		const days = this.strip.createDiv("th-cal-strip-days");
-		for (const day of strip.days) {
-			const cell = days.createDiv("th-cal-day");
-			cell.toggleClass("is-today", day.date.equals(today));
-			cell.toggleClass("is-off", day.future || day.outside);
-			cell.toggleClass("is-selected", strip.focus?.equals(day.date) ?? false);
-			cell.createSpan("th-cal-date").createSpan({ cls: "th-cal-figure", text: String(day.date.day) });
+		this.focus = strip?.focus ?? null;
+		if (strip) {
+			const places = this.strip.createDiv("th-cal-strip-days");
+			for (const day of strip.days) places.createDiv({ cls: "th-cal-day", attr: { "data-date": day.date.toString() } });
 		}
-		this.centerFigures();
+		this.carry();
 	}
 
 	/** The month the folded tray rests on: the one of `rest`. */
 	private restIndex(): number {
-		const rest = this.rest;
-		const index = rest ? this.months.findIndex((month) => month.year === rest.year && month.month === rest.month) : -1;
+		const index = this.rest ? this.indexOf(this.rest) : -1;
 		return index < 0 ? this.months.length - 1 : index;
+	}
+
+	/** Where a month is among the calendar's, kept by the month itself: days answered before them add months in front. */
+	private indexOf(month: CalendarMonth): number {
+		return this.months.findIndex((known) => known.year === month.year && known.month === month.month);
 	}
 
 	private arrow(line: HTMLElement, label: string, path: string, step: number): HTMLButtonElement {
@@ -242,37 +298,167 @@ export class CalendarTray {
 		return button;
 	}
 
-	/** Opens the month before or after the one on show, all of it. */
+	/** Opens the month before or after the one on show, all of it; over the grid, the band moves to its last days. */
 	private turn(step: number): void {
 		const index = Math.min(this.months.length - 1, Math.max(0, this.monthIndex + step));
 		if (index === this.monthIndex) return;
 		this.monthIndex = index;
+		const range = this.range;
+		const end = range ? this.lastDayOf(this.months[index]) : null;
+		if (range && end) {
+			this.range = { ...range, end };
+			this.shownDay = end;
+			this.rest = end;
+		}
 		this.renderMonth();
 		this.settle(this.maxUp());
+		if (range && end) range.move(end);
+	}
+
+	/** A month's last day, or today in this month. */
+	private lastDayOf(month: CalendarMonth): LocalDate {
+		const last = LocalDate.of(month.year, month.month + 1, 0);
+		return this.today && last.isAfter(this.today) ? this.today : last;
 	}
 
 	private renderMonth(): void {
 		const month = this.months[this.monthIndex];
 		const today = this.today;
 		if (!month || !today) return;
-		const rest = this.rest;
-		const all = monthWeeks(this.days, month, today);
-		const weeks = rest && this.monthIndex === this.restIndex() ? all.filter((week) => !week[0].date.isAfter(mondayOf(rest))) : all;
+		const weeks = this.range ? bandWeeks(this.days, month, today) : monthWeeks(this.days, month, today);
 		this.weeks.empty();
 		this.rings = [];
-		this.drawn = -1;
+		this.bands = [];
+		this.weekDates = weeks.map((week) => week.map((day) => day.date));
 		const list = this.weeks.createDiv("th-cal-list");
-		for (const week of weeks) {
+		weeks.forEach((week, index) => {
 			const row = list.createDiv("th-cal-week");
-			for (const day of week) this.renderDay(row, day, this.shownDay?.equals(day.date) ?? false, today);
-		}
+			if (this.range) this.bands.push(row.createDiv("th-cal-band"));
+			for (const day of week) {
+				if (this.range) this.renderBandDay(row, day, index, today);
+				else this.renderDay(row, day, index, this.shownDay?.equals(day.date) ?? false, today);
+			}
+		});
 		this.fitTitle();
 		this.previous.disabled = this.monthIndex === 0;
 		this.next.disabled = this.monthIndex === this.months.length - 1;
-		this.rows = Math.max(1, weeks.length);
+		this.rows = Math.max(1, weeks.length - (this.range && !this.revealed() ? 1 : 0));
 		this.raised = Math.min(this.raised, this.maxUp());
 		this.centerFigures();
+		this.placeBand();
+		this.carry();
 		this.place();
+	}
+
+	/** Whether the week before the month shows over the grid, its days there for the band to move onto. */
+	private revealed(): boolean {
+		const revealed = this.revealedIn;
+		return this.range !== null && revealed !== null && this.monthIndex >= 0 && this.indexOf(revealed) === this.monthIndex;
+	}
+
+	/**
+	 * Marks the days on show with a band on each week they are in, from the first of them there to the last. A week
+	 * without them keeps its band folded away on the side they lie past, so it grows from there when they come in.
+	 * Once they reach the month's first week, the week before it comes in over it.
+	 */
+	private placeBand(): void {
+		const range = this.range;
+		if (!range) return;
+		const start = range.end.addDays(1 - range.count);
+		const first = this.weekDates[1];
+		if (first && !this.revealed() && !start.isAfter(first[WEEK_DAYS - 1])) this.reveal();
+		this.bands.forEach((band, index) => {
+			const dates = this.weekDates[index];
+			const held = dates.flatMap((date, column) => (date.isBefore(start) || date.isAfter(range.end) ? [] : [column]));
+			const from = held[0] ?? (dates[0].isAfter(range.end) ? 0 : WEEK_DAYS - 1);
+			const to = held[held.length - 1] ?? from;
+			band.style.setProperty("--th-band-first", String((from + 0.5) / WEEK_DAYS));
+			band.style.setProperty("--th-band-last", String((to + 0.5) / WEEK_DAYS));
+			band.toggleClass("is-empty", held.length === 0);
+		});
+		this.bandDrawn = -1;
+		this.drawBand();
+	}
+
+	/** Brings the week before the month in over its first week, the tray rising a week to show it if it is up. */
+	private reveal(): void {
+		this.revealedIn = this.months[this.monthIndex] ?? null;
+		this.rows += 1;
+		if (this.raised > 1) this.settle(this.raised + DESIGN.weekRow);
+	}
+
+	/** Draws each week's band back from its last day on show to its first while their dates travel up to it. */
+	private drawBand(): void {
+		if (this.raised === this.bandDrawn) return;
+		this.bandDrawn = this.raised;
+		this.bands.forEach((band, week) => band.style.setProperty("--th-band-shown", this.travel(week).toFixed(3)));
+	}
+
+	/**
+	 * How far the folded tray's dates have come to their week of the month: from nothing, folded, to all the way once
+	 * the tray shows that week whole, so each lands as its week comes in.
+	 */
+	private travel(week: number): number {
+		const whole = ROW_WHOLE + HEAD + (this.weekDates.length - 1 - week) * DESIGN.weekRow;
+		return clamp(Math.max(0, this.raised) / whole);
+	}
+
+	/** Whether a day is one of the days on show over the grid. */
+	private onShow(date: LocalDate): boolean {
+		const range = this.range;
+		return !!range && !date.isAfter(range.end) && !date.isBefore(range.end.addDays(1 - range.count));
+	}
+
+	/** Finds how far each day on show lies from its place in the folded row, to carry it between the two. */
+	private carry(): void {
+		for (const item of this.carried) {
+			item.cell.removeClass("is-carried");
+			item.cell.removeClass("is-selected");
+		}
+		this.carried = [];
+		const places = this.range ? Array.from(this.strip.querySelectorAll<HTMLElement>(".th-cal-day")) : [];
+		const cells = places.map((place) => this.weeks.querySelector<HTMLElement>(`.th-cal-day[data-date="${place.dataset.date ?? ""}"]`));
+		places.forEach((place, index) => {
+			const cell = cells[index];
+			const date = cell?.dataset.date ? LocalDate.parse(cell.dataset.date) : null;
+			const week = date ? this.weekDates.findIndex((dates) => dates.some((day) => day.equals(date))) : -1;
+			if (!cell || !date || week < 0) return;
+			const from = place.getBoundingClientRect();
+			const to = cell.getBoundingClientRect();
+			cell.addClass("is-carried");
+			cell.toggleClass("is-selected", this.focus?.equals(date) ?? false);
+			this.carried.push({ cell, week, across: from.left + from.width / 2 - to.left - to.width / 2, down: from.top + from.height / 2 - to.top - to.height / 2 });
+		});
+		this.moveCarried();
+	}
+
+	/**
+	 * Carries each day on show as far as the tray has risen: across to its column all the way up to where its week shows
+	 * whole, and up only once the head is open, rising with the tray from there, so it never passes under the head. Each
+	 * week's band stretches with its days, from the first of them there to the last.
+	 */
+	private moveCarried(): void {
+		const opened = Math.max(0, this.raised) - ROW_WHOLE - HEAD;
+		const shifts = new Map<number, { first: number; last: number; up: number }>();
+		let carrying = false;
+		for (const item of this.carried) {
+			const weeksUp = this.weekDates.length - 1 - item.week;
+			const travel = this.travel(item.week);
+			const x = item.across * (1 - travel);
+			const y = item.down * (1 - (weeksUp === 0 ? 1 : clamp(opened / (weeksUp * DESIGN.weekRow))));
+			carrying ||= travel < 1;
+			item.cell.style.setProperty("--th-carry-x", `${x.toFixed(2)}px`);
+			item.cell.style.setProperty("--th-carry-y", `${y.toFixed(2)}px`);
+			shifts.set(item.week, { first: shifts.get(item.week)?.first ?? x, last: x, up: y });
+		}
+		this.bands.forEach((band, week) => {
+			const shift = shifts.get(week);
+			band.style.setProperty("--th-band-first-x", `${(shift?.first ?? 0).toFixed(2)}px`);
+			band.style.setProperty("--th-band-last-x", `${(shift?.last ?? 0).toFixed(2)}px`);
+			band.style.setProperty("--th-band-y", `${(shift?.up ?? 0).toFixed(2)}px`);
+		});
+		this.tray.toggleClass("is-carrying", carrying);
+		this.tray.style.setProperty("--th-month-in", clamp(opened / DESIGN.weekRow).toFixed(3));
 	}
 
 	/** The month's whole name, or its short one when the whole one leaves the buttons no room on its line. */
@@ -290,7 +476,7 @@ export class CalendarTray {
 	 * to the middle of its circle.
 	 */
 	private centerFigures(): void {
-		const figures = Array.from(this.calendar.querySelectorAll<HTMLElement>(".th-cal-weeks .th-cal-figure, .th-cal-strip .th-cal-figure"));
+		const figures = Array.from(this.calendar.querySelectorAll<HTMLElement>(".th-cal-weeks .th-cal-figure"));
 		this.figureContext ??= document.createElement("canvas").getContext("2d");
 		const context = this.figureContext;
 		if (!context || !figures[0]) return;
@@ -328,7 +514,7 @@ export class CalendarTray {
 		return shift;
 	}
 
-	private renderDay(row: HTMLElement, day: CalendarDay, selected: boolean, today: LocalDate): void {
+	private renderDay(row: HTMLElement, day: CalendarDay, week: number, selected: boolean, today: LocalDate): void {
 		const off = day.future || day.outside;
 		const percent = off ? null : donePercent(day);
 		const title = dayTitle(day.date, today);
@@ -336,14 +522,29 @@ export class CalendarTray {
 		button.toggleClass("is-selected", selected);
 		button.toggleClass("is-today", day.date.equals(today));
 		button.toggleClass("is-off", off);
-		if (!off) this.renderRing(button, percent ?? 0);
+		if (!off) this.renderRing(button, percent ?? 0, day.date, week);
 		button.createSpan("th-cal-date").createSpan({ cls: "th-cal-figure", text: String(day.date.day) });
 		button.disabled = off;
 		button.addEventListener("click", () => this.pick(day.date));
 	}
 
+	/**
+	 * A day of the month over the grid: its ring and date as on Today, in any month, but not a button: the band over the
+	 * days on show is what a finger moves.
+	 */
+	private renderBandDay(row: HTMLElement, day: CalendarDay, week: number, today: LocalDate): void {
+		const percent = day.future ? null : donePercent(day);
+		const title = dayTitle(day.date, today);
+		const cell = row.createDiv({ cls: "th-cal-day", attr: { "data-date": day.date.toString(), "aria-label": percent === null ? title : `${title}, ${percent}% done` } });
+		cell.toggleClass("is-today", day.date.equals(today));
+		cell.toggleClass("is-off", day.future);
+		cell.toggleClass("is-other", day.outside);
+		if (!day.future) this.renderRing(cell, percent ?? 0, day.date, week);
+		cell.createSpan("th-cal-date").createSpan({ cls: "th-cal-figure", text: String(day.date.day) });
+	}
+
 	/** A ring around the date, its accent part as far round as the day was done: all of it for a day done in full. */
-	private renderRing(button: HTMLElement, percent: number): void {
+	private renderRing(button: HTMLElement, percent: number, date: LocalDate, week: number): void {
 		const svg = button.appendChild(document.createElementNS(SVG_NS, "svg"));
 		svg.setAttribute("class", "th-cal-ring");
 		svg.setAttribute("viewBox", `0 0 ${DESIGN.ring} ${DESIGN.ring}`);
@@ -358,19 +559,21 @@ export class CalendarTray {
 			return element;
 		};
 		const track = circle("th-cal-ring-track");
-		this.rings.push({ track, done: percent === 0 ? null : circle("th-cal-ring-arc"), share: percent / 100 });
+		this.rings.push({ track, done: percent === 0 ? null : circle("th-cal-ring-arc"), share: percent / 100, date, week, drawn: -1 });
 	}
 
 	/**
 	 * Draws every ring from its top, clockwise, as far round as `round` says, from none to all the way; the part the day
-	 * was done grows with it, so each ring comes in drawing itself rather than fading in.
+	 * was done grows with it, so each ring comes in drawing itself rather than fading in. Over the grid the rings of the
+	 * days on show draw round their dates as those travel up to them.
 	 */
 	private drawRings(round: number): void {
-		if (round === this.drawn) return;
-		this.drawn = round;
 		for (const ring of this.rings) {
-			this.drawArc(ring.track, round);
-			if (ring.done) this.drawArc(ring.done, round * ring.share);
+			const drawn = this.onShow(ring.date) ? this.travel(ring.week) : round;
+			if (drawn === ring.drawn) continue;
+			ring.drawn = drawn;
+			this.drawArc(ring.track, drawn);
+			if (ring.done) this.drawArc(ring.done, drawn * ring.share);
 		}
 	}
 
@@ -414,6 +617,8 @@ export class CalendarTray {
 		// Rising, the room under this week's row grows back first and the row becomes whole; then the head opens over it, so
 		// it never lies over a week; the earlier weeks get the rest. All the while, up to the first stop, the rings draw round.
 		this.drawRings(clamp(raised / RINGS_DRAWN));
+		this.drawBand();
+		this.moveCarried();
 		this.tray.style.setProperty("--th-head-height", `${Math.min(HEAD, Math.max(0, raised - ROW_WHOLE))}px`);
 		this.tray.style.setProperty("--th-open", String(clamp(raised / SHADOW_FADE)));
 		// Folded, this week's row hangs low so only its dates show; pushed below its rest, the tray takes them down with it.
@@ -432,12 +637,53 @@ export class CalendarTray {
 	}
 
 	private readonly pointerDown = (event: PointerEvent) => {
-		if (event.button !== 0) return;
+		if (event.button !== 0 || this.grabBand(event)) return;
 		cancelAnimationFrame(this.settleFrame);
 		this.drag = { pointer: event.pointerId, startY: event.clientY, startRaised: this.raised, lastY: event.clientY, lastAt: event.timeStamp, speed: 0, moving: false };
 	};
 
+	/** A finger down on the days on show takes the band, to move them along the month; anywhere else it moves the tray. */
+	private grabBand(event: PointerEvent): boolean {
+		const range = this.range;
+		const cell = event.target instanceof Element ? event.target.closest<HTMLElement>(".th-cal-weeks .th-cal-day") : null;
+		const date = cell?.dataset.date ? LocalDate.parse(cell.dataset.date) : null;
+		const week = cell?.parentElement;
+		if (!range || !date || !week || this.raised <= 1) return false;
+		if (date.isAfter(range.end) || date.isBefore(range.end.addDays(1 - range.count))) return false;
+		const column = (week.clientWidth - 2 * DESIGN.weekPad) / WEEK_DAYS;
+		this.bandDrag = { pointer: event.pointerId, x: event.clientX, y: event.clientY, column, from: range.end };
+		this.tray.addClass("is-moving");
+		return true;
+	}
+
+	/** Moves the band a day for each column the finger crosses and a week for each week; the grid follows at once. */
+	private moveBand(event: PointerEvent): void {
+		const drag = this.bandDrag;
+		const range = this.range;
+		if (!drag || !range || event.pointerId !== drag.pointer) return;
+		const days = Math.round((event.clientX - drag.x) / drag.column) + WEEK_DAYS * Math.round((event.clientY - drag.y) / DESIGN.weekRow);
+		const end = this.reachable(drag.from.addDays(days), range.count);
+		if (end.equals(range.end)) return;
+		this.range = { ...range, end };
+		this.placeBand();
+		this.tap();
+		range.move(end);
+	}
+
+	/** Keeps the days on show on the weeks the tray shows now, and none of them after today. */
+	private reachable(end: LocalDate, count: number): LocalDate {
+		const weeks = this.weekDates;
+		const shownWeeks = Math.floor((Math.round(this.raised) - ROW_WHOLE - HEAD) / DESIGN.weekRow) + 1;
+		const top = Math.max(weeks.length - this.rows, weeks.length - Math.max(1, shownWeeks));
+		const earliest = weeks[top][0].addDays(count - 1);
+		const last = weeks[weeks.length - 1][WEEK_DAYS - 1];
+		const latest = this.today && this.today.isBefore(last) ? this.today : last;
+		if (end.isAfter(latest)) return latest;
+		return end.isBefore(earliest) ? earliest : end;
+	}
+
 	private readonly pointerMove = (event: PointerEvent) => {
+		if (this.bandDrag) return this.moveBand(event);
 		const drag = this.drag;
 		if (!drag || event.pointerId !== drag.pointer) return;
 		const dy = event.clientY - drag.startY;
@@ -458,6 +704,11 @@ export class CalendarTray {
 	private readonly pointerCancel = (event: PointerEvent) => this.release(event, true);
 
 	private release(event: PointerEvent, cancelled: boolean): void {
+		if (this.bandDrag?.pointer === event.pointerId) {
+			this.bandDrag = null;
+			this.tray.removeClass("is-moving");
+			return;
+		}
 		const drag = this.drag;
 		if (!drag || event.pointerId !== drag.pointer) return;
 		this.drag = null;
@@ -488,16 +739,20 @@ export class CalendarTray {
 		else this.settle(this.nearestStop(this.raised));
 	}
 
-	/** Folded, the head over this week, or the head over one more whole week each time, up to all the way. */
+	/**
+	 * Folded, the head over this week, or the head over one more whole week each time, up to all the way. Over the grid
+	 * only folded or all the way, so the days on show never stop on their way up to their week.
+	 */
 	private nearestStop(raised: number): number {
 		const stops = [0, this.maxUp()];
-		for (let week = 0; ROW_WHOLE + HEAD + week * DESIGN.weekRow < this.maxUp(); week++) stops.push(ROW_WHOLE + HEAD + week * DESIGN.weekRow);
+		for (let week = 0; !this.range && ROW_WHOLE + HEAD + week * DESIGN.weekRow < this.maxUp(); week++) stops.push(ROW_WHOLE + HEAD + week * DESIGN.weekRow);
 		return stops.reduce((best, stop) => (Math.abs(stop - raised) < Math.abs(best - raised) ? stop : best));
 	}
 
 	/**
 	 * Moves the tray to `target` above its rest, within its range, on iOS's settling curve, and taps when it opens or
-	 * folds. Folding goes back to the month it rests on, so the folded tray always shows its week.
+	 * folds. Folding goes back to the month it rests on, so the folded tray always shows its week; once folded, the week
+	 * before the month goes away again.
 	 */
 	private settle(target: number): void {
 		cancelAnimationFrame(this.settleFrame);
@@ -506,7 +761,7 @@ export class CalendarTray {
 			this.renderMonth();
 		}
 		const to = Math.min(this.maxUp(), Math.max(0, target));
-		if ((to > 1) !== (this.raised > 1)) this.onSnap();
+		if ((to > 1) !== (this.raised > 1)) this.tap();
 		const from = this.raised;
 		const start = performance.now();
 		const step = (now: number) => {
@@ -514,7 +769,14 @@ export class CalendarTray {
 			this.raised = from + (to - from) * easeOut(t);
 			this.place();
 			if (t < 1) this.settleFrame = requestAnimationFrame(step);
+			else if (to <= 0 && this.revealed()) this.forget();
 		};
 		this.settleFrame = requestAnimationFrame(step);
+	}
+
+	/** Hides the week before the month again, unless the days on show still reach into its first week. */
+	private forget(): void {
+		this.revealedIn = null;
+		this.renderMonth();
 	}
 }

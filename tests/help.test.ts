@@ -19,10 +19,10 @@ describe("helpRows", () => {
 		expect(computer).not.toContain("Pull the days up");
 	});
 
-	it("explains the last five days, stepped with the bar's days on a phone and with the arrows on a computer", () => {
+	it("explains the last five days, moved along the bar's month on a phone and with the arrows on a computer", () => {
 		const week = (mobile: boolean) => helpRows(mobile, merge).find((row) => row.action === "The week button")?.result;
 		expect(week(true)).toContain("Tap a circle to answer for that day");
-		expect(week(true)).toContain("Pull the bar up and tap a day to see the 5 days up to it");
+		expect(week(true)).toContain("Pull the bar up: the 5 days are marked on the month — drag the mark along it to see other days");
 		expect(week(false)).toContain("Click a circle to answer for that day");
 		expect(week(false)).toContain("The arrows by the month step 5 days");
 	});
