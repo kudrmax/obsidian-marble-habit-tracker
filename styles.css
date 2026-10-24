@@ -572,6 +572,10 @@ body:not(.is-mobile) .th-today .th-sheet-head button.th-back { margin-left: calc
 /* The places under the grid's columns where the days on show sit while the tray is folded; only their places, never seen. */
 .th-cal-strip { position: absolute; left: 0; right: 0; bottom: 0; box-sizing: border-box; max-width: var(--th-column); height: var(--th-week-row); margin: 0 auto; display: flex; align-items: center; justify-content: flex-end; visibility: hidden; }
 .th-cal-strip:empty { display: none; }
+/* Folded over the grid, arrows on the left of the row move its days a day at a time; they go as the tray rises. */
+.th-cal-steps { position: absolute; left: 0; right: 0; bottom: 0; box-sizing: border-box; max-width: var(--th-column); height: var(--th-week-row); margin: 0 auto; padding-left: calc(var(--th-cal-edge, var(--th-gutter)) - (var(--th-control) - var(--th-icon)) / 2); display: flex; align-items: center; gap: var(--th-space-2); opacity: calc(1 - var(--th-open, 0)); pointer-events: none; }
+.th-cal-steps:empty { display: none; }
+.th-tray:not(.is-up) .th-cal-steps button.th-cal-arrow { pointer-events: auto; }
 .th-cal-strip-days { flex: none; display: flex; margin-right: calc(var(--th-gutter) + (var(--th-mark) - var(--th-grid-pitch)) / 2); }
 .th-cal-strip .th-cal-day { flex: 0 0 var(--th-grid-pitch); display: flex; align-items: center; justify-content: center; height: var(--th-week-row); }
 

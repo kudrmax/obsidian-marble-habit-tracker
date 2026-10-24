@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HabitEntry } from "../src/application/ports";
 import { TINY, missed } from "../src/domain/DayMark";
-import { calendarMonths, calendarWeek, closedDayLine, dayStrip, dayTitle, donePercent, monthTitle, monthWeeks, totalWins, winsLabel, winsSince, offersShrink, todayEntries } from "../src/ui/today";
+import { calendarMonths, calendarWeek, closedDayLine, dayStrip, dayTitle, donePercent, monthTitle, monthWeeks, trayWeeks, totalWins, winsLabel, winsSince, offersShrink, todayEntries } from "../src/ui/today";
 import { d } from "./support/dates";
 import { habitNote } from "./support/habits";
 
@@ -151,6 +151,28 @@ describe("monthWeeks", () => {
 		expect(on("2026-09-19")).toMatchObject({ outside: true });
 		expect(on("2026-09-20")).toMatchObject({ outside: false, done: 1 });
 		expect(on("2026-10-01")).toMatchObject({ outside: true });
+	});
+});
+
+describe("trayWeeks", () => {
+	const today = d("2026-10-15");
+
+	it("lays the month out as monthWeeks does, with as many weeks before it as asked", () => {
+		expect(trayWeeks(dayStrip([ok("Read")], today), { year: 2026, month: 10 }, today).map((week) => week[0].date.toString())).toEqual(["2026-09-28", "2026-10-05", "2026-10-12"]);
+		const weeks = trayWeeks(dayStrip([ok("Read")], today), { year: 2026, month: 10 }, today, 1);
+		expect(weeks).toHaveLength(4);
+		expect(weeks.every((week) => week.length === 7)).toBe(true);
+		expect(weeks[0][0].date.toString()).toBe("2026-09-21");
+		expect(weeks[3][6].date.toString()).toBe("2026-10-18");
+	});
+
+	it("keeps every day's counts, whichever month it is in, the other months' days outside", () => {
+		const read = ok("Read", { done_tiny: ["2026-09-27", "2026-10-14"] });
+		const weeks = trayWeeks(dayStrip([read], today), { year: 2026, month: 10 }, today, 1);
+		const on = (text: string) => weeks.flat().find((day) => day.date.toString() === text);
+		expect(on("2026-09-27")).toMatchObject({ outside: true, done: 1 });
+		expect(on("2026-10-14")).toMatchObject({ outside: false, due: 1, done: 1 });
+		expect(on("2026-10-17")).toMatchObject({ outside: false, future: true });
 	});
 });
 
