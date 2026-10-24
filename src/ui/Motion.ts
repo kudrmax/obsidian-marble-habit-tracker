@@ -11,6 +11,10 @@ const DAY_MS = 260;
 const PUSH_MS = 380;
 const GROW_MS = 300;
 const BUMP_MS = 420;
+/** How far a day's content comes in from, and All habits'; how much a bumped element grows. */
+const DAY_DISTANCE = "28px";
+const PUSH_DISTANCE = "36%";
+const BUMP_SCALE = 1.08;
 /**
  * The choices sliding into the row from past its left edge, and the circle and name fading where they are. Leaving,
  * they slide back out on the same curve, quick from the first frame, while the circle and the name fade straight in.
@@ -49,7 +53,7 @@ export class Motion {
 		if (this.reduced()) return;
 		const push = kind === "push" || kind === "pop";
 		const sign = kind === "later" || kind === "push" ? 1 : -1;
-		const distance = push ? "36%" : "28px";
+		const distance = push ? PUSH_DISTANCE : DAY_DISTANCE;
 		for (const element of elements) {
 			element.animate(
 				[
@@ -146,6 +150,6 @@ export class Motion {
 	/** A number that just grew swells for a moment, like a counter ticking up. */
 	bump(element: HTMLElement): void {
 		if (this.reduced()) return;
-		element.animate([{ transform: "scale(1)" }, { transform: "scale(1.08)" }, { transform: "scale(1)" }], { duration: BUMP_MS, easing: SPRING });
+		element.animate([{ transform: "scale(1)" }, { transform: `scale(${BUMP_SCALE})` }, { transform: "scale(1)" }], { duration: BUMP_MS, easing: SPRING });
 	}
 }
