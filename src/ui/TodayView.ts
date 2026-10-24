@@ -32,9 +32,9 @@ import { SizeCalibration } from "./SizeCalibration";
 import { ScreenChrome } from "./ScreenChrome";
 import { WeekCalendar } from "./WeekCalendar";
 import { WeekGrid } from "./WeekGrid";
-import { closedDayLine, dayStrip, dayTitle, winsLabel, offersShrink, todayEntries } from "./today";
+import { closedDayLine, dayStrip, dayTitle, monthTitle, winsLabel, offersShrink, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
-import { sameWeek, weekGroups, weekTitle } from "./week";
+import { daysTitle, daysUpTo, weekGroups } from "./week";
 
 export const HABITS_VIEW = "tiny-habits-grid";
 /** The tool that turns Today into the week's grid and back. */
@@ -176,7 +176,7 @@ export class TodayView extends ItemView {
 			(drop) => this.dropped(drop),
 		);
 		this.jar = new JarCanvas(root, this.jarOptions());
-		this.grid = new WeekGrid(!Platform.isMobile, {
+		this.grid = new WeekGrid({
 			tap: (path, day, mark) => this.tapCell(path, day, mark),
 			choose: (path, day) => this.showMenu(path, day),
 		});
@@ -383,28 +383,26 @@ export class TodayView extends ItemView {
 	}
 
 	/**
-	 * The shown day's week as a grid: every habit by section, a circle for each of its days, answered right there as on the
-	 * list, the answers sliding over the row's circles.
+	 * The seven days up to the shown day as a grid: every habit by section, a circle for each day, answered right there as
+	 * on the list, the answers sliding over the row while the calendar picks the day they are for.
 	 */
 	private renderWeek(column: HTMLElement, all: readonly HabitEntry[]): void {
 		const today = this.ui.service.today();
 		const shown = this.shownDay();
 		this.renderCalendar(all);
 		this.renderHead();
-		if (!sameWeek(shown, today)) column.appendChild(this.backChip(weekTitle(shown, today), "Back to this week"));
+		if (!shown.equals(today)) column.appendChild(this.backChip(daysTitle(shown, today), "Back to today"));
 		this.showTools(this.renderTools(0, false));
-		const focused = this.menu ?? this.asking;
 		const answering = this.answering;
 		const rows = this.grid?.render(column, {
 			today,
 			groups: weekGroups(all, shown, today),
-			focus: focused && answering ? { path: focused, day: answering } : null,
 			popping: (path, day) => this.celebrating.has(this.cellKey(path, day)),
 		});
-		for (const [path, { habit, row, strip }] of rows ?? []) {
+		for (const [path, { habit, row, line }] of rows ?? []) {
 			const mark = answering ? habit.markOn(answering) : undefined;
-			if (this.menu === path) this.renderChoices(strip, path, habit, mark);
-			if (this.closing === path) this.refold(strip);
+			if (this.menu === path) this.renderChoices(line, path, habit, mark);
+			if (this.closing === path) this.refold(line);
 			if (this.asking === path) this.renderReasons(row, path);
 			if (this.shrink === path && mark?.kind === "missed") this.renderShrink(row, path, habit);
 		}
@@ -530,17 +528,21 @@ export class TodayView extends ItemView {
 
 	/**
 	 * The calendar in the tray, on Today and in All habits, with the shown day picked; a tap on a day shows it on Today,
-	 * or its week on the grid. Over the grid the days are the grid's columns: the folded tray rests on the week on show,
-	 * and a computer's week stays that week, its arrows a week each way.
+	 * or the seven days up to it on the grid. Over the grid the calendar's row is the grid's own seven days, a date over
+	 * or under each column, the day being answered picked: the folded tray's on a phone, the week over the list on a
+	 * computer, whose arrows step seven days.
 	 */
 	private renderCalendar(all: readonly HabitEntry[]): void {
 		const today = this.ui.service.today();
+		const shown = this.shownDay();
 		const days = dayStrip(all, today, this.ui.settings().wins);
 		const pick = (day: LocalDate) => this.showDay(day);
 		const grid = this.showsWeek();
-		this.tray?.show(days, this.shownDay(), today, pick, grid ? this.shownDay() : today);
-		if (grid) this.week?.follow(days, this.shownDay(), today, pick);
-		else this.week?.show(days, this.shownDay(), today, pick);
+		const focus = grid && (this.menu ?? this.asking) ? this.answering : null;
+		this.tray?.show(days, shown, today, pick, grid ? shown : today);
+		this.tray?.setStrip(grid ? { title: monthTitle({ year: shown.year, month: shown.month }, today), days: daysUpTo(days, shown, today), focus } : null);
+		if (grid) this.week?.follow(days, shown, today, pick, focus);
+		else this.week?.show(days, shown, today, pick);
 	}
 
 	/** Today's buttons, on the month's line wherever the calendar is. */
@@ -656,10 +658,9 @@ export class TodayView extends ItemView {
 		if (justClosed) this.haptics.merge();
 	}
 
-	/** Shows a day on Today, or its week on the grid; a day picked in All habits takes the way back. */
+	/** Shows a day on Today, or the seven days up to it on the grid; a day picked in All habits takes the way back. */
 	private showDay(day: LocalDate): void {
-		const sameGrid = this.showsWeek() && sameWeek(day, this.shownDay());
-		this.slide = this.screen === "all" ? "pop" : sameGrid ? null : day.isBefore(this.shownDay()) ? "earlier" : "later";
+		this.slide = this.screen === "all" ? "pop" : day.isBefore(this.shownDay()) ? "earlier" : "later";
 		this.screen = "today";
 		this.leaving.clear();
 		this.day = day.isBefore(this.ui.service.today()) ? day : null;

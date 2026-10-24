@@ -1,7 +1,7 @@
 import { LocalDate } from "../domain/LocalDate";
 import { dayRing } from "./components";
 import { CalendarDay, CalendarMonth, StripDay, calendarMonths, calendarWeek, dayTitle, donePercent, monthTitle, monthWeeks } from "./today";
-import { mondayOf } from "./week";
+import { GRID_DAYS, daysUpTo, mondayOf } from "./week";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const CHEVRON_LEFT = "m15 18-6-6 6-6";
@@ -28,8 +28,10 @@ export class WeekCalendar {
 	private pick: (day: LocalDate) => void = () => undefined;
 	/** The whole month on show, instead of one week. */
 	private open = false;
-	/** Over the week's grid: always one week, the shown day's, and the arrows step the shown day a week. */
+	/** Over the grid: the seven days up to the shown day, and the arrows step the shown day seven days. */
 	private grid = false;
+	/** Over the grid, the day being answered. */
+	private focus: LocalDate | null = null;
 	/** A day in the week on show, while only a week is. */
 	private week: LocalDate | null = null;
 	private monthIndex = -1;
@@ -67,10 +69,14 @@ export class WeekCalendar {
 		this.render();
 	}
 
-	/** The shown day's week over the week's grid: the month's name only names it, and the arrows pick a day a week away. */
-	follow(days: readonly StripDay[], shown: LocalDate, today: LocalDate, pick: (day: LocalDate) => void): void {
+	/**
+	 * Over the grid: the seven days up to the shown day as its columns' dates, plain, with the day being answered picked.
+	 * The month's name names the shown day's month, and the arrows step seven days.
+	 */
+	follow(days: readonly StripDay[], shown: LocalDate, today: LocalDate, pick: (day: LocalDate) => void, focus: LocalDate | null): void {
 		this.grid = true;
 		this.open = false;
+		this.focus = focus;
 		this.take(days, shown, today, pick);
 		this.week = shown;
 		this.render();
@@ -103,20 +109,33 @@ export class WeekCalendar {
 
 	/**
 	 * A week or a month before or after the one on show, never past this week nor before the calendar starts. Over the
-	 * grid, the day a week away is picked, today at the latest.
+	 * grid, the day seven days away is picked, today at the latest.
 	 */
 	private turn(step: number): void {
 		const today = this.today;
 		if (!today || !this.week) return;
+		if (this.grid) {
+			const end = this.week.addDays(GRID_DAYS * step);
+			if (this.canStep(step)) this.pick(end.isAfter(today) ? today : end);
+			return;
+		}
 		if (this.open) {
 			this.monthIndex = Math.min(this.months.length - 1, Math.max(0, this.monthIndex + step));
 		} else {
 			const week = this.week.addDays(WEEK_DAYS * step);
 			if (!this.canShowWeek(week)) return;
-			if (this.grid) return this.pick(week.isAfter(today) ? today : week);
 			this.week = week;
 		}
 		this.render();
+	}
+
+	/** Over the grid, seven days on is as far as today, and seven days back no earlier than the calendar's first day. */
+	private canStep(step: number): boolean {
+		const today = this.today;
+		const first = this.days[0]?.date;
+		const end = this.week;
+		if (!today || !first || !end) return false;
+		return step > 0 ? end.isBefore(today) : !end.addDays(-GRID_DAYS).isBefore(first);
 	}
 
 	private canShowWeek(day: LocalDate): boolean {
@@ -137,21 +156,21 @@ export class WeekCalendar {
 		if (!today || !week) return;
 		this.el.toggleClass("is-open", this.open);
 		this.el.toggleClass("is-grid", this.grid);
-		const month = this.open ? this.months[this.monthIndex] : this.monthOfWeek(week);
+		const month = this.grid ? { year: week.year, month: week.month } : this.open ? this.months[this.monthIndex] : this.monthOfWeek(week);
 		if (month) this.title.setText(monthTitle(month, today));
 		if (this.grid) this.title.removeAttribute("aria-expanded");
 		else this.title.setAttr("aria-expanded", String(this.open));
 		this.title.setAttr("aria-label", this.grid ? this.title.getText() : this.open ? "Show one week" : "Show the whole month");
-		const rows = this.open && month ? monthWeeks(this.days, month, today) : [calendarWeek(this.days, week, today)];
+		const rows = this.grid ? [daysUpTo(this.days, week, today)] : this.open && month ? monthWeeks(this.days, month, today) : [calendarWeek(this.days, week, today)];
 		this.weeks.empty();
 		for (const days of rows) {
 			const row = this.weeks.createDiv("th-week-row");
 			for (const day of days) this.renderDay(row, day, today);
 		}
-		this.previous.setAttr("aria-label", this.open ? "Previous month" : "Previous week");
-		this.next.setAttr("aria-label", this.open ? "Next month" : "Next week");
-		this.previous.disabled = this.open ? this.monthIndex <= 0 : !this.canShowWeek(week.addDays(-WEEK_DAYS));
-		this.next.disabled = this.open ? this.monthIndex >= this.months.length - 1 : !this.canShowWeek(week.addDays(WEEK_DAYS));
+		this.previous.setAttr("aria-label", this.grid ? "Seven days back" : this.open ? "Previous month" : "Previous week");
+		this.next.setAttr("aria-label", this.grid ? "Seven days on" : this.open ? "Next month" : "Next week");
+		this.previous.disabled = this.grid ? !this.canStep(-1) : this.open ? this.monthIndex <= 0 : !this.canShowWeek(week.addDays(-WEEK_DAYS));
+		this.next.disabled = this.grid ? !this.canStep(1) : this.open ? this.monthIndex >= this.months.length - 1 : !this.canShowWeek(week.addDays(WEEK_DAYS));
 	}
 
 	/** The month a week belongs to: the one its Thursday is in, as calendars count weeks. */
@@ -160,18 +179,19 @@ export class WeekCalendar {
 		return { year: thursday.year, month: thursday.month };
 	}
 
+	/** A date in its ring of how much of the day was done; over the grid a plain date, picked while it is being answered. */
 	private renderDay(row: HTMLElement, day: CalendarDay, today: LocalDate): void {
 		const off = day.future || day.outside;
 		const percent = off ? null : donePercent(day);
 		const title = dayTitle(day.date, today);
-		const selected = this.shown?.equals(day.date) ?? false;
+		const selected = (this.grid ? this.focus : this.shown)?.equals(day.date) ?? false;
 		const button = row.createEl("button", { cls: "th-cal-day", attr: { "aria-label": percent === null ? title : `${title}, ${percent}% done`, "aria-pressed": String(selected), "data-tooltip-position": "top" } });
 		button.toggleClass("is-selected", selected);
 		button.toggleClass("is-today", day.date.equals(today));
 		button.toggleClass("is-off", off);
-		if (!off) dayRing(button, (percent ?? 0) / 100);
+		if (!off && !this.grid) dayRing(button, (percent ?? 0) / 100);
 		button.createSpan("th-cal-date").createSpan({ cls: "th-cal-figure", text: String(day.date.day) });
-		button.disabled = off;
+		button.disabled = off || this.grid;
 		button.addEventListener("click", () => this.pick(day.date));
 	}
 }

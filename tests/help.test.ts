@@ -19,12 +19,12 @@ describe("helpRows", () => {
 		expect(computer).not.toContain("Pull the days up");
 	});
 
-	it("explains the week's grid, stepped with the bar's days on a phone and with the arrows on a computer", () => {
+	it("explains the last seven days, stepped with the bar's days on a phone and with the arrows on a computer", () => {
 		const week = (mobile: boolean) => helpRows(mobile, merge).find((row) => row.action === "The week button")?.result;
 		expect(week(true)).toContain("Tap a circle to answer for that day");
-		expect(week(true)).toContain("Tap a day in the bar to see its week");
+		expect(week(true)).toContain("Pull the bar up and tap a day to see the seven days up to it");
 		expect(week(false)).toContain("Click a circle to answer for that day");
-		expect(week(false)).toContain("the arrows step a week");
+		expect(week(false)).toContain("The arrows by the month step seven days");
 	});
 
 	it("takes the merge counts from settings", () => {

@@ -34,6 +34,14 @@ const RUBBER_LOW = 0.15;
 const SETTLE_MS = 420;
 const SVG_NS = "http://www.w3.org/2000/svg";
 
+/** The days the folded tray shows over the week's grid, with the month they end in. */
+export interface TrayStrip {
+	readonly title: string;
+	readonly days: readonly CalendarDay[];
+	/** The day being answered, picked among them. */
+	readonly focus: LocalDate | null;
+}
+
 /** A date's ring: its track all the way round, and the part of it the day was done, if any. */
 interface Ring {
 	readonly track: SVGCircleElement;
@@ -52,7 +60,7 @@ const easeOut = (t: number) => 1 - Math.pow(1 - t, 3.4);
 
 /**
  * Today's calendar, in a tray at the bottom of the view over Obsidian's navbar. Folded, it shows this week's dates, or
- * on the week's grid the dates of the week on show; pulled up, the rest of the month comes in above them, each date in a ring of how much of that day was done, under a
+ * over the week's grid the grid's own seven days; pulled up, the rest of the month comes in above them, each date in a ring of how much of that day was done, under a
  * line with the month, arrows to the months before and Today's buttons. Let go, it stays on the nearest whole week. Its
  * top edge is the floor the marbles stand on, wherever it is: rising, it carries them up and they hop off it.
  */
@@ -68,6 +76,8 @@ export class CalendarTray {
 	/** Today's buttons, on the month's line. */
 	private readonly tools: HTMLElement;
 	private readonly weeks: HTMLElement;
+	/** Over the week's grid, the folded row of the grid's own days. */
+	private readonly strip: HTMLElement;
 	private days: readonly StripDay[] = [];
 	private months: CalendarMonth[] = [];
 	/** The month on show, as an index into `months`; folded, it is always this month. */
@@ -122,6 +132,7 @@ export class CalendarTray {
 		this.previous = this.arrow(line, "Previous month", CHEVRON_LEFT, -1);
 		this.next = this.arrow(line, "Next month", CHEVRON_RIGHT, 1);
 		this.tools = line.createDiv("th-cal-tools");
+		this.strip = this.calendar.createDiv("th-cal-strip");
 		this.tray.addEventListener("pointerdown", this.pointerDown);
 		window.addEventListener("pointermove", this.pointerMove);
 		window.addEventListener("pointerup", this.pointerUp);
@@ -195,6 +206,26 @@ export class CalendarTray {
 		this.renderMonth();
 	}
 
+	/**
+	 * Over the week's grid the folded tray shows the grid's own days, each under its column of circles, and their month
+	 * where the grid has its names. Pulled up, they fade away and the month comes in as always.
+	 */
+	setStrip(strip: TrayStrip | null): void {
+		this.strip.empty();
+		const today = this.today;
+		if (!strip || !today) return;
+		this.strip.createDiv({ cls: ["th-cal-month", "th-cal-strip-title"], text: strip.title });
+		const days = this.strip.createDiv("th-cal-strip-days");
+		for (const day of strip.days) {
+			const cell = days.createDiv("th-cal-day");
+			cell.toggleClass("is-today", day.date.equals(today));
+			cell.toggleClass("is-off", day.future || day.outside);
+			cell.toggleClass("is-selected", strip.focus?.equals(day.date) ?? false);
+			cell.createSpan("th-cal-date").createSpan({ cls: "th-cal-figure", text: String(day.date.day) });
+		}
+		this.centerFigures();
+	}
+
 	/** The month the folded tray rests on: the one of `rest`. */
 	private restIndex(): number {
 		const rest = this.rest;
@@ -261,7 +292,7 @@ export class CalendarTray {
 	 * to the middle of its circle.
 	 */
 	private centerFigures(): void {
-		const figures = Array.from(this.weeks.querySelectorAll<HTMLElement>(".th-cal-figure"));
+		const figures = Array.from(this.calendar.querySelectorAll<HTMLElement>(".th-cal-weeks .th-cal-figure, .th-cal-strip .th-cal-figure"));
 		this.figureContext ??= document.createElement("canvas").getContext("2d");
 		const context = this.figureContext;
 		if (!context || !figures[0]) return;
@@ -391,6 +422,7 @@ export class CalendarTray {
 		this.tray.style.setProperty("--th-lift", `${Math.max(0, REST_LIFT - this.raised)}px`);
 		this.alignToGrid();
 		this.grip.setAttribute("aria-label", this.raised > 1 ? "Hide the month" : "Show the month");
+		this.tray.toggleClass("is-up", this.raised > 1);
 	}
 
 	/** Where the finger puts the tray, giving way less and less past either end of its range. */

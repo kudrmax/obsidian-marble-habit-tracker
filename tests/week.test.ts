@@ -1,22 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { HabitEntry } from "../src/application/ports";
-import { mondayOf, sameWeek, weekCell, weekGroups, weekTitle } from "../src/ui/week";
+import { dayStrip } from "../src/ui/today";
+import { daysTitle, daysUpTo, mondayOf, weekCell, weekGroups } from "../src/ui/week";
 import { d } from "./support/dates";
 import { habitNote } from "./support/habits";
 
 const thursday = d("2026-10-15");
 const ok = (name: string, extra = {}): HabitEntry => ({ kind: "ok", path: `Habits/${name}.md`, habit: habitNote(name, extra) });
+const dates = (days: readonly { date: { toString(): string } }[]) => days.map((day) => day.date.toString());
 
 describe("mondayOf", () => {
 	it("goes back to the Monday of the day's week, a Monday staying where it is", () => {
 		expect(mondayOf(thursday).toString()).toBe("2026-10-12");
 		expect(mondayOf(d("2026-10-12")).toString()).toBe("2026-10-12");
 		expect(mondayOf(d("2026-10-18")).toString()).toBe("2026-10-12");
-	});
-
-	it("tells whether two days are in one week", () => {
-		expect(sameWeek(d("2026-10-12"), d("2026-10-18"))).toBe(true);
-		expect(sameWeek(d("2026-10-11"), d("2026-10-12"))).toBe(false);
 	});
 });
 
@@ -48,24 +45,17 @@ describe("weekCell", () => {
 });
 
 describe("weekGroups", () => {
-	it("lays every habit out by section, Monday to Sunday of the day's week", () => {
+	it("lays every habit out by section, with the seven days up to the shown day, oldest first", () => {
 		const read = ok("Read", { order: 0, section: "Morning" });
 		const floss = ok("Floss", { order: 1 });
 		const walk = ok("Walk", { order: 2, section: "Morning" });
-		const groups = weekGroups([read, floss, walk], d("2026-10-14"), thursday);
+		const groups = weekGroups([read, floss, walk], thursday, thursday);
 		expect(groups.map((group) => [group.section, group.rows.map((row) => row.habit.name)])).toEqual([
 			[undefined, ["Floss"]],
 			["Morning", ["Read", "Walk"]],
 		]);
-		expect(groups[0].rows[0].cells.map((cell) => cell.date.toString())).toEqual([
-			"2026-10-12",
-			"2026-10-13",
-			"2026-10-14",
-			"2026-10-15",
-			"2026-10-16",
-			"2026-10-17",
-			"2026-10-18",
-		]);
+		expect(dates(groups[0].rows[0].cells)).toEqual(["2026-10-09", "2026-10-10", "2026-10-11", "2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15"]);
+		expect(groups[0].rows[0].cells.every((cell) => cell.kind === "due")).toBe(true);
 		expect(groups[0].rows[0].path).toBe("Habits/Floss.md");
 	});
 
@@ -79,15 +69,20 @@ describe("weekGroups", () => {
 	});
 });
 
-describe("weekTitle", () => {
-	it("names this week and the last one, and dates the ones before", () => {
-		expect(weekTitle(thursday, thursday)).toBe("This week");
-		expect(weekTitle(d("2026-10-05"), thursday)).toBe("Last week");
-		expect(weekTitle(d("2026-09-30"), thursday)).toBe("Sep 28 – Oct 4");
-		expect(weekTitle(d("2026-09-24"), thursday)).toBe("Sep 21 – 27");
+describe("daysUpTo", () => {
+	it("gives the calendar's seven days up to a day, the ones before the calendar starts outside", () => {
+		const strip = dayStrip([ok("Read", { done_tiny: ["2026-10-14"] })], thursday);
+		const days = daysUpTo(strip, d("2026-10-03"), thursday);
+		expect(dates(days)).toEqual(["2026-09-27", "2026-09-28", "2026-09-29", "2026-09-30", "2026-10-01", "2026-10-02", "2026-10-03"]);
+		expect(days.map((day) => day.outside)).toEqual([true, true, true, true, true, false, false]);
+		expect(daysUpTo(strip, thursday, thursday).find((day) => day.date.equals(d("2026-10-14")))).toMatchObject({ due: 1, done: 1, outside: false });
 	});
+});
 
-	it("adds the year of a week in another year", () => {
-		expect(weekTitle(d("2025-12-30"), thursday)).toBe("Dec 29 – Jan 4 2025");
+describe("daysTitle", () => {
+	it("dates the seven days up to a day, with the year when it is another year", () => {
+		expect(daysTitle(d("2026-10-08"), thursday)).toBe("Oct 2 – 8");
+		expect(daysTitle(d("2026-10-03"), thursday)).toBe("Sep 27 – Oct 3");
+		expect(daysTitle(d("2026-01-02"), d("2027-01-10"))).toBe("Dec 27 – Jan 2 2026");
 	});
 });
