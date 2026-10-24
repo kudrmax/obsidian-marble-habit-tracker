@@ -19,6 +19,14 @@ describe("helpRows", () => {
 		expect(computer).not.toContain("Pull the days up");
 	});
 
+	it("explains the week's grid, stepped with the bar's days on a phone and with the arrows on a computer", () => {
+		const week = (mobile: boolean) => helpRows(mobile, merge).find((row) => row.action === "The week button")?.result;
+		expect(week(true)).toContain("Tap a circle to answer for that day");
+		expect(week(true)).toContain("Tap a day in the bar to see its week");
+		expect(week(false)).toContain("Click a circle to answer for that day");
+		expect(week(false)).toContain("the arrows step a week");
+	});
+
 	it("takes the merge counts from settings", () => {
 		const marbles = helpRows(true, { smallPerMedium: 5, mediumPerBig: 3 }).find((row) => row.action === "Marbles");
 		expect(marbles?.result).toContain("5 small ones merge into a medium, 3 medium into a big");

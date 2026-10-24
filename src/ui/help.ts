@@ -30,7 +30,8 @@ export function helpRows(mobile: boolean, merge: MergeRule, offTrigger: OffTrigg
 			: { action: "The week above the list", result: "Each day in a ring of how much of it was done; click one to mark it, and the arrows step a week. Click the month's name to open the whole month in place, and again to close it; open, the arrows step a month." },
 		{ action: "✓ and a number", result: `How many answered habits are hidden. ${tap} it to show them and change an answer, and again to hide them.` },
 		{ action: "The day above the list", result: "On a past day it says which one; its ✕ goes back to today." },
-		{ action: "The list button", result: `Shows all habits, with the ones not due today and the archived ones. The days stay ${mobile ? "under" : "above"} them; ${tap.toLowerCase()} one to go back to Today on that day.` },
+		{ action: "The week button", result: `Turns Today into the week: every habit in a row with a circle for each day, ${mobile ? "its name over them" : "today's column marked"}. ${tap} a circle to answer for that day — the answers slide over the row's circles — and a marked one to clear it. ${mobile ? `${tap} a day in the bar to see its week` : "Over it the arrows step a week"}; the chip over the days goes back to this week. ${tap} the button again for the list; the tab keeps the one it was left on.` },
+		{ action: "The list button", result: `Shows all habits, with the ones not due today and the archived ones. The days stay ${mobile ? "under" : "above"} them; ${tap.toLowerCase()} one to go back to Today on that day, or to its week.` },
 		{ action: "Marbles", result: `Every win drops a marble in its habit's color.${offWin} ${merge.smallPerMedium} small ones merge into a medium, ${merge.mediumPerBig} medium into a big.${mobile ? "" : " On a wide tab they grow, so its long floor still holds a pile."}` },
 		{ action: mobile ? "Tilt the phone" : "Move the mouse", result: "Rolls the marbles." },
 	];

@@ -1,4 +1,4 @@
-import { ItemView, Notice, Platform, WorkspaceLeaf, setIcon } from "obsidian";
+import { ItemView, Notice, Platform, ViewStateResult, WorkspaceLeaf, setIcon } from "obsidian";
 import { HabitEntry } from "../application/ports";
 import { DayMark, FULL, OFF_TRIGGER, SKIPPED, TINY, isWin, missed } from "../domain/DayMark";
 import { Habit } from "../domain/Habit";
@@ -7,7 +7,7 @@ import { HabitColor } from "../domain/HabitColor";
 import { HabitBlock } from "./HabitBlock";
 import { buildJar } from "../domain/Jar";
 import { colorClass } from "./colors";
-import { IconName, chip, icon, iconButton } from "./components";
+import { IconName, chip, icon, iconButton, markCircle } from "./components";
 import { recipeDays } from "./format";
 import { computeStats } from "../domain/Stats";
 import { DayWatcher } from "./DayWatcher";
@@ -31,10 +31,14 @@ import { SectionNameModal } from "./SectionNameModal";
 import { SizeCalibration } from "./SizeCalibration";
 import { ScreenChrome } from "./ScreenChrome";
 import { WeekCalendar } from "./WeekCalendar";
-import { closedDayLine, dayStrip, dayTitle, winsLabel, offersShrink, todayEntries } from "./today";
+import { WeekGrid } from "./WeekGrid";
+import { StripDay, calendarWeek, closedDayLine, dayStrip, dayTitle, winsLabel, offersShrink, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
+import { sameWeek, weekGroups, weekTitle } from "./week";
 
 export const HABITS_VIEW = "tiny-habits-grid";
+/** The tool that turns Today into the week's grid and back. */
+const WEEK_ICON = "calendar-range";
 const SVG_NS = "http://www.w3.org/2000/svg";
 const RING_RADIUS = 50;
 const RING_GAP = 9;
@@ -55,6 +59,9 @@ const FALLBACK_COLOR: Hsl = { h: 258, s: 88, l: 66 };
 const STYLES_RETRY_MS = 200;
 
 type Answer = "full" | "tiny" | "offTrigger" | "skip";
+/** Today as the shown day's list, or as its week's grid of every habit. */
+type Layout = "day" | "week";
+const isLayout = (value: unknown): value is Layout => value === "day" || value === "week";
 
 export class TodayView extends ItemView {
 	private scrollEl!: HTMLElement;
@@ -76,6 +83,10 @@ export class TodayView extends ItemView {
 	private day: LocalDate | null = null;
 	/** Today's list, or every habit including the ones not due and the archived ones. */
 	private screen: "today" | "all" = "today";
+	private layout: Layout = "day";
+	/** On the week's grid, the day of the circle being answered, its skip's reasons and the offer to shrink; on the list it is the shown day. */
+	private answering: LocalDate | null = null;
+	private grid: WeekGrid | null = null;
 	private showArchived = false;
 	/** The card opened to show its recipe; one at a time. */
 	private expanded: string | null = null;
@@ -138,6 +149,18 @@ export class TodayView extends ItemView {
 		return "sprout";
 	}
 
+	/** The list or the grid is part of the tab's state, so a tab opens again the way it was left on this device. */
+	override getState(): Record<string, unknown> {
+		return { ...super.getState(), layout: this.layout };
+	}
+
+	override async setState(state: unknown, result: ViewStateResult): Promise<void> {
+		const layout: unknown = state && typeof state === "object" && "layout" in state ? state.layout : undefined;
+		if (isLayout(layout)) this.layout = layout;
+		await super.setState(state, result);
+		this.render();
+	}
+
 	override async onOpen(): Promise<void> {
 		const root = this.contentEl;
 		root.empty();
@@ -153,6 +176,10 @@ export class TodayView extends ItemView {
 			(drop) => this.dropped(drop),
 		);
 		this.jar = new JarCanvas(root, this.jarOptions());
+		this.grid = new WeekGrid(!Platform.isMobile, {
+			tap: (path, day, mark) => this.tapCell(path, day, mark),
+			choose: (path, day) => this.showMenu(path, day),
+		});
 		// A phone keeps the days in a tray to pull up; a computer has the room to show them over the list, and a wide view
 		// grows the marbles so they still make a pile on its floor.
 		if (Platform.isMobile) this.tray = new CalendarTray(root, () => this.haptics.tap(), () => this.updateFloor());
@@ -217,6 +244,7 @@ export class TodayView extends ItemView {
 		this.tray?.destroy();
 		this.tray = null;
 		this.week = null;
+		this.grid = null;
 		this.panel = null;
 		window.clearTimeout(this.captionTimer);
 		window.clearTimeout(this.stylesTimer);
@@ -279,6 +307,7 @@ export class TodayView extends ItemView {
 		this.renderingRows = new Set();
 		const all = visibleEntries(this.ui.repository.list());
 		this.syncJar(all);
+		this.contentEl.toggleClass("is-week", this.showsWeek() && all.length > 0);
 		if (all.length === 0) {
 			this.renderEmpty(column);
 			return;
@@ -290,6 +319,7 @@ export class TodayView extends ItemView {
 			this.playMotion(column);
 			return;
 		}
+		if (this.layout === "week") return this.renderWeek(column, all);
 		const today = this.shownDay();
 		const entries = todayEntries(all, today);
 		const habits = entries.flatMap((entry) => (entry.kind === "ok" ? [entry] : []));
@@ -352,6 +382,65 @@ export class TodayView extends ItemView {
 		}
 	}
 
+	/**
+	 * The shown day's week as a grid: every habit by section, a circle for each of its days, answered right there as on the
+	 * list, the answers sliding over the row's circles.
+	 */
+	private renderWeek(column: HTMLElement, all: readonly HabitEntry[]): void {
+		const today = this.ui.service.today();
+		const shown = this.shownDay();
+		const days = this.renderCalendar(all);
+		this.renderHead();
+		this.showTools(this.renderTools(0, false));
+		const focused = this.menu ?? this.asking;
+		const answering = this.answering;
+		const rows = this.grid?.render(column, {
+			today,
+			above: sameWeek(shown, today) ? undefined : this.backChip(weekTitle(shown, today), "Back to this week"),
+			days: calendarWeek(days, shown, today),
+			groups: weekGroups(all, shown, today),
+			focus: focused && answering ? { path: focused, day: answering } : null,
+			popping: (path, day) => this.celebrating.has(this.cellKey(path, day)),
+		});
+		for (const [path, { habit, row, strip }] of rows ?? []) {
+			const mark = answering ? habit.markOn(answering) : undefined;
+			if (this.menu === path) this.renderChoices(strip, path, habit, mark);
+			if (this.closing === path) this.refold(strip);
+			if (this.asking === path) this.renderReasons(row, path);
+			if (this.shrink === path && mark?.kind === "missed") this.renderShrink(row, path, habit);
+		}
+		for (const entry of all) if (entry.kind === "broken") this.renderBroken(column, entry);
+		this.playMotion(column);
+	}
+
+	private showsWeek(): boolean {
+		return this.screen === "today" && this.layout === "week";
+	}
+
+	/** Shows the week's grid, from the command. */
+	showWeek(): void {
+		this.setLayout("week");
+	}
+
+	/** Turns Today into the week's grid or back into the list, either on today; the tab remembers which. */
+	private setLayout(layout: Layout): void {
+		this.tray?.snap(false);
+		this.layout = layout;
+		this.screen = "today";
+		this.day = null;
+		this.leaving.clear();
+		this.menu = null;
+		this.asking = null;
+		this.other = null;
+		this.otherText = "";
+		this.shrink = null;
+		this.answering = null;
+		this.showDone = false;
+		this.wasClosed = null;
+		this.app.workspace.requestSaveLayout();
+		this.render();
+	}
+
 	showAll(): void {
 		this.tray?.snap(false);
 		this.slide = this.screen === "all" ? null : "push";
@@ -359,6 +448,7 @@ export class TodayView extends ItemView {
 		this.menu = null;
 		this.asking = null;
 		this.shrink = null;
+		this.answering = null;
 		this.render();
 	}
 
@@ -439,12 +529,18 @@ export class TodayView extends ItemView {
 		return this.day && this.day.isBefore(today) ? this.day : today;
 	}
 
-	/** The calendar in the tray, on Today and in All habits, with the shown day picked; a tap on a day shows it on Today. */
-	private renderCalendar(all: readonly HabitEntry[]): void {
+	/**
+	 * The calendar in the tray, on Today and in All habits, with the shown day picked; a tap on a day shows it on Today,
+	 * or its week on the grid. Over a computer's grid only the month's line is left, its arrows a week each way.
+	 */
+	private renderCalendar(all: readonly HabitEntry[]): StripDay[] {
 		const today = this.ui.service.today();
 		const days = dayStrip(all, today, this.ui.settings().wins);
-		this.tray?.show(days, this.shownDay(), today, (day) => this.showDay(day));
-		this.week?.show(days, this.shownDay(), today, (day) => this.showDay(day));
+		const pick = (day: LocalDate) => this.showDay(day);
+		this.tray?.show(days, this.shownDay(), today, pick);
+		if (this.showsWeek()) this.week?.follow(days, this.shownDay(), today, pick);
+		else this.week?.show(days, this.shownDay(), today, pick);
+		return days;
 	}
 
 	/** Today's buttons, on the month's line wherever the calendar is. */
@@ -458,11 +554,16 @@ export class TodayView extends ItemView {
 		const today = this.ui.service.today();
 		const shown = this.shownDay();
 		if (shown.equals(today)) return null;
-		const line = column.createDiv("th-day-chip-line");
-		const chip = line.createEl("button", { cls: "th-day-chip", attr: { "aria-label": "Back to today" } });
-		chip.createSpan({ text: dayTitle(shown, today) });
+		return column.appendChild(this.backChip(dayTitle(shown, today), "Back to today"));
+	}
+
+	/** A chip over the list or the grid naming the day or week on show; it and its cross go back to today. */
+	private backChip(text: string, label: string): HTMLElement {
+		const line = createDiv("th-day-chip-line");
+		const chip = line.createEl("button", { cls: "th-day-chip", attr: { "aria-label": label } });
+		chip.createSpan({ text });
 		setIcon(chip.createSpan("th-day-chip-x"), "x");
-		chip.addEventListener("click", () => this.showDay(today));
+		chip.addEventListener("click", () => this.showDay(this.ui.service.today()));
 		return line;
 	}
 
@@ -488,7 +589,13 @@ export class TodayView extends ItemView {
 			element.addEventListener("click", onClick);
 			return element;
 		};
-		if (this.screen === "today") button("All habits", "list", () => this.showAll());
+		if (this.screen === "today") {
+			const week = this.layout === "week";
+			const toggle = button("Week", WEEK_ICON, () => this.setLayout(week ? "day" : "week"));
+			toggle.toggleClass("is-on", week);
+			toggle.setAttr("aria-pressed", String(week));
+			button("All habits", "list", () => this.showAll());
+		}
 		button("New habit", "plus", () => this.ui.newHabit());
 		const help = tools.createEl("button", { cls: "th-tool th-tool-help", text: "?", attr: { "aria-label": "How it works", "data-tooltip-position": "top" } });
 		help.toggleClass("th-has-dot", !this.ui.settings().hintsSeen);
@@ -510,7 +617,7 @@ export class TodayView extends ItemView {
 		const line = head.createDiv("th-head-line");
 		const back = line.createEl("button", { cls: "th-back" });
 		setIcon(back.createSpan("th-back-icon"), "chevron-left");
-		back.appendText("Today");
+		back.appendText(this.layout === "week" ? "Week" : "Today");
 		back.addEventListener("click", () => this.showToday());
 		line.createEl("h2", { cls: "th-sheet-title", text: "All habits" });
 	}
@@ -549,9 +656,10 @@ export class TodayView extends ItemView {
 		if (justClosed) this.haptics.merge();
 	}
 
-	/** Shows a day on Today; a day picked in All habits takes the way back to Today. */
+	/** Shows a day on Today, or its week on the grid; a day picked in All habits takes the way back. */
 	private showDay(day: LocalDate): void {
-		this.slide = this.screen === "all" ? "pop" : day.isBefore(this.shownDay()) ? "earlier" : "later";
+		const sameGrid = this.showsWeek() && sameWeek(day, this.shownDay());
+		this.slide = this.screen === "all" ? "pop" : sameGrid ? null : day.isBefore(this.shownDay()) ? "earlier" : "later";
 		this.screen = "today";
 		this.leaving.clear();
 		this.day = day.isBefore(this.ui.service.today()) ? day : null;
@@ -560,6 +668,7 @@ export class TodayView extends ItemView {
 		this.other = null;
 		this.otherText = "";
 		this.shrink = null;
+		this.answering = null;
 		this.showDone = false;
 		this.wasClosed = null;
 		this.render();
@@ -636,11 +745,7 @@ export class TodayView extends ItemView {
 		this.renderingRows.add(path);
 		const main = row.querySelector<HTMLElement>(".th-row-main");
 		if (main && this.menu === path) this.renderChoices(main, path, habit, mark);
-		if (main && this.closing === path) {
-			this.motion.refold(main, this.contentOf(main), this.leavingChoices, this.contentEl);
-			this.leavingChoices = null;
-			this.closing = null;
-		}
+		if (main && this.closing === path) this.refold(main);
 		if (this.asking === path) this.renderReasons(row, path);
 		if (this.shrink === path && mark?.kind === "missed") this.renderShrink(row, path, habit);
 	}
@@ -724,6 +829,13 @@ export class TodayView extends ItemView {
 		this.leavingChoices = copy;
 	}
 
+	/** The choices just closed without an answer slide back out of `surface`, and what they covered comes back. */
+	private refold(surface: HTMLElement): void {
+		this.motion.refold(surface, this.contentOf(surface), this.leavingChoices, this.contentEl);
+		this.leavingChoices = null;
+		this.closing = null;
+	}
+
 	/** The row's own content — circle and name — without the choices laid over it. */
 	private contentOf(main: HTMLElement): HTMLElement[] {
 		return [...main.children].filter((child): child is HTMLElement => child instanceof HTMLElement && !child.hasClass("th-row-choices"));
@@ -748,17 +860,9 @@ export class TodayView extends ItemView {
 		const hint = mark ? "Clear the mark" : `Choose: ${choices.join(", ")} or skipped`;
 		const button = parent.createEl("button", { cls: "th-mark-button", attr: { title: hint } });
 		button.createSpan({ cls: "th-sr-only", text: hint });
-		const circle = button.createSpan("th-mark");
-		circle.toggleClass("is-popping", this.celebrating.has(path));
-		if (mark?.kind === "full" || mark?.kind === "tiny") {
-			circle.addClass("is-done");
-			circle.toggleClass("is-tiny", mark.kind === "tiny");
-			icon(circle, "check");
-		} else if (mark?.kind === "offTrigger") {
-			circle.addClass("is-off-trigger");
-			icon(circle, "check");
-		} else if (mark?.kind === "missed") circle.addClass("is-missed");
-		else if (this.asking === path) circle.addClass("is-asking");
+		const circle = markCircle(button, mark);
+		circle.toggleClass("is-popping", this.celebrating.has(this.cellKey(path, this.shownDay())));
+		if (!mark && this.asking === path) circle.addClass("is-asking");
 
 		button.addEventListener("contextmenu", (event) => {
 			event.preventDefault();
@@ -812,19 +916,46 @@ export class TodayView extends ItemView {
 		link.addEventListener("click", () => new EditSheet(this.app, this.ui.service, path, habit, "tiny", this.ui.labels()).open());
 	}
 
-	private showMenu(path: string): void {
-		if (this.menu === path) return;
+	/**
+	 * Opens a row's answers, on the grid for the day of its circle. Another row's skip reasons or offer to shrink close, so
+	 * they can't be answered for the wrong habit or day.
+	 */
+	private showMenu(path: string, day: LocalDate | null = null): void {
+		if (this.menu === path && (day === null || this.answering?.equals(day))) return;
 		this.menu = path;
+		this.answering = day;
+		this.asking = null;
+		this.other = null;
+		this.otherText = "";
+		this.shrink = null;
 		this.menuOpening = true;
 		this.haptics.tap();
 		this.render();
+	}
+
+	/** A circle on the grid: an empty one opens the answers for its day, a marked one is cleared. */
+	private tapCell(path: string, day: LocalDate, mark: DayMark | undefined): void {
+		if (!mark) return this.showMenu(path, day);
+		this.haptics.tap();
+		this.answering = day;
+		void this.answer(path, undefined);
+	}
+
+	/** The day an answer is for: the circle's day on the grid, the shown day on the list. */
+	private answerDay(): LocalDate {
+		return this.answering ?? this.shownDay();
+	}
+
+	/** A habit's day, to tell which circle is popping. */
+	private cellKey(path: string, day: LocalDate): string {
+		return `${path}|${day.toString()}`;
 	}
 
 	/** A click elsewhere closes the answer menu, and the optional reasons of a skip. */
 	private closeMenuOutside(event: MouseEvent): void {
 		if (!this.menu && !this.asking) return;
 		const target = event.target as HTMLElement | null;
-		if (target?.closest(".th-row-choices, .th-mark-button, .th-row-extra")) return;
+		if (target?.closest(".th-row-choices, .th-mark-button, .th-grid-cell, .th-row-extra")) return;
 		this.takeChoices();
 		this.unfolding?.stop();
 		this.unfolding = null;
@@ -849,6 +980,8 @@ export class TodayView extends ItemView {
 	}
 
 	private async answer(path: string, mark: DayMark | undefined, event?: MouseEvent, leave = true): Promise<void> {
+		const day = this.answerDay();
+		const cell = this.cellKey(path, day);
 		const win = isWin(mark, this.ui.settings().wins);
 		if (!win) this.origins.delete(path);
 		const target = event?.currentTarget as HTMLElement | null | undefined;
@@ -857,21 +990,21 @@ export class TodayView extends ItemView {
 			this.origins.set(path, { point: { x: box.left + box.width / 2, y: box.top + box.height / 2 }, at: Date.now() });
 		}
 		try {
-			const habit = await this.ui.service.setMark(path, this.shownDay(), mark);
+			const habit = await this.ui.service.setMark(path, day, mark);
 			this.menu = null;
 			this.asking = null;
 			this.other = null;
 			this.otherText = "";
 			this.shrink = mark && offersShrink(habit, mark, this.ui.settings().redesignThreshold, this.ui.settings().shrinkReason) ? path : null;
-			if (mark && leave && this.ui.settings().hideDone && !this.showDone) this.startLeaving(path);
+			if (mark && leave && this.layout === "day" && this.ui.settings().hideDone && !this.showDone) this.startLeaving(path);
 			else this.leaving.delete(path);
 			if (win) {
 				this.haptics.tap();
-				this.celebrate(path);
+				this.celebrate(cell);
 				const phrase = habit.current("celebration");
 				if (phrase && this.ui.settings().celebrationLine) this.caption(habit, phrase);
 			}
-			else this.stopCelebrating(path);
+			else this.stopCelebrating(cell);
 		} catch (error) {
 			new Notice(error instanceof Error ? error.message : String(error));
 		}
@@ -889,19 +1022,20 @@ export class TodayView extends ItemView {
 		}, LEAVE_MS);
 	}
 
-	private celebrate(path: string): void {
-		this.stopCelebrating(path);
+	/** Keeps a habit's day popping for a moment; `cell` is from `cellKey`. */
+	private celebrate(cell: string): void {
+		this.stopCelebrating(cell);
 		this.celebrating.set(
-			path,
+			cell,
 			window.setTimeout(() => {
-				this.celebrating.delete(path);
+				this.celebrating.delete(cell);
 			}, POP_MS),
 		);
 	}
 
-	private stopCelebrating(path: string): void {
-		window.clearTimeout(this.celebrating.get(path));
-		this.celebrating.delete(path);
+	private stopCelebrating(cell: string): void {
+		window.clearTimeout(this.celebrating.get(cell));
+		this.celebrating.delete(cell);
 	}
 
 	private syncJar(entries: readonly HabitEntry[]): void {

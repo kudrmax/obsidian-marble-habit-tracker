@@ -9,6 +9,7 @@ A habit tracker for [Obsidian](https://obsidian.md) where every win drops a marb
 - **Tiny is a win.** Built on BJ Fogg's Tiny Habits recipe: after I …, I will … — the tiny version counts as fully done.
 - **Look back.** This week's dates sit at the bottom of Today. Pull them up for the whole month, each day in a ring of how much of it was done, and page back to earlier months; tap a day to mark it.
 - **On a computer.** Nothing is pulled with a mouse: the week sits over the list, and a click on the month's name opens the whole month in place. In a wide tab the marbles grow, so its long floor still holds a pile; the mouse rolls them.
+- **The week at a glance.** The week button over Today's calendar, or the *Open the week* command, turns Today into a grid: every habit in a row with a circle for each day of the week, answered right there the way Today answers. On a phone a habit's name stands over its circles and a day picked in the bar below shows its week; on a computer the names stand to the left, today's column is marked, and the arrows step a week. The tab keeps the view it was left on.
 - **All habits.** The list button over Today's calendar, or the *Open all habits* command, shows every habit with its days and wins, archived ones folded at the bottom. The calendar stays under it; tap a day to go back to Today on it.
 - **Plain Markdown.** Each habit is a note in a folder of your choice; marks and recipe history live in its frontmatter.
 
