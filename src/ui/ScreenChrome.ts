@@ -7,8 +7,8 @@ const HEADER_PARTS = ".view-header .view-header-left .view-action, .view-header 
 
 /**
  * Tracks the floating parts of Obsidian's UI over the element — the phone navbar and the desktop status bar below, the
- * header buttons above — and keeps --th-bottom-inset equal to how much the navbar covers. The navbar and the status
- * bar are shelves for every win; the header buttons only stop wins that already landed, so the jar can fill from the top.
+ * header buttons above. The navbar and the status bar are shelves for every win; the header buttons only stop wins that
+ * already landed, so the jar can fill from the top.
  */
 export class ScreenChrome {
 	private readonly resizer = new ResizeObserver(() => this.measure());
@@ -36,11 +36,9 @@ export class ScreenChrome {
 		const bar = statusBar ? this.box(statusBar) : null;
 		const shelves = [shelf, bar].filter((box): box is Box => box !== null);
 		const ledges = parts.flatMap((part) => this.box(part) ?? []);
-		const inset = shelf ? Math.max(0, Math.ceil(this.element.getBoundingClientRect().height - shelf.top)) : 0;
-		const key = JSON.stringify([shelves, ledges, inset]);
+		const key = JSON.stringify([shelves, ledges]);
 		if (key === this.last) return;
 		this.last = key;
-		this.element.style.setProperty("--th-bottom-inset", `${inset}px`);
 		this.onChange(shelves, ledges);
 	}
 

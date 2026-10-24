@@ -1,36 +1,28 @@
 import { LocalDate } from "../domain/LocalDate";
+import { DAY_RING_LENGTH, DAY_RING_RADIUS, DESIGN } from "./design";
 import { Box } from "./jar/JarPhysics";
 import { CalendarDay, CalendarMonth, StripDay, calendarMonths, dayTitle, donePercent, monthTitle, monthWeeks } from "./today";
 
-/** The strip with the grabber at the tray's top. */
-const GRIP = 14;
-/** One week of the calendar: each date in a ring of how much of that day was done. */
-export const WEEK_ROW = 54;
 /** Over the weeks: room under the grabber, then one line with the month, its arrows and Today's buttons. */
-const HEAD = 56;
-/** Room each side of the week grid; its columns share the rest. */
-const GRID_PAD = 8;
-/** The ring around each date, with room inside for two figures and the shown day's disc. */
-const RING = 40;
+const HEAD_ROOM = 14;
+const HEAD = HEAD_ROOM + DESIGN.monthLine + DESIGN.monthLineGap;
 const WEEK_DAYS = 7;
 /** Room between the weeks and whatever of Obsidian covers the bottom of the view, once the tray is up. */
 const BOTTOM_GAP = 8;
 /** How high the folded tray stands over Obsidian's bar. Its dates sit in the middle, as far from its edge as from the bar. */
 const REST_HEIGHT = 66;
 /** Folded, this week's row hangs this far below the calendar, so its dates sit in the middle of the tray; rising, the room under it grows back. */
-const REST_LIFT = WEEK_ROW / 2 + BOTTOM_GAP - REST_HEIGHT / 2;
+const REST_LIFT = DESIGN.weekRow / 2 + BOTTOM_GAP - REST_HEIGHT / 2;
 /** The figures the dates are written in, to see where their ink sits in their line. */
 const FIGURES = "0123456789";
 /** How far the tray rises before this week's row is whole. */
-const ROW_WHOLE = WEEK_ROW + GRIP + BOTTOM_GAP - REST_HEIGHT;
+const ROW_WHOLE = DESIGN.weekRow + DESIGN.grip + BOTTOM_GAP - REST_HEIGHT;
 /** How far the tray rises while the rings draw themselves round: up to its first stop, with the head open. */
 const RINGS_DRAWN = ROW_WHOLE + HEAD;
 /** The furthest the tray goes up: enough for a month of six weeks. */
 const MAX_UP = 360;
 /** How far the tray rises before its shadow is at full strength. */
 const SHADOW_FADE = 60;
-/** The rounded corners of the tray's top edge, which the marbles roll along. */
-const CORNER = 24;
 /** A finger has to move this far before it is clear whether it moves the tray or taps a day. */
 const SLOP = 6;
 /** A flick faster than this, in px per ms, carries the tray all the way up, or all the way down. */
@@ -40,9 +32,6 @@ const RUBBER = 0.35;
 const RUBBER_LOW = 0.15;
 const SETTLE_MS = 420;
 const SVG_NS = "http://www.w3.org/2000/svg";
-/** The ring around a date, in its own box. */
-const RING_RADIUS = 19;
-const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
 
 /** A date's ring: its track all the way round, and the part of it the day was done, if any. */
 interface Ring {
@@ -183,7 +172,7 @@ export class CalendarTray {
 
 	/** The tray where it is now, as the box the marbles stand on. */
 	box(): Box {
-		return { left: 0, top: this.restTop - this.raised, right: this.root.clientWidth, bottom: this.root.clientHeight, radius: CORNER };
+		return { left: 0, top: this.restTop - this.raised, right: this.root.clientWidth, bottom: this.root.clientHeight, radius: DESIGN.trayCorner };
 	}
 
 	/**
@@ -313,15 +302,15 @@ export class CalendarTray {
 	private renderRing(button: HTMLElement, percent: number): void {
 		const svg = button.appendChild(document.createElementNS(SVG_NS, "svg"));
 		svg.setAttribute("class", "th-cal-ring");
-		svg.setAttribute("viewBox", `0 0 ${RING} ${RING}`);
+		svg.setAttribute("viewBox", `0 0 ${DESIGN.ring} ${DESIGN.ring}`);
 		svg.setAttribute("aria-hidden", "true");
 		const circle = (cls: string) => {
 			const element = svg.appendChild(document.createElementNS(SVG_NS, "circle"));
 			element.setAttribute("class", cls);
-			element.setAttribute("cx", String(RING / 2));
-			element.setAttribute("cy", String(RING / 2));
-			element.setAttribute("r", String(RING_RADIUS));
-			element.setAttribute("transform", `rotate(-90 ${RING / 2} ${RING / 2})`);
+			element.setAttribute("cx", String(DESIGN.ring / 2));
+			element.setAttribute("cy", String(DESIGN.ring / 2));
+			element.setAttribute("r", String(DAY_RING_RADIUS));
+			element.setAttribute("transform", `rotate(-90 ${DESIGN.ring / 2} ${DESIGN.ring / 2})`);
 			return element;
 		};
 		const track = circle("th-cal-ring-track");
@@ -342,7 +331,7 @@ export class CalendarTray {
 	}
 
 	private drawArc(circle: SVGCircleElement, share: number): void {
-		circle.setAttribute("stroke-dasharray", `${(RING_LENGTH * share).toFixed(2)} ${RING_LENGTH.toFixed(2)}`);
+		circle.setAttribute("stroke-dasharray", `${(DAY_RING_LENGTH * share).toFixed(2)} ${DAY_RING_LENGTH.toFixed(2)}`);
 		circle.style.visibility = share > 0 ? "" : "hidden";
 	}
 
@@ -350,7 +339,7 @@ export class CalendarTray {
 	private alignToGrid(): void {
 		const column = parseFloat(getComputedStyle(this.root).getPropertyValue("--th-column")) || Infinity;
 		const width = Math.min(this.calendar.clientWidth, column);
-		const edge = Math.round(GRID_PAD + ((width - 2 * GRID_PAD) / WEEK_DAYS - RING) / 2);
+		const edge = Math.round(DESIGN.weekPad + ((width - 2 * DESIGN.weekPad) / WEEK_DAYS - DESIGN.ring) / 2);
 		if (width === 0 || edge === this.edge) return;
 		this.edge = edge;
 		this.tray.style.setProperty("--th-cal-edge", `${edge}px`);
@@ -358,7 +347,7 @@ export class CalendarTray {
 	}
 
 	private maxUp(): number {
-		return Math.min(MAX_UP, ROW_WHOLE + HEAD + (this.rows - 1) * WEEK_ROW);
+		return Math.min(MAX_UP, ROW_WHOLE + HEAD + (this.rows - 1) * DESIGN.weekRow);
 	}
 
 	/** Places the tray again after the view or Obsidian's bars changed. */
@@ -457,7 +446,7 @@ export class CalendarTray {
 	/** Folded, the head over this week, or the head over one more whole week each time, up to all the way. */
 	private nearestStop(raised: number): number {
 		const stops = [0, this.maxUp()];
-		for (let week = 0; ROW_WHOLE + HEAD + week * WEEK_ROW < this.maxUp(); week++) stops.push(ROW_WHOLE + HEAD + week * WEEK_ROW);
+		for (let week = 0; ROW_WHOLE + HEAD + week * DESIGN.weekRow < this.maxUp(); week++) stops.push(ROW_WHOLE + HEAD + week * DESIGN.weekRow);
 		return stops.reduce((best, stop) => (Math.abs(stop - raised) < Math.abs(best - raised) ? stop : best));
 	}
 

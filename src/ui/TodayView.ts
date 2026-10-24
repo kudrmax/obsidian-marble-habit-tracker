@@ -38,6 +38,8 @@ export const HABITS_VIEW = "tiny-habits-grid";
 const SVG_NS = "http://www.w3.org/2000/svg";
 const RING_RADIUS = 50;
 const RING_GAP = 9;
+/** Each habit's arc of a closed day draws in this long after the one before. */
+const ARC_STAGGER_MS = 90;
 
 /** How long the circle of a just-marked habit keeps popping, while its row is still on screen. */
 const POP_MS = 450;
@@ -534,7 +536,7 @@ export class TodayView extends ItemView {
 			circle.style.setProperty("--th-arc", `${length}`);
 			circle.style.setProperty("--th-rest", `${circumference - length}`);
 			circle.style.setProperty("stroke-dashoffset", `${-offset}`);
-			circle.style.setProperty("animation-delay", `${index * 90}ms`);
+			circle.style.setProperty("animation-delay", `${index * ARC_STAGGER_MS}ms`);
 		};
 		arc(["th-ring-track"], circumference, 0, 0);
 		habits.forEach((habit, index) => {

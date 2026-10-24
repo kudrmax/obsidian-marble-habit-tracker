@@ -1,11 +1,8 @@
 import { LocalDate, WEEKDAYS } from "../domain/LocalDate";
+import { DAY_RING_LENGTH, DAY_RING_RADIUS, DESIGN } from "./design";
 import { CalendarDay, CalendarMonth, StripDay, calendarMonths, calendarWeek, dayTitle, donePercent, monthTitle, monthWeeks } from "./today";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
-/** The ring around each date, as in the phone's calendar. */
-const RING = 40;
-const RING_RADIUS = 19;
-const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
 const CHEVRON_LEFT = "m15 18-6-6 6-6";
 const CHEVRON_RIGHT = "m9 18 6-6-6-6";
 
@@ -161,16 +158,16 @@ export class WeekCalendar {
 	private renderRing(button: HTMLElement, share: number): void {
 		const svg = button.appendChild(document.createElementNS(SVG_NS, "svg"));
 		svg.setAttribute("class", "th-cal-ring");
-		svg.setAttribute("viewBox", `0 0 ${RING} ${RING}`);
+		svg.setAttribute("viewBox", `0 0 ${DESIGN.ring} ${DESIGN.ring}`);
 		svg.setAttribute("aria-hidden", "true");
 		const circle = (cls: string, length: number) => {
 			const element = svg.appendChild(document.createElementNS(SVG_NS, "circle"));
 			element.setAttribute("class", cls);
-			element.setAttribute("cx", String(RING / 2));
-			element.setAttribute("cy", String(RING / 2));
-			element.setAttribute("r", String(RING_RADIUS));
-			element.setAttribute("transform", `rotate(-90 ${RING / 2} ${RING / 2})`);
-			element.setAttribute("stroke-dasharray", `${(RING_LENGTH * length).toFixed(2)} ${RING_LENGTH.toFixed(2)}`);
+			element.setAttribute("cx", String(DESIGN.ring / 2));
+			element.setAttribute("cy", String(DESIGN.ring / 2));
+			element.setAttribute("r", String(DAY_RING_RADIUS));
+			element.setAttribute("transform", `rotate(-90 ${DESIGN.ring / 2} ${DESIGN.ring / 2})`);
+			element.setAttribute("stroke-dasharray", `${(DAY_RING_LENGTH * length).toFixed(2)} ${DAY_RING_LENGTH.toFixed(2)}`);
 		};
 		circle("th-cal-ring-track", 1);
 		if (share > 0) circle("th-cal-ring-arc", share);

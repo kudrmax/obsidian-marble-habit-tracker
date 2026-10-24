@@ -1,8 +1,14 @@
 /*
- * Tiny Habits design tokens. Every colour comes from the Obsidian theme, so the plugin follows light, dark and custom themes.
- * New controls reuse the component classes below; only a new kind of object needs new rules.
+ * Marble's design system. Every value lives here, as a token: colours (from the Obsidian theme where it has one), shapes,
+ * sizes, type, spacing and motion. Component rules below only refer to these tokens; tests/styles.test.ts fails on a
+ * number, a colour or a radius written straight into a rule, and on a token no rule uses. To change how something looks,
+ * change its token, or add one here with a name that says what it is for.
+ *
+ * Shapes: everything is round. A circle is --th-radius-circle; anything longer than it is tall is a capsule,
+ * --th-radius-capsule. Only the tray, the style tiles and Obsidian's own panels have corners of another kind.
  */
 body {
+	/* Colour */
 	--th-bg: var(--background-primary);
 	--th-surface: var(--background-secondary);
 	--th-text: var(--text-normal);
@@ -11,26 +17,240 @@ body {
 	--th-line: var(--background-modifier-border);
 	--th-strong: var(--text-normal);
 	--th-on-strong: var(--background-primary);
+	--th-accent: var(--interactive-accent);
+	--th-accent-text: var(--text-accent);
+	--th-on-accent: var(--text-on-accent);
+	--th-hover: var(--background-modifier-hover);
+	/* White, for a check or a word on a filled colour. */
+	--th-on-color: #ffffff;
+	/* The grey of a skipped day, iOS's system grey. */
+	--th-skip: rgb(142, 142, 147);
+	/* iOS's fill: a quiet ground for small round buttons, and, mixed into the surface, the ground of cancel. */
+	--th-fill: rgba(118, 118, 128, 0.12);
+	--th-fill-hover: rgba(118, 118, 128, 0.18);
+	--th-fill-solid: color-mix(in srgb, rgb(118, 118, 128) 30%, var(--background-secondary));
+	/* How much of a habit's colour its tiny answer keeps, mixed into the surface. */
+	--th-tint-share: 30%;
+	--th-accent-tint: hsla(var(--interactive-accent-hsl), 0.14);
+	--th-accent-tint-strong: hsla(var(--interactive-accent-hsl), 0.2);
+	--th-shadow-rgb: 0, 0, 0;
+	--th-tray-shadow-alpha: 0.12;
+	/* Opaque, for a mask. */
+	--th-mask-solid: #000;
+	--th-shadow-lifted: var(--shadow-l);
+	--th-calibration-ground: #000;
+	--th-calibration-text: #fff;
+	--th-calibration-hint: rgba(255, 255, 255, 0.7);
+	--th-calibration-band: var(--color-yellow);
+	--th-calibration-corner: var(--color-cyan);
 
+	/* Shape */
+	--th-radius-circle: 50%;
+	--th-radius-capsule: 999px;
+	--th-radius-tray: 24px;
+	--th-radius-tile: 14px;
+	--th-radius-panel: var(--radius-m);
+	--th-radius-overlay: var(--radius-l);
+	--th-radius-setting: 30px;
+
+	/* Lines */
+	--th-line-width: 1px;
+	--th-stroke: 1.5px;
+	--th-mark-stroke: 2px;
+	--th-check-stroke: 3.4px;
+	--th-check-stroke-done: 3.2px;
+	--th-icon-stroke: 2.3px;
+	--th-arrow-stroke: 2.3;
+	--th-chip-x-stroke: 3.2px;
+	--th-closed-ring-stroke: 7;
+	--th-day-ring-stroke: 2;
+	--th-dash-height: 2px;
+	--th-dash-width: 44%;
+
+	/* Sizes */
 	--th-column: 640px;
 	--th-gutter: 20px;
-	--th-title-size: 30px;
-	--th-text-size: 17px;
-	--th-small-size: 13px;
-	--th-row-min: 36px;
-	--th-target: 48px;
 	--th-mark: 28px;
-	--th-answer: 44px;
-	--th-chip: 34px;
+	--th-mark-phone: 24px;
+	--th-row-height: 40px;
+	--th-slot: 44px;
 	--th-button: 44px;
+	--th-button-large: 64px;
+	--th-answer: 44px;
+	--th-answer-width: 92px;
+	--th-chip: 34px;
+	--th-control: 30px;
 	--th-dot: 16px;
-	--th-line-width: 1px;
-	--th-progress: 3px;
-	--th-jar-reserve: 230px;
+	--th-ring: 40px;
+	--th-week-row: 54px;
+	--th-month-line: 30px;
+	--th-grip: 14px;
+	--th-grabber-width: 36px;
+	--th-grabber-height: 5px;
+	--th-badge: 8px;
+	--th-chip-x: 18px;
+	--th-caption-height: 32px;
+	--th-link-height: 32px;
+	--th-closed-ring: 168px;
+	--th-style-marbles: 68px;
+	--th-history-icon: 10px;
+	--th-history-date-column: 58px;
+	--th-history-icon-column: 18px;
+	--th-panel-date-column: 52px;
+	--th-panel-icon-column: 16px;
+	--th-panel-dot: 11px;
+	--th-guide-name: 9.5em;
+	--th-setting-label: 4.5em;
+	--th-calibration-panel: 320px;
+	--th-sr-size: 1px;
 
-	--th-ease-pop: cubic-bezier(0.2, 0.9, 0.3, 1.2);
+	/* Icons */
+	--th-icon-large: 26px;
+	--th-icon: 20px;
+	--th-icon-back: 18px;
+	--th-icon-tool: 16px;
+	--th-icon-answer: 15px;
+	--th-icon-check: 14px;
+	--th-icon-check-phone: 13px;
+	--th-icon-chevron: 14px;
+	--th-icon-small: 13px;
+	--th-icon-chip-x: 10px;
+
+	/* Type */
+	--th-font-display: 34px;
+	--th-font-title: 30px;
+	--th-font-calibration: 28px;
+	--th-font-closed: 26px;
+	--th-font-sheet-title: 22px;
+	--th-font-header: 20px;
+	--th-font-body: 17px;
+	--th-font-answer: 15px;
+	--th-font-control: 14px;
+	--th-font-small: 13px;
+	--th-font-micro: 10px;
+	--th-font-ui-small: var(--font-ui-small);
+	--th-font-ui-medium: var(--font-ui-medium);
+	--th-font-ui-large: var(--font-ui-large);
+	/* A note's own text, for the habit's panel shown inside Today. */
+	--th-font-note: var(--font-text);
+	--th-font-note-size: var(--font-text-size);
+	--th-leading-note: var(--line-height-normal);
+	/* A phone draws Today in Apple's own font. */
+	--th-font-phone: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-interface);
+	--th-leading-sheet-title: 28px;
+	--th-leading-header: 25px;
+	--th-leading-date: 24px;
+	--th-leading-body: 22px;
+	--th-leading-title: 1.12;
+	--th-leading-text: 1.4;
+	--th-weight-regular: var(--font-normal);
+	--th-weight-semibold: var(--font-semibold);
+	--th-weight-bold: var(--font-bold);
+	--th-tracking-tight: -0.01em;
+	--th-tracking-tighter: -0.02em;
+
+	/* Spacing */
+	--th-space-1: 1px;
+	--th-space-2: 2px;
+	--th-space-3: 3px;
+	--th-space-4: 4px;
+	--th-space-5: 5px;
+	--th-space-6: 6px;
+	--th-space-8: 8px;
+	--th-space-9: 9px;
+	--th-space-10: 10px;
+	--th-space-11: 11px;
+	--th-space-12: 12px;
+	--th-space-14: 14px;
+	--th-space-15: 15px;
+	--th-space-16: 16px;
+	--th-space-18: 18px;
+	--th-space-22: 22px;
+	--th-space-26: 26px;
+	--th-space-28: 28px;
+	--th-space-32: 32px;
+	--th-space-64: 64px;
+	--th-space-120: 120px;
+	/* The month's line and the week under it, the same in the phone's tray and over a computer's list. */
+	--th-month-line-gap: 12px;
+	--th-week-pad: 8px;
+	/* The circles' slots start this far into the gutter, so a circle's edge is where the list's text would start. */
+	--th-slot-pull: 10px;
+	/* Room under the list for the marbles, and how far over them the celebration line stands. */
+	--th-list-floor: 140px;
+	--th-caption-lift: 110px;
+	/* How far a computer's letters and chips are pulled left so their ink starts at the circles' edge. */
+	--th-ink-pull: 3px;
+	--th-chip-pull: 2px;
+	--th-back-pull: 9px;
+	--th-back-pull-phone: 4px;
+	/* The swatch's ring and the help badge's ring: a gap of the ground, then the ring. */
+	--th-swatch-gap: 3px;
+	--th-swatch-ring: 5px;
+	--th-badge-ring: 2px;
+	--th-today-ring: 1.5px;
+	--th-today-ring-gap: 3px;
+	/* The tray's hairline and its shadow, which grows as the tray rises. */
+	--th-tray-hairline: -0.5px;
+	--th-tray-shadow-y: -8px;
+	--th-tray-shadow-blur: 24px;
+	/* The list fades out over this much under the panel's top edge once scrolled. */
+	--th-scroll-fade: 26px;
+	/* Obsidian's Properties look, for the habit's panel. */
+	--th-property-padding: var(--input-padding);
+	--th-property-text: var(--metadata-input-text-color);
+	--th-property-font: var(--metadata-input-font-size);
+
+	/* Opacity */
+	--th-dim: 0.5;
+	--th-grabber-opacity: 0.6;
+	--th-outside-opacity: 0.4;
+
+	/* A year's dots: the full day's white middle and a day done not at the trigger's coloured one, then where each fades to the ring. */
+	--th-full-dot-core: 18%;
+	--th-full-dot-edge: 24%;
+	--th-small-dot-core: 22%;
+	--th-small-dot-edge: 28%;
+
+	/* Layers, bottom to top */
+	--th-layer-list: 1;
+	--th-layer-grip: 2;
+	--th-layer-sheet: 4;
+	--th-layer-lifted: 5;
+	--th-layer-marbles: 5;
+	--th-layer-tray: 6;
+	--th-layer-caption: 7;
+	--th-layer-overlay: 8;
+	--th-layer-calibration: 10000;
+
+	/* Motion */
 	--th-fast: 150ms ease;
+	--th-ease-pop: cubic-bezier(0.2, 0.9, 0.3, 1.2);
+	--th-ease-settle: cubic-bezier(0.2, 0.9, 0.3, 1);
+	--th-quick-time: 120ms;
+	--th-press-time: 90ms;
+	--th-shift-time: 160ms;
+	--th-in-time: 220ms;
+	--th-in-quick-time: 200ms;
+	--th-fresh-time: 300ms;
+	--th-pop-time: 420ms;
+	--th-count-pop-time: 520ms;
+	--th-count-pop-delay: 300ms;
+	--th-arc-time: 600ms;
+	--th-draw-time: 280ms;
+	--th-draw-delay: 120ms;
+	--th-in-rise: -6px;
+	--th-pop-from: 0.4;
+	--th-pop-peak: 1.2;
+	--th-check-length: 24;
+	--th-press-scale: 0.84;
+	--th-word-press-scale: 0.94;
+	--th-drag-scale: 1.02;
+	--th-picked-brightness: 1.2;
 }
+
+/* A phone's finger needs a smaller circle than a mouse would guess: the mark and its check shrink there. */
+.is-mobile .tiny-habits { --th-mark: var(--th-mark-phone); --th-icon-check: var(--th-icon-check-phone); font-family: var(--th-font-phone); }
 
 .th-habit { --th-habit: var(--interactive-accent); }
 .th-color-accent { --th-habit: var(--interactive-accent); }
@@ -43,116 +263,57 @@ body {
 .th-color-purple { --th-habit: var(--color-purple); }
 .th-color-pink { --th-habit: var(--color-pink); }
 
-@keyframes th-pop { 0% { transform: scale(0.4); } 55% { transform: scale(1.2); } 100% { transform: scale(1); } }
+@keyframes th-pop { 0% { transform: scale(var(--th-pop-from)); } 55% { transform: scale(var(--th-pop-peak)); } 100% { transform: scale(1); } }
 @keyframes th-arc { from { stroke-dasharray: 0 var(--th-arc) var(--th-rest) 0; } to { stroke-dasharray: var(--th-arc) 0 var(--th-rest) 0; } }
-@keyframes th-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes th-in { from { opacity: 0; transform: translateY(var(--th-in-rise)); } to { opacity: 1; transform: none; } }
+@keyframes th-draw { from { stroke-dashoffset: var(--th-check-length); } to { stroke-dashoffset: 0; } }
 
 /* Typography */
-.th-title {
-	margin: 0;
-	font-size: var(--th-title-size);
-	font-weight: 700;
-	line-height: 1.12;
-	letter-spacing: -0.02em;
-	color: var(--th-text);
-}
-.th-label { font-size: var(--th-small-size); color: var(--th-faint); }
-.th-subtitle { margin: 18px 0 2px; font-size: 15px; font-weight: 600; color: var(--th-muted); }
+.th-title { margin: 0; font-size: var(--th-font-title); font-weight: var(--th-weight-bold); line-height: var(--th-leading-title); letter-spacing: var(--th-tracking-tighter); color: var(--th-text); }
+.th-label { font-size: var(--th-font-small); color: var(--th-faint); }
 
 /* Buttons */
-button.th-button {
-	width: var(--th-button);
-	height: var(--th-button);
-	padding: 0;
-	border: none;
-	border-radius: 50%;
-	box-shadow: none;
-	background: transparent;
-	color: var(--th-muted);
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	cursor: pointer;
-	transition: background var(--th-fast), color var(--th-fast);
-}
-@media (hover: hover) { button.th-button:hover { background: var(--background-modifier-hover); color: var(--th-text); } }
-button.th-button svg { width: 20px; height: 20px; }
+button.th-button { width: var(--th-button); height: var(--th-button); padding: 0; border: none; border-radius: var(--th-radius-circle); box-shadow: none; background: transparent; color: var(--th-muted); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: background var(--th-fast), color var(--th-fast); }
+@media (hover: hover) { button.th-button:hover { background: var(--th-hover); color: var(--th-text); } }
+button.th-button svg { width: var(--th-icon); height: var(--th-icon); }
 button.th-button-primary, button.th-button-primary:hover { background: var(--th-strong); color: var(--th-on-strong); }
 button.th-button-primary:disabled { background: var(--th-surface); color: var(--th-faint); cursor: default; }
-button.th-button-large { width: 64px; height: 64px; }
-button.th-button-large svg { width: 26px; height: 26px; }
+button.th-button-large { width: var(--th-button-large); height: var(--th-button-large); }
+button.th-button-large svg { width: var(--th-icon-large); height: var(--th-icon-large); }
 
-button.th-chip {
-	height: var(--th-chip);
-	padding: 0 12px;
-	border: var(--th-line-width) solid var(--th-line);
-	border-radius: var(--th-chip);
-	box-shadow: none;
-	background: var(--th-surface);
-	color: var(--th-text);
-	font-size: var(--th-small-size);
-	cursor: pointer;
-}
+button.th-chip { height: var(--th-chip); padding: 0 var(--th-space-12); border: var(--th-line-width) solid var(--th-line); border-radius: var(--th-radius-capsule); box-shadow: none; background: var(--th-surface); color: var(--th-text); font-size: var(--th-font-small); cursor: pointer; }
 button.th-chip-ghost { background: transparent; border-style: dashed; color: var(--th-muted); }
 button.th-chip.is-on { border-style: solid; border-color: var(--th-muted); }
-button.th-chip-strong { border: none; background: var(--th-strong); color: var(--th-on-strong); font-weight: 600; }
+button.th-chip-strong { border: none; background: var(--th-strong); color: var(--th-on-strong); font-weight: var(--th-weight-semibold); }
 button.th-chip-strong:disabled { background: var(--th-surface); color: var(--th-faint); }
 
-button.th-link {
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	height: 32px;
-	padding: 0;
-	border: none;
-	box-shadow: none;
-	background: transparent;
-	color: var(--interactive-accent);
-	font-size: var(--th-small-size);
-	cursor: pointer;
-}
-button.th-link svg { width: 13px; height: 13px; }
+button.th-link { display: inline-flex; align-items: center; gap: var(--th-space-6); height: var(--th-link-height); padding: 0; border: none; box-shadow: none; background: transparent; color: var(--th-accent); font-size: var(--th-font-small); cursor: pointer; }
+button.th-link svg { width: var(--th-icon-small); height: var(--th-icon-small); }
 
-/* Answer circles: the round control behind every mark */
-.th-mark {
-	box-sizing: border-box;
-	width: var(--th-mark);
-	height: var(--th-mark);
-	border-radius: 50%;
-	border: 1.5px solid var(--th-line);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	color: #ffffff;
-	transition: border-color var(--th-fast), background var(--th-fast);
-}
-.th-mark svg { width: 14px; height: 14px; stroke-width: 3.4px; }
-.th-mark.is-done { border: none; background: var(--th-habit); }
-.th-mark.is-missed { position: relative; border-color: var(--th-faint); }
-.th-mark.is-missed::after { content: ""; width: 44%; height: 2px; border-radius: 1px; background: var(--th-faint); }
+/*
+ * The circle says how the day went, flat: the habit's colour with a check for the full action, a tint of it for the
+ * tiny one, grey with a dash for skipped, the grey of cancel with a check of the habit's colour for a day done not at
+ * the trigger. Today's answer buttons carry these same circles.
+ */
+.th-mark { box-sizing: border-box; width: var(--th-mark); height: var(--th-mark); border-radius: var(--th-radius-circle); border-width: var(--th-mark-stroke); border-style: solid; border-color: var(--th-habit); display: flex; align-items: center; justify-content: center; color: var(--th-on-color); transition: border-color var(--th-fast), background var(--th-fast); }
+.th-mark svg { width: var(--th-icon-check); height: var(--th-icon-check); stroke-width: var(--th-check-stroke); }
+.th-mark.is-done, .th-mark.is-missed, .th-mark.th-choice-cancel { border: none; }
+.th-mark.is-done { background: var(--th-habit); color: var(--th-on-color); }
+.th-mark.is-done.is-tiny { background: color-mix(in srgb, var(--th-habit) var(--th-tint-share), var(--th-surface)); color: var(--th-habit); }
+.th-mark.is-done svg { stroke-width: var(--th-check-stroke-done); }
+.th-mark.is-missed { position: relative; background: var(--th-skip); }
+.th-mark.is-missed::after { content: ""; width: var(--th-dash-width); height: var(--th-dash-height); border-radius: var(--th-radius-capsule); background: var(--th-on-color); }
 .th-mark.is-asking { border-style: dashed; border-color: var(--th-faint); }
-.th-mark.is-popping { animation: th-pop 420ms var(--th-ease-pop); }
-button.th-mark-button {
-	width: var(--th-target);
-	height: var(--th-target);
-	flex: 0 0 auto;
-	margin: -6px -10px -6px 0;
-	padding: 0;
-	border: none;
-	border-radius: 50%;
-	box-shadow: none;
-	background: transparent;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	cursor: pointer;
-	-webkit-user-select: none;
-	user-select: none;
-	-webkit-touch-callout: none;
-	touch-action: manipulation;
-}
+.th-mark.th-choice-cancel { background: var(--th-fill-solid); color: var(--th-muted); }
+.th-mark.is-off-trigger { border: none; background: var(--th-fill-solid); color: var(--th-habit); }
+.th-mark.is-off-trigger svg { stroke-width: var(--th-check-stroke-done); }
+.th-mark.is-popping { animation: th-pop var(--th-pop-time) var(--th-ease-pop); }
+.th-mark.is-popping svg path, .th-mark.is-popping svg polyline { stroke-dasharray: var(--th-check-length); animation: th-draw var(--th-draw-time) var(--th-draw-delay) ease-out both; }
+button.th-mark-button { width: var(--th-slot); height: var(--th-row-height); flex: 0 0 auto; margin: 0; padding: 0; border: none; border-radius: var(--th-radius-circle); box-shadow: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
 button.th-mark-button:hover { background: transparent; }
 @media (hover: hover) { button.th-mark-button:hover .th-mark:not(.is-done) { border-color: var(--th-muted); } }
+button.th-mark-button:active .th-mark { transform: scale(var(--th-press-scale)); transition: transform var(--th-press-time) ease; }
+.th-mark-slot { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: var(--th-slot); height: var(--th-row-height); }
 .tiny-habits button, .th-sheet button { -webkit-tap-highlight-color: transparent; }
 .is-mobile .tiny-habits button:focus-visible, .is-mobile .th-sheet button:focus-visible, button.th-mark-button:focus-visible { box-shadow: none; outline: none; }
 
@@ -160,460 +321,95 @@ button.th-mark-button:hover { background: transparent; }
 .tiny-habits button, .tiny-habits .th-mark, .th-sheet button.th-day, .th-sheet button.th-swatch { corner-shape: round; }
 
 /* Fields */
-.th-field { display: block; padding: 6px 0 10px; }
-.th-field .th-label { margin-bottom: 6px; font-size: var(--font-ui-small); color: var(--text-muted); }
+.th-field { display: block; padding: var(--th-space-6) 0 var(--th-space-10); }
+.th-field .th-label { margin-bottom: var(--th-space-6); font-size: var(--th-font-ui-small); color: var(--th-muted); }
 .th-field input,
-.th-field textarea { width: 100%; box-sizing: border-box; font-size: var(--font-ui-medium); resize: none; }
-input.th-inline-input {
-	flex: 1 1 auto;
-	min-width: 0;
-	height: var(--th-chip);
-	padding: 0 12px;
-	border: var(--th-line-width) solid var(--th-line);
-	border-radius: var(--th-chip);
-	background: var(--th-surface);
-	font-size: var(--th-small-size);
-}
+.th-field textarea { width: 100%; box-sizing: border-box; font-size: var(--th-font-ui-medium); resize: none; }
+input.th-inline-input { flex: 1 1 auto; min-width: 0; height: var(--th-chip); padding: 0 var(--th-space-12); border: var(--th-line-width) solid var(--th-line); border-radius: var(--th-radius-capsule); background: var(--th-surface); font-size: var(--th-font-small); }
 
-.th-circles { display: flex; justify-content: space-between; gap: 6px; margin-top: 10px; }
-button.th-day {
-	width: var(--th-answer);
-	height: var(--th-answer);
-	min-height: 0;
-	padding: 0;
-	border: 1.5px solid var(--th-line);
-	border-radius: 50%;
-	box-shadow: none;
-	background: transparent;
-	color: var(--th-faint);
-	font-size: 14px;
-	font-weight: 600;
-	cursor: pointer;
-}
+.th-circles { display: flex; justify-content: space-between; gap: var(--th-space-6); margin-top: var(--th-space-10); }
+button.th-day { width: var(--th-answer); height: var(--th-answer); min-height: 0; padding: 0; border: var(--th-stroke) solid var(--th-line); border-radius: var(--th-radius-circle); box-shadow: none; background: transparent; color: var(--th-faint); font-size: var(--th-font-control); font-weight: var(--th-weight-semibold); cursor: pointer; }
 button.th-day.is-on { border-color: var(--th-strong); background: var(--th-strong); color: var(--th-on-strong); }
-button.th-swatch {
-	width: 30px;
-	height: 30px;
-	padding: 0;
-	border: none;
-	border-radius: 50%;
-	box-shadow: none;
-	background: var(--th-habit);
-	cursor: pointer;
-}
-button.th-swatch.is-on { box-shadow: 0 0 0 3px var(--th-bg), 0 0 0 5px var(--th-habit); }
+button.th-swatch { width: var(--th-control); height: var(--th-control); padding: 0; border: none; border-radius: var(--th-radius-circle); box-shadow: none; background: var(--th-habit); cursor: pointer; }
+button.th-swatch.is-on { box-shadow: 0 0 0 var(--th-swatch-gap) var(--th-bg), 0 0 0 var(--th-swatch-ring) var(--th-habit); }
 
-/* Today */
-.tiny-habits.th-today { position: relative; height: 100%; padding: 0; overflow: hidden; }
-.th-today-scroll { position: absolute; inset: 0; z-index: 1; overflow-y: auto; }
+/* Today: the habits on a panel under Obsidian's header, the marbles over them, and the days. */
+.tiny-habits.th-today { --th-tray-top: 100%; --th-tray-rest: 0px; --th-tray-inset: 0px; position: relative; height: 100%; padding: 0; overflow: hidden; }
 .is-phone .mod-root .workspace-leaf-content[data-type="tiny-habits-grid"] { --view-top-spacing: 0; }
 .is-phone.is-floating-nav .workspace-leaf-content[data-type="tiny-habits-grid"] .th-today,
-.is-phone.auto-full-screen .workspace-leaf-content[data-type="tiny-habits-grid"] .th-today { --th-top-inset: calc(var(--safe-area-inset-top) + var(--view-header-height) + 8px); }
-.th-column { max-width: var(--th-column); margin: 0 auto; padding: calc(8px + var(--th-top-inset, 0px)) var(--th-gutter) calc(var(--th-jar-reserve) + var(--th-bottom-inset, 0px)); box-sizing: border-box; }
-button.th-archived-toggle { margin: 12px 0 10px; font-size: var(--th-small-size); color: var(--th-muted); }
-.th-head { padding: 10px 0 18px; }
-.th-head-line { display: flex; align-items: center; gap: 2px; }
-.th-head-line .th-title { flex: 1; min-width: 0; }
-button.th-head-step, button.th-head-today, button.th-back, button.th-archived-toggle { height: auto; border: none; box-shadow: none; background: transparent; cursor: pointer; font-size: var(--th-small-size); }
-button.th-head-step { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-s); color: var(--th-muted); }
-button.th-head-step svg { width: 20px; height: 20px; }
-button.th-head-step:last-child { margin-right: -8px; }
-button.th-head-step:disabled { opacity: 0.3; cursor: default; }
-button.th-head-today { margin-right: 4px; padding: 3px 10px; border-radius: 999px; color: var(--interactive-accent); background: hsla(var(--interactive-accent-hsl), 0.14); }
-@media (hover: hover) { button.th-head-step:not(:disabled):hover { background: var(--background-modifier-hover); color: var(--th-text); } }
-.th-head-sub { display: flex; align-items: center; gap: 12px; min-height: 24px; margin-top: 6px; font-size: var(--th-small-size); color: var(--th-muted); }
-.th-head-wins { margin-left: auto; color: var(--th-faint); font-variant-numeric: tabular-nums; }
-button.th-fold { display: inline-flex; align-items: center; gap: 8px; height: auto; padding: 0; border: none; box-shadow: none; background: transparent; color: var(--th-muted); font-size: inherit; cursor: pointer; }
-button.th-fold:disabled { opacity: 1; cursor: default; }
-@media (hover: hover) { button.th-fold:not(:disabled):hover { color: var(--th-text); } }
-button.th-fold[aria-expanded="true"] .th-meta-chevron { transform: rotate(90deg); }
-.th-ring-block { display: flex; flex-direction: column; align-items: center; padding: 28px 0 26px; text-align: center; }
-.th-ring-block.is-fresh { animation: th-in 300ms ease; }
-.th-ring-block .th-title { font-size: 26px; }
-.th-ring { position: relative; width: 168px; height: 168px; margin-bottom: 18px; }
-.th-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
-.th-ring circle { fill: none; stroke-width: 7; stroke-linecap: round; stroke-dasharray: var(--th-arc) var(--th-rest); }
-.th-ring-track { stroke: var(--th-line); stroke-linecap: butt; }
-.th-ring-arc { stroke: var(--th-habit); }
-.th-ring-arc.is-missed { stroke: var(--th-faint); opacity: 0.5; }
-.th-ring-block.is-fresh .th-ring-arc { animation: th-arc 600ms cubic-bezier(.2, .9, .3, 1) both; }
-.th-ring-block.is-fresh .th-ring-count { animation: th-pop 520ms cubic-bezier(.2, .9, .3, 1.2) 300ms both; }
-.th-ring-count { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 34px; font-weight: 700; letter-spacing: -0.02em; color: var(--th-text); font-variant-numeric: tabular-nums; }
-.th-ring-sub { margin-top: 6px; font-size: 14px; color: var(--th-muted); }
-button.th-back { display: inline-flex; align-items: center; gap: 2px; padding: 4px 8px 4px 0; margin-left: -4px; color: var(--th-muted); }
-button.th-back svg { width: 18px; height: 18px; }
-.th-back-nav { padding-top: 6px; }
-.th-back-icon { display: inline-flex; }
-.th-back-nav + .th-head { padding-top: 2px; }
-button.th-archived-toggle { display: inline-flex; align-items: center; gap: 8px; margin: 12px 0 10px; padding: 0; color: var(--th-muted); }
-.th-progress { height: var(--th-progress); margin-top: 14px; border-radius: var(--th-progress); background: var(--th-line); overflow: hidden; }
-.th-meta-chevron { display: inline-flex; color: var(--th-faint); transition: transform 150ms ease; }
-.th-meta-chevron svg { width: 14px; height: 14px; }
-.th-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-.th-progress-fill { height: 100%; border-radius: var(--th-progress); background: var(--th-text); transition: width 450ms ease; }
-
-.th-row { position: relative; margin-bottom: 2px; padding-left: 16px; -webkit-touch-callout: none; }
-.th-row.is-new { animation: th-in 220ms ease; }
-.th-row::before { content: ""; position: absolute; left: 0; top: 7px; bottom: 7px; width: 3px; border-radius: 2px; background: var(--th-habit, var(--th-line)); transition: opacity var(--th-fast); }
-.th-row.is-answered::before { opacity: 0.3; }
-.th-row-main { display: flex; align-items: center; gap: 10px; min-height: var(--th-row-min); }
-.th-row-text { flex: 1 1 auto; min-width: 0; padding: 6px 0; cursor: pointer; }
-.th-row-title { font-size: var(--th-text-size); font-weight: 500; color: var(--th-text); overflow-wrap: anywhere; }
-.th-row-sub { margin-top: 2px; font-size: var(--th-small-size); color: var(--th-faint); }
-.th-row.is-answered .th-row-title { color: var(--th-faint); }
-.th-row-extra { padding: 0 0 14px; animation: th-in 200ms ease; }
-.th-row-extra .th-label { margin-bottom: 8px; }
-.th-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.th-inline-form { display: flex; gap: 6px; margin-top: 8px; }
-
-.th-done-dots { display: flex; }
-.th-done-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--th-habit); box-shadow: 0 0 0 2px var(--th-bg); }
-.th-done-dot.is-skipped { background: var(--th-faint); }
-.th-done-dot + .th-done-dot { margin-left: -4px; }
-
-.th-jar { position: absolute; top: 0; left: 0; z-index: 2; width: 100%; height: 100%; pointer-events: none; }
-.th-caption {
-	position: absolute;
-	left: 0;
-	right: 0;
-	width: max-content;
-	max-width: calc(100% - 2 * var(--th-gutter));
-	margin: 0 auto;
-	bottom: calc(210px + var(--th-bottom-inset, 0px));
-	z-index: 3;
-	height: 32px;
-	padding: 0 14px;
-	display: flex;
-	align-items: center;
-	border: var(--th-line-width) solid var(--th-habit);
-	border-radius: 16px;
-	background: var(--th-surface);
-	color: var(--th-habit);
-	font-size: var(--th-small-size);
-	font-weight: 600;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	pointer-events: none;
-	animation: th-in 200ms ease;
-}
-
-.th-column:has(> .th-empty) { box-sizing: border-box; height: 100%; padding-bottom: 0; }
-.th-empty { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; padding: 0 32px 120px; text-align: center; }
-
-/* Habit screen */
-.tiny-habits.th-screen { max-width: var(--th-column); margin: 0 auto; padding: 16px var(--th-gutter) 48px; box-sizing: border-box; }
-.th-screen-header { display: flex; align-items: center; gap: 10px; }
-.th-screen-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--th-habit); }
-.th-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.th-stat-value { font-size: 32px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; color: var(--th-muted); }
-.th-stat:first-child .th-stat-value { color: var(--th-text); }
-.th-stat-label { margin-top: 6px; font-size: var(--th-small-size); color: var(--th-faint); }
-
-.th-year { display: flex; gap: 6px; margin-top: 22px; }
-.th-year-labels { flex: 0 0 auto; display: flex; flex-direction: column; gap: 3px; padding-top: calc(var(--th-dot) + 3px); font-size: 10px; color: var(--th-faint); }
-.th-year-labels span { height: var(--th-dot); line-height: var(--th-dot); }
-.th-year-scroll { flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
-.th-year-scroll::-webkit-scrollbar { display: none; }
-.th-year-weeks { display: inline-flex; gap: 3px; }
-.th-year-week { display: flex; flex-direction: column; gap: 3px; width: var(--th-dot); }
-.th-year-month { height: var(--th-dot); font-size: 10px; line-height: var(--th-dot); color: var(--th-faint); white-space: nowrap; overflow: visible; }
-.th-year-day { box-sizing: border-box; width: var(--th-dot); height: var(--th-dot); border-radius: 50%; corner-shape: round; border: 1.5px solid var(--th-line); background: transparent; }
-.th-year-day.is-tiny { border-color: var(--th-habit); background: var(--th-habit); }
-.th-year-day.is-full { border-color: var(--th-habit); background: radial-gradient(circle, #ffffff 0 18%, var(--th-habit) 24%); }
-.th-year-day.is-missed { border-color: transparent; background: var(--th-line); }
-.th-year-day.is-off-trigger { border-color: transparent; background: radial-gradient(circle, var(--th-habit) 0 22%, var(--th-line) 28%); }
-.th-year-day.is-off { border-color: transparent; background: radial-gradient(circle, var(--th-line) 0 22%, transparent 28%); }
-.th-year-day.is-before,
-.th-year-day.is-future { opacity: 0.4; }
-.th-year-day.is-today { box-shadow: inset 0 0 0 1.5px var(--th-text); }
-.th-year-day.is-today.is-tiny,
-.th-year-day.is-today.is-full { box-shadow: inset 0 0 0 1.5px var(--th-habit), inset 0 0 0 3px var(--background-primary); }
-
-.th-history-row { display: grid; grid-template-columns: 58px 18px minmax(0, 1fr); align-items: start; padding: 11px 0; border-bottom: var(--th-line-width) solid var(--th-line); font-size: 15px; }
-.th-history-date { padding-top: 1px; font-size: var(--th-small-size); color: var(--th-faint); }
-.th-history-icon { width: 10px; height: 10px; margin-top: 5px; box-sizing: border-box; border-radius: 50%; background: var(--th-faint); }
-.th-history-icon.is-missed { background: transparent; border: 1.5px solid var(--th-faint); }
-.th-history-icon.is-change { background: var(--th-habit); }
-.th-history-text { color: var(--th-text); overflow-wrap: anywhere; }
-.th-history-note { display: block; margin-top: 2px; font-size: var(--th-small-size); color: var(--th-faint); }
-.th-quiet { font-size: var(--th-small-size); color: var(--th-faint); padding: 8px 0; }
-
-/* Sheets: Edit and New habit */
-.th-sheet-body { padding: 4px 0 8px; }
-.th-sheet-group { padding: 14px 0 6px; }
-
-.th-style-picker { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 0 0 16px; }
-button.th-style-tile {
-	height: auto;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 8px;
-	padding: 14px 6px 10px;
-	border: 1.5px solid var(--background-modifier-border);
-	border-radius: 14px;
-	background: var(--background-primary);
-	box-shadow: none;
-	cursor: pointer;
-	-webkit-tap-highlight-color: transparent;
-}
-button.th-style-tile.is-selected { border-color: var(--interactive-accent); }
-.th-style-marbles { display: flex; align-items: flex-end; justify-content: center; height: 68px; }
-.th-style-marbles img { display: block; margin-left: -6px; }
-.th-style-marbles img:first-child { margin-left: 0; }
-.th-style-name { font-size: var(--font-ui-small); color: var(--text-normal); }
-
-.th-habit-panel { --th-dot: 11px; -webkit-user-select: none; user-select: none; }
-.th-habit-panel .th-habit-days { cursor: pointer; }
-.th-habit-panel .metadata-property-value:has(.th-panel-cell) { align-items: flex-start; }
-.th-panel-cell { flex: 1 1 auto; min-width: 0; padding: var(--input-padding); color: var(--metadata-input-text-color); font-size: var(--metadata-input-font-size); }
-.th-panel-stats { display: flex; flex-wrap: wrap; gap: 0 var(--size-4-4); }
-.th-panel-stat-value { font-weight: var(--font-semibold); font-variant-numeric: tabular-nums; }
-.th-habit-panel .th-year { margin: 0; padding: 0; }
-.th-panel-history-toggle { display: inline-flex; align-items: center; gap: var(--size-2-2); cursor: pointer; }
-.th-panel-chevron { display: inline-flex; color: var(--text-muted); transition: transform 150ms ease; }
-.th-panel-chevron svg { width: 14px; height: 14px; }
-.th-panel-history-toggle[aria-expanded="true"] .th-panel-chevron { transform: rotate(90deg); }
-.th-panel-quiet { padding-inline-start: var(--size-2-3); color: var(--text-faint); }
-.th-archived { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 8px; padding: 8px 12px; border-radius: var(--radius-m); background: var(--background-secondary); }
-.th-archived-text { font-size: var(--th-small-size); color: var(--th-muted); }
-.th-habit-panel .th-history-row { grid-template-columns: 52px 16px minmax(0, 1fr); padding: var(--size-2-2) 0 0; border-bottom: none; font-size: inherit; color: inherit; }
-.th-habit-panel .th-history-date { color: var(--text-muted); font-size: inherit; padding-top: 0; }
-
-/* Fingers need bigger circles than a mouse: on phones the mark and the three answers grow together. */
-.is-mobile .tiny-habits { --th-mark: 24px; }
-.is-mobile .th-mark svg { width: 13px; height: 13px; }
-
-/* Screen corner calibration: a band along the screen edge that is equally thin everywhere when the radius is right. */
-.th-calibration { position: fixed; inset: 0; z-index: 10000; background: var(--color-yellow); }
-.th-calibration-screen { position: absolute; inset: var(--th-band); background: #000; border-radius: max(0px, calc(var(--th-corner) - var(--th-band))); corner-shape: round; }
-.th-calibration-marble { position: absolute; width: var(--th-marble); height: var(--th-marble); border-radius: 50%; corner-shape: round; background: var(--color-cyan); }
-.th-calibration-marble.is-top-left { top: var(--th-corner-inset); left: var(--th-corner-inset); }
-.th-calibration-marble.is-top-right { top: var(--th-corner-inset); right: var(--th-corner-inset); }
-.th-calibration-marble.is-bottom-left { bottom: var(--th-corner-inset); left: var(--th-corner-inset); }
-.th-calibration-marble.is-bottom-right { bottom: var(--th-corner-inset); right: var(--th-corner-inset); }
-.th-calibration-panel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(320px, calc(100% - 64px)); display: flex; flex-direction: column; gap: 12px; color: #fff; text-align: center; }
-.th-calibration-title { font-size: var(--font-ui-large); font-weight: 600; }
-.th-calibration-hint { font-size: var(--font-ui-small); color: rgba(255, 255, 255, 0.7); }
-.th-calibration-value { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.th-calibration-row { display: flex; align-items: center; gap: 12px; }
-.th-calibration-row input { flex: 1; min-width: 0; }
-.th-calibration-row button { width: 44px; height: 44px; border-radius: 50%; corner-shape: round; padding: 0; font-size: 22px; }
-.th-calibration-actions { display: flex; justify-content: center; gap: 12px; }
-
-/* Marble sizes: a small jar that follows the sliders. */
-/* Marble sizes, picked on Today: a card of sliders over the top of the list, the marbles stay in view below it. */
-.th-size-calibration { position: absolute; top: calc(var(--th-top-inset, 0px) + 8px); left: var(--th-gutter); right: var(--th-gutter); z-index: 8; max-width: calc(var(--th-column) - 2 * var(--th-gutter)); margin: 0 auto; padding: var(--size-4-3) var(--size-4-4); border-radius: var(--radius-l); background: var(--background-secondary); box-shadow: var(--shadow-l); }
-.th-size-calibration-title { margin-bottom: var(--size-4-2); padding-inline-start: var(--size-4-4); font-size: var(--font-ui-medium); font-weight: var(--font-semibold); }
-.th-size-calibration .setting-item { align-items: center; padding: var(--size-4-2); border-top: none; border-radius: 30px; }
-.th-size-calibration .setting-item-info { flex: 0 0 4.5em; padding-inline-start: var(--size-4-2); }
-.th-size-calibration .th-size-stepper { flex: 1 1 auto; min-width: 0; gap: var(--size-4-2); }
-.th-size-calibration .th-size-stepper input[type="range"] { flex: 1 1 auto; min-width: 0; width: auto; }
-.th-size-calibration button.th-size-step { flex: none; width: 44px; height: 44px; border-radius: 50%; corner-shape: round; padding: 0; font-size: 22px; }
-.th-size-calibration .modal-button-container { flex-wrap: wrap; margin: var(--size-4-3) 0 0; padding: 0; }
-.is-phone .th-size-calibration .modal-button-container { display: grid; grid-template-columns: 1fr 1fr; }
-
-/* Reordering: hold a habit's text, then drag the row. */
-.th-row-text { -webkit-user-select: none; user-select: none; }
-.th-row.is-dragging { z-index: 5; background: var(--background-primary); border-radius: var(--radius-m); box-shadow: var(--shadow-l); scale: 1.02; transition: scale var(--th-fast), box-shadow var(--th-fast); }
-.th-row.is-shifting { transition: transform 160ms ease; }
-
-/* Sections on Today: a quiet header over each group; the new-section zone shows only while a habit is being dragged. */
-.th-group { padding: 10px 0 0; font-size: var(--font-ui-small); font-weight: 600; color: var(--text-muted); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: grab; }
-.th-group.is-dragging { position: relative; z-index: 5; background: var(--background-primary); }
-.th-group.is-shifting { transition: transform 160ms ease; }
-.th-section-new { display: none; margin-top: 8px; padding: 14px 16px; border: 1px dashed var(--background-modifier-border); border-radius: var(--radius-m); color: var(--text-faint); font-size: var(--font-ui-small); text-align: center; transition: border-color var(--th-fast), color var(--th-fast), background-color var(--th-fast); }
-.is-dragging-row .th-section-new { display: block; }
-.th-section-new.is-target { border-color: var(--interactive-accent); color: var(--text-accent); background: var(--background-modifier-hover); }
-.th-section-name { width: 100%; }
-
-/* A row of mutually exclusive choices, like Obsidian's own segmented controls. */
-button.th-disclosure { display: flex; align-items: center; justify-content: flex-start; gap: 6px; width: 100%; height: auto; margin-top: 14px; padding: 10px 0; border: none; border-top: 1px solid var(--background-modifier-border); border-radius: 0; box-shadow: none; background: transparent; color: var(--text-normal); font-size: var(--font-ui-small); font-weight: var(--font-semibold); cursor: pointer; }
-.th-disclosure-icon { display: inline-flex; color: var(--text-faint); transition: transform 150ms ease; }
-.th-disclosure-icon svg { width: 14px; height: 14px; }
-button.th-disclosure[aria-expanded="true"] .th-disclosure-icon { transform: rotate(90deg); }
-.th-disclosure-note { color: var(--text-faint); font-weight: var(--font-normal); }
-.th-guide { margin-top: 6px; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 12px 16px; font-size: var(--font-ui-small); line-height: 1.4; }
-.th-guide-name { font-weight: var(--font-semibold); color: var(--text-normal); max-width: 9.5em; }
-.th-guide-text { color: var(--text-muted); }
-.th-recipe-guide { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 10px 14px; margin: 2px 0 10px; padding: 12px 14px; border-radius: var(--radius-m); background: var(--background-secondary); font-size: var(--font-ui-small); line-height: 1.4; }
-.th-recipe-guide-name { font-weight: var(--font-semibold); color: var(--text-normal); }
-.th-recipe-guide-text { color: var(--text-muted); }
-.th-recipe-guide-example { margin-top: 2px; color: var(--text-faint); font-style: italic; }
-.th-segmented { display: inline-flex; gap: 2px; padding: 2px; border-radius: var(--radius-m); background: var(--background-modifier-form-field, var(--background-secondary)); }
-.th-segmented button { height: auto; padding: 6px 14px; border: none; box-shadow: none; background: transparent; color: var(--text-muted); font-size: var(--font-ui-small); }
-.th-segmented button.is-selected { background: var(--interactive-normal); color: var(--text-normal); box-shadow: var(--input-shadow); }
-
-.th-check { display: flex; align-items: center; gap: 8px; padding: 0 0 12px; font-size: var(--th-small-size); color: var(--th-muted); }
-
-.th-probe { display: none; }
-.th-habit-note .metadata-property.th-own-property, .th-habit-note .metadata-container.th-only-own { display: none; }
-
-.th-card-recipe { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 7px 14px; margin: 6px 0 4px; padding: 12px 14px; border-radius: var(--radius-m); background: var(--th-surface); font-size: 14px; line-height: 1.4; }
-.th-card-key { color: var(--th-faint); }
-.th-card-value { color: var(--th-text); overflow-wrap: anywhere; }
-button.th-card-open { grid-column: 1 / -1; justify-self: start; display: inline-flex; align-items: center; gap: 4px; height: auto; margin-top: 2px; padding: 0; border: none; box-shadow: none; background: transparent; color: var(--interactive-accent); font-size: 14px; cursor: pointer; }
-.th-card-open-icon { display: inline-flex; }
-.th-card-open-icon svg { width: 15px; height: 15px; }
-.th-row-text { cursor: pointer; }
-
-/*
- * Today is a panel with the habits under Obsidian's header, and a tray with the calendar at the bottom, over Obsidian's
- * navbar. The marbles fall over the list and stand on the tray's top edge. Folded, the tray shows this week's dates;
- * pulled up, earlier weeks and how much of each day was done. On a phone it all follows iOS: the system font and
- * Reminders' plain list.
- */
-.tiny-habits.th-today { --th-tray-top: 100%; --th-tray-rest: 0px; --th-tray-inset: 0px; }
-.is-mobile .tiny-habits { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-interface); }
-.th-today .th-jar { z-index: 5; }
-.th-today .th-caption { z-index: 7; bottom: calc(var(--th-tray-rest) + 110px); }
-
-.th-sheet { position: absolute; left: 0; right: 0; top: calc(var(--th-top-inset, 0px) + 6px); bottom: 0; z-index: 4; display: flex; flex-direction: column; padding-top: 6px; }
+.is-phone.auto-full-screen .workspace-leaf-content[data-type="tiny-habits-grid"] .th-today { --th-top-inset: calc(var(--safe-area-inset-top) + var(--view-header-height) + var(--th-space-8)); }
+.th-sheet { position: absolute; left: 0; right: 0; top: calc(var(--th-top-inset, 0px) + var(--th-space-6)); bottom: 0; z-index: var(--th-layer-sheet); display: flex; flex-direction: column; padding-top: var(--th-space-6); }
 /* Once the list scrolls, it fades out under the panel's top edge instead of being cut. */
-.th-sheet.is-scrolled .th-today-scroll { -webkit-mask-image: linear-gradient(to bottom, transparent, #000 26px); mask-image: linear-gradient(to bottom, transparent, #000 26px); }
-.th-sheet .th-today-scroll { position: relative; inset: auto; flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: none; }
-.th-sheet .th-column { padding: 4px var(--th-gutter) calc(var(--th-tray-rest) + 140px); }
+.th-sheet.is-scrolled .th-today-scroll { -webkit-mask-image: linear-gradient(to bottom, transparent, var(--th-mask-solid) var(--th-scroll-fade)); mask-image: linear-gradient(to bottom, transparent, var(--th-mask-solid) var(--th-scroll-fade)); }
+.th-today-scroll { position: relative; z-index: var(--th-layer-list); flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: none; }
+.th-column { box-sizing: border-box; max-width: var(--th-column); margin: 0 auto; padding: var(--th-space-4) var(--th-gutter) calc(var(--th-tray-rest) + var(--th-list-floor)); }
+.th-column:has(> .th-empty) { box-sizing: border-box; height: 100%; }
+.th-empty { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--th-space-28); padding: 0 var(--th-space-32) var(--th-space-120); text-align: center; }
 /* The header keeps to the list's column, so All habits' way back starts at the habits' edge on a wide tab too. */
 .th-sheet-head { flex: 0 0 auto; box-sizing: border-box; width: 100%; max-width: var(--th-column); margin: 0 auto; padding: 0 var(--th-gutter); }
-.th-sheet-head .th-head-line { display: flex; align-items: center; min-height: 44px; }
-.th-sheet-title { flex: 1; min-width: 0; margin: 0; font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: -0.01em; color: var(--text-normal); }
-.th-sheet-head button.th-back { margin-right: 8px; font-size: 17px; color: var(--text-accent); }
+.th-head-line { display: flex; align-items: center; gap: var(--th-space-2); min-height: var(--th-slot); }
+.th-sheet-title { flex: 1; min-width: 0; margin: 0; font-size: var(--th-font-sheet-title); line-height: var(--th-leading-sheet-title); font-weight: var(--th-weight-bold); letter-spacing: var(--th-tracking-tight); color: var(--th-text); }
+button.th-back, button.th-archived-toggle { height: auto; border: none; box-shadow: none; background: transparent; cursor: pointer; font-size: var(--th-font-small); }
+button.th-back { display: inline-flex; align-items: center; gap: var(--th-space-2); margin: 0 var(--th-space-8) 0 calc(-1 * var(--th-back-pull-phone)); padding: var(--th-space-4) var(--th-space-8) var(--th-space-4) 0; font-size: var(--th-font-body); color: var(--th-accent-text); }
+button.th-back svg { width: var(--th-icon-back); height: var(--th-icon-back); }
+.th-back-icon { display: inline-flex; }
+button.th-archived-toggle { display: inline-flex; align-items: center; gap: var(--th-space-8); margin: var(--th-space-12) 0 var(--th-space-10); padding: 0; color: var(--th-muted); }
+.th-meta-chevron { display: inline-flex; color: var(--th-faint); transition: transform var(--th-fast); }
+.th-meta-chevron svg { width: var(--th-icon-chevron); height: var(--th-icon-chevron); }
+.th-sr-only { position: absolute; width: var(--th-sr-size); height: var(--th-sr-size); padding: 0; margin: calc(-1 * var(--th-sr-size)); overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
-/* The calendar's tray: a ground of its own, a hairline on top, and a shadow that grows as it is pulled up. A finger on it
-   moves the tray, never the page, whatever Obsidian lets its buttons do. */
-.th-tray { touch-action: none; position: absolute; left: 0; right: 0; top: var(--th-tray-top); bottom: 0; z-index: 6; border-radius: 24px 24px 0 0; corner-shape: round; background: var(--background-secondary); box-shadow: 0 -0.5px 0 var(--background-modifier-border), 0 -8px 24px rgba(0, 0, 0, calc(0.12 * var(--th-open, 0))); -webkit-user-select: none; user-select: none; }
-button.th-tray-grip { position: absolute; left: 0; right: 0; top: 0; z-index: 2; display: block; width: 100%; height: 14px; padding: 0; border: none; border-radius: 0; box-shadow: none; background: transparent; cursor: grab; -webkit-tap-highlight-color: transparent; }
-button.th-tray-grip:hover { background: transparent; }
-.th-tray.is-dragging, .th-tray.is-dragging button.th-tray-grip { cursor: grabbing; }
-.th-tray-grabber { display: block; width: 36px; height: 5px; margin: 5px auto 0; border-radius: 3px; background: var(--text-faint); opacity: 0.6; }
-.th-cal { position: absolute; left: 0; right: 0; top: 14px; bottom: calc(var(--th-tray-inset) - var(--th-lift, 0px)); overflow: hidden; }
-.th-cal-weeks { position: absolute; left: 0; right: 0; top: var(--th-head-height, 0px); bottom: 0; overflow: hidden; }
-/* The weeks stand on the bottom: folded, only this week's dates show. */
-.th-cal-list { position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; }
-/* The head is a band of its own over the weeks that opens as the tray rises, after this week's row is whole. */
-.th-cal-head { position: absolute; left: 0; right: 0; top: 0; height: var(--th-head-height, 0px); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
-/* The calendar keeps to the list's column, so on a wide tab its days stand under the habits, not across the tab. */
-.th-cal-line, .th-cal-week { box-sizing: border-box; width: 100%; max-width: var(--th-column); margin-left: auto; margin-right: auto; }
-.th-cal-line { flex: none; display: flex; align-items: center; gap: 2px; height: 30px; margin-bottom: 12px; padding: 0 var(--th-cal-edge, var(--th-gutter)); }
-/* The month reads as one of Today's section headers. */
-.th-cal-month { flex: none; margin-right: 6px; font-size: 20px; line-height: 25px; font-weight: 700; color: var(--text-normal); }
-button.th-cal-arrow { flex: none; width: 30px; height: 30px; padding: 0; border: none; border-radius: 15px; corner-shape: round; box-shadow: none; background: transparent; color: var(--text-muted); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-button.th-cal-arrow:hover, button.th-cal-arrow.mobile-tap { background: transparent; }
-button.th-cal-arrow:disabled { color: var(--text-faint); opacity: 0.5; cursor: default; }
-button.th-cal-arrow svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; }
-.th-cal-tools { margin-left: auto; }
-.th-cal-tools .th-tools { margin: 0; }
-.th-cal-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); flex: 0 0 54px; height: 54px; padding-left: 8px; padding-right: 8px; }
-button.th-cal-day { position: relative; height: 54px; margin: 0; padding: 0; border: none; border-radius: 0; box-shadow: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-button.th-cal-day:hover, button.th-cal-day.mobile-tap, button.th-tray-grip.mobile-tap { background: transparent; }
-button.th-cal-day:disabled { cursor: default; opacity: 1; }
-.th-cal-date { position: relative; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: var(--th-text-size); line-height: 24px; font-weight: 400; color: var(--text-normal); }
-/* How much of a day was done: a ring in Obsidian's accent, drawn as far round as that; it draws itself in as the tray rises. */
-.th-cal-ring { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; pointer-events: none; }
-.th-cal-ring-track, .th-cal-ring-arc { fill: none; stroke-width: 2; }
-.th-cal-ring-track { stroke: var(--background-modifier-border); }
-.th-cal-ring-arc { stroke: var(--interactive-accent); stroke-linecap: round; }
-.th-cal-figure { position: relative; top: var(--th-figure-shift, 0px); }
-.th-cal-baseline { display: inline-block; width: 0; height: 0; vertical-align: baseline; }
-.th-cal-day.is-today .th-cal-date { color: var(--text-accent); font-weight: 600; }
-.th-cal-day.is-selected:not(.is-today) .th-cal-date { background: var(--interactive-accent); color: var(--text-on-accent); font-weight: 600; }
-.th-cal-day.is-off .th-cal-date { color: var(--text-faint); }
+/* A closed day: a ring of arcs, one per habit, with the count in the middle. */
+.th-ring-block { display: flex; flex-direction: column; align-items: center; padding: var(--th-space-28) 0 var(--th-space-26); text-align: center; }
+.th-ring-block.is-fresh { animation: th-in var(--th-fresh-time) ease; }
+.th-ring-block .th-title { font-size: var(--th-font-closed); }
+.th-ring { position: relative; width: var(--th-closed-ring); height: var(--th-closed-ring); margin-bottom: var(--th-space-18); }
+.th-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
+.th-ring circle { fill: none; stroke-width: var(--th-closed-ring-stroke); stroke-linecap: round; stroke-dasharray: var(--th-arc) var(--th-rest); }
+.th-ring-track { stroke: var(--th-line); stroke-linecap: butt; }
+.th-ring-arc { stroke: var(--th-habit); }
+.th-ring-arc.is-missed { stroke: var(--th-faint); opacity: var(--th-dim); }
+.th-ring-block.is-fresh .th-ring-arc { animation: th-arc var(--th-arc-time) var(--th-ease-settle) both; }
+.th-ring-block.is-fresh .th-ring-count { animation: th-pop var(--th-count-pop-time) var(--th-ease-pop) var(--th-count-pop-delay) both; }
+.th-ring-count { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: var(--th-font-display); font-weight: var(--th-weight-bold); letter-spacing: var(--th-tracking-tighter); color: var(--th-text); font-variant-numeric: tabular-nums; }
+.th-ring-sub { margin-top: var(--th-space-6); font-size: var(--th-font-control); color: var(--th-muted); }
 
-/* Today's buttons ride on the first header's line: answered count, All habits, new habit, help. */
-.th-tools { display: flex; align-items: center; gap: 8px; margin: -3px 0 -2px auto; }
-.th-tools-line { display: flex; padding: 15px 0 8px; }
-button.th-tool { position: relative; flex: none; width: 30px; height: 30px; padding: 0; border: none; border-radius: 15px; corner-shape: round; box-shadow: none; background: rgba(118, 118, 128, 0.12); color: var(--text-muted); display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 14px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-button.th-tool:hover { background: rgba(118, 118, 128, 0.18); }
-.th-tool-icon { display: inline-flex; }
-.th-tool-icon svg { width: 16px; height: 16px; stroke-width: 2.3px; }
-button.th-tool-done { width: auto; padding: 0 11px 0 9px; }
-button.th-tool-help { font-size: 15px; font-weight: 700; }
-button.th-tool.th-has-dot::after { content: ""; position: absolute; top: -1px; right: -1px; width: 8px; height: 8px; border-radius: 50%; background: var(--interactive-accent); box-shadow: 0 0 0 2px var(--background-secondary); }
-.th-day-chip-line { display: flex; align-items: center; padding: 12px 0 0; }
-.th-day-chip-line + .th-group { padding-top: 14px; }
-button.th-day-chip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 6px 0 12px; border: none; border-radius: 15px; corner-shape: round; box-shadow: none; background: hsla(var(--interactive-accent-hsl), 0.14); color: var(--text-accent); font-size: 14px; font-weight: 600; cursor: pointer; }
-.th-day-chip-x { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: hsla(var(--interactive-accent-hsl), 0.2); }
-.th-day-chip-x svg { width: 10px; height: 10px; stroke-width: 3.2px; }
-
-/*
- * A computer's calendar sits over the list instead of in a tray: the month's line with its arrows and Today's buttons,
- * the weekday letters, then the shown day's week, or the whole month once the month's name is clicked. Its days are the
- * tray's days.
- */
-.th-week { flex: 0 0 auto; box-sizing: border-box; width: 100%; max-width: var(--th-column); margin: 0 auto; padding: 14px var(--th-gutter) 0; }
-/* The month's line and the weeks keep the tray's measures: a 30px line, 12px down to the days, 54px weeks. */
-.th-week-line { display: flex; align-items: center; gap: 2px; height: 30px; margin-bottom: 12px; }
-button.th-week-title { height: 30px; padding: 0; border: none; border-radius: 0; box-shadow: none; background: transparent; cursor: pointer; }
-button.th-week-title:hover { background: transparent; }
-.th-week-tools { margin-left: auto; }
-.th-week-tools .th-tools { margin: 0; }
-/*
- * One left edge and one right edge with the list: the first day's ring starts where the habits' circles start, the
- * last one ends where Today's last button ends, the rest spread evenly between.
- */
-.th-week { --th-circle-edge: calc((44px - var(--th-mark)) / 2 - 10px); }
-/* The month's letters and the section headers' start where the circles do, not their boxes; the past day's chip and All habits' way back too. */
-body:not(.is-mobile) .th-today button.th-week-title { margin-left: -3px; }
-body:not(.is-mobile) .th-today .th-sheet .th-group { margin-left: -3px; }
-body:not(.is-mobile) .th-today .th-day-chip-line { margin-left: -2px; }
-body:not(.is-mobile) .th-today .th-sheet-head button.th-back { margin-left: -9px; }
-.th-week-row { display: flex; justify-content: space-between; margin-left: var(--th-circle-edge); }
-.th-week-row button.th-cal-day { flex: 0 0 40px; width: 40px; height: 54px; }
-
-/* On a computer the answers that slide into a row are the phone's size: a computer's bigger circle must not grow them. */
-body:not(.is-mobile) .th-today .th-row-choices { --th-mark: 24px; }
-
-/* The list: Reminders' rows, a circle in the habit's color, the name, a hairline from the name to the edge. */
-.th-sheet .th-group { display: flex; align-items: center; padding: 26px 0 8px; font-size: 20px; line-height: 25px; font-weight: 700; color: var(--text-normal); }
-.th-sheet .th-column > .th-group:first-child { padding-top: 15px; }
-.th-row { margin: 0 calc(-1 * var(--th-gutter)); padding: 0; }
-.th-row::before { display: none; }
-.th-row-main { gap: 4px; min-height: 40px; padding: 0 var(--th-gutter) 0 calc(var(--th-gutter) - 10px); transition: background-color 120ms ease; }
-.th-row-text { padding: 9px 0; }
-.th-row-title { font-size: 17px; line-height: 22px; font-weight: 400; letter-spacing: -0.01em; }
-.th-row.is-answered .th-row-title { color: var(--text-faint); }
-.th-row-main:has(.th-row-text:active) { background: var(--background-modifier-hover); }
+/* The list: Reminders' rows, a circle in the habit's colour and the name. */
+.th-group { display: flex; align-items: center; padding: var(--th-space-26) 0 var(--th-space-8); font-size: var(--th-font-header); line-height: var(--th-leading-header); font-weight: var(--th-weight-bold); color: var(--th-text); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: grab; }
+.th-column > .th-group:first-child { padding-top: var(--th-space-15); }
+.th-group.is-dragging { position: relative; z-index: var(--th-layer-lifted); background: var(--th-bg); }
+.th-group.is-shifting { transition: transform var(--th-shift-time) ease; }
+.th-row { position: relative; margin: 0 calc(-1 * var(--th-gutter)); padding: 0; -webkit-touch-callout: none; }
+.th-row.is-new { animation: th-in var(--th-in-time) ease; }
+.th-row-main { display: flex; align-items: center; gap: var(--th-space-4); min-height: var(--th-row-height); padding: 0 var(--th-gutter) 0 calc(var(--th-gutter) - var(--th-slot-pull)); transition: background-color var(--th-quick-time) ease; }
+.th-row-main:has(.th-row-text:active) { background: var(--th-hover); }
+.th-row-text { flex: 1 1 auto; min-width: 0; padding: var(--th-space-9) 0; cursor: pointer; -webkit-user-select: none; user-select: none; }
+.th-row-title { font-size: var(--th-font-body); line-height: var(--th-leading-body); font-weight: var(--th-weight-regular); letter-spacing: var(--th-tracking-tight); color: var(--th-text); overflow-wrap: anywhere; }
+.th-row-sub { margin-top: var(--th-space-2); font-size: var(--th-font-small); color: var(--th-faint); }
+.th-row.is-answered .th-row-title { color: var(--th-faint); }
 .th-row.is-leaving { overflow: hidden; pointer-events: none; }
-.is-mobile .tiny-habits { --th-mark: 24px; }
-.th-mark { border-width: 2px; border-color: var(--th-habit); }
-.th-mark.is-missed { border-color: var(--text-faint); }
-.is-mobile .th-mark svg { width: 13px; height: 13px; }
-button.th-mark-button { width: 44px; height: 40px; margin: 0; }
-button.th-mark-button:active .th-mark { transform: scale(0.84); transition: transform 90ms ease; }
-.th-mark-slot { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 44px; height: 40px; }
+.th-row.is-dragging { z-index: var(--th-layer-lifted); background: var(--th-bg); border-radius: var(--th-radius-panel); box-shadow: var(--th-shadow-lifted); scale: var(--th-drag-scale); transition: scale var(--th-fast), box-shadow var(--th-fast); }
+.th-row.is-shifting { transition: transform var(--th-shift-time) ease; }
+.th-row-extra { padding: 0 var(--th-gutter) var(--th-space-14) calc(var(--th-gutter) + var(--th-slot) - var(--th-space-6)); animation: th-in var(--th-in-quick-time) ease; }
+.th-row-extra .th-label { margin-bottom: var(--th-space-8); }
+.th-chips { display: flex; flex-wrap: wrap; gap: var(--th-space-6); }
+.th-inline-form { display: flex; gap: var(--th-space-6); margin-top: var(--th-space-8); }
+/* The new-section zone shows only while a habit is being dragged. */
+.th-section-new { display: none; margin-top: var(--th-space-8); padding: var(--th-space-14) var(--th-space-16); border: var(--th-line-width) dashed var(--th-line); border-radius: var(--th-radius-panel); color: var(--th-faint); font-size: var(--th-font-ui-small); text-align: center; transition: border-color var(--th-fast), color var(--th-fast), background-color var(--th-fast); }
+.is-dragging-row .th-section-new { display: block; }
+.th-section-new.is-target { border-color: var(--th-accent); color: var(--th-accent-text); background: var(--th-hover); }
+.th-section-name { width: 100%; }
+
 /*
  * The open card hangs from its habit, on the panel's own background as in the note: the field icons and the note link
- * start where the habit's name starts, the background reaches the list's right edge (it stands 12 px out from the panel,
- * as Obsidian draws it), and it keeps 12 px from the name above and from the note link below. The icon's box is 4 px
- * wider than its glyph's.
+ * start where the habit's name starts, the background reaches the list's right edge (it stands out from the panel as
+ * Obsidian draws it), and it keeps the same room from the name above and from the note link below.
  */
-.th-today .th-card-recipe { display: block; margin: 2px calc(var(--th-gutter) + 12px) 16px calc(var(--th-gutter) + 34px); padding: 0; border-radius: 0; background: transparent; clip-path: inset(0 -16px); }
-/* The recipe rows of the habit's own panel from its note, as they are there. */
+.th-card-recipe { display: block; margin: var(--th-space-2) calc(var(--th-gutter) + var(--th-space-12)) var(--th-space-16) calc(var(--th-gutter) + var(--th-slot) - var(--th-slot-pull)); padding: 0; border-radius: 0; background: transparent; clip-path: inset(0 calc(-1 * var(--th-space-16))); font-size: var(--th-font-control); line-height: var(--th-leading-text); }
 /* Its sizes follow the font around it, so it gets the note's font to come out the same as in the note. */
-.th-today .th-card-recipe .th-habit-panel { margin-bottom: 0; font-family: var(--font-text); font-size: var(--font-text-size); line-height: var(--line-height-normal); }
-.th-today .th-card-recipe button.th-card-open { margin: 12px 0 0 4px; }
-.th-row-extra { padding: 0 var(--th-gutter) 14px calc(var(--th-gutter) + 38px); }
-
-
-/*
- * The circle says how the day went, flat: the habit's color with a check for the full action, a tint of it for the
- * tiny one, grey with a dash for skipped. Today's answer buttons carry these same circles.
- */
-.th-mark.is-done, .th-mark.is-missed, .th-mark.th-choice-cancel { border: none; }
-.th-mark.is-done { background: var(--th-habit); color: #ffffff; }
-.th-mark.is-done.is-tiny { background: color-mix(in srgb, var(--th-habit) 30%, var(--background-secondary)); color: var(--th-habit); }
-.th-mark.is-done svg { stroke-width: 3.2px; }
-.th-mark.is-missed { background: rgb(142, 142, 147); }
-.th-mark.is-missed::after { background: #ffffff; }
-.th-mark.th-choice-cancel { background: color-mix(in srgb, rgb(118, 118, 128) 30%, var(--background-secondary)); color: var(--text-muted); }
-/* Done not at the trigger: the grey of cancel with a check in the habit's color. */
-.th-mark.is-off-trigger { border: none; background: color-mix(in srgb, rgb(118, 118, 128) 30%, var(--background-secondary)); color: var(--th-habit); }
-.th-mark.is-off-trigger svg { stroke-width: 3.2px; }
-.th-mark.is-popping { animation: th-pop 420ms var(--th-ease-pop); }
-.th-mark.is-popping svg path, .th-mark.is-popping svg polyline { stroke-dasharray: 24; animation: th-draw 280ms 120ms ease-out both; }
-@keyframes th-draw { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
-
+.th-card-recipe .th-habit-panel { margin-bottom: 0; font-family: var(--th-font-note); font-size: var(--th-font-note-size); line-height: var(--th-leading-note); }
+button.th-card-open { grid-column: 1 / -1; justify-self: start; display: inline-flex; align-items: center; gap: var(--th-space-4); height: auto; margin: var(--th-space-12) 0 0 var(--th-space-4); padding: 0; border: none; box-shadow: none; background: transparent; color: var(--th-accent); font-size: var(--th-font-control); cursor: pointer; }
+.th-card-open-icon { display: inline-flex; }
+.th-card-open-icon svg { width: var(--th-icon-answer); height: var(--th-icon-answer); }
 
 /*
  * The answers in the row: cancel exactly on the circle, then full, tiny, anytime and skip as capsules of one width,
@@ -623,26 +419,215 @@ button.th-mark-button:active .th-mark { transform: scale(0.84); transition: tran
 .th-row-main.is-choosing .th-mark-button, .th-row-main.is-choosing .th-row-text { opacity: 0; pointer-events: none; }
 .th-row-choices.is-arriving, .th-row-choices.is-leaving { pointer-events: none; }
 .th-row-main.is-refolding { overflow: hidden; }
-.th-row-choices { position: absolute; inset: 0; display: flex; align-items: center; padding: 0 var(--th-gutter) 0 calc(var(--th-gutter) - 10px); }
-button.th-choice { flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border: none; border-radius: 22px; box-shadow: none; background: transparent; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.th-row-choices { position: absolute; inset: 0; display: flex; align-items: center; padding: 0 var(--th-gutter) 0 calc(var(--th-gutter) - var(--th-slot-pull)); }
+button.th-choice { flex: 0 0 var(--th-slot); width: var(--th-slot); height: var(--th-slot); padding: 0; border: none; border-radius: var(--th-radius-capsule); box-shadow: none; background: transparent; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 button.th-choice:hover { background: transparent; }
-.th-choice-ball { display: inline-flex; pointer-events: none; transition: scale 120ms ease, filter 120ms ease; }
-button.th-choice:active .th-choice-ball { scale: 0.84; }
-.th-choice-ball .th-mark { width: calc(var(--th-mark) + 6px); height: calc(var(--th-mark) + 6px); }
-.th-choice-ball .th-mark svg { width: 15px; height: 15px; }
-button.th-choice.is-picked .th-choice-ball { filter: brightness(1.2); }
+.th-choice-ball { display: inline-flex; pointer-events: none; transition: scale var(--th-quick-time) ease, filter var(--th-quick-time) ease; }
+button.th-choice:active .th-choice-ball { scale: var(--th-press-scale); }
+.th-choice-ball .th-mark { width: calc(var(--th-mark) + var(--th-space-6)); height: calc(var(--th-mark) + var(--th-space-6)); }
+.th-choice-ball .th-mark svg { width: var(--th-icon-answer); height: var(--th-icon-answer); }
+button.th-choice.is-picked .th-choice-ball { filter: brightness(var(--th-picked-brightness)); }
 /* The sign and the word sit together in the middle of the capsule. */
-button.th-choice.has-word { flex: 0 0 auto; width: auto; margin-right: 8px; }
-.th-choice-ball.is-word { width: 92px; height: calc(var(--th-mark) + 6px); align-items: center; justify-content: center; border-radius: 999px; corner-shape: round; }
-.th-choice-ball.is-word.is-done { background: var(--th-habit); color: #ffffff; }
-.th-choice-ball.is-word.is-done.is-tiny { background: color-mix(in srgb, var(--th-habit) 30%, var(--background-secondary)); color: var(--th-habit); }
-.th-choice-ball.is-word.is-missed { background: rgb(142, 142, 147); color: #ffffff; }
-.th-choice-ball.is-word.is-off-trigger { background: color-mix(in srgb, rgb(118, 118, 128) 30%, var(--background-secondary)); color: var(--th-habit); }
+button.th-choice.has-word { flex: 0 0 auto; width: auto; margin-right: var(--th-space-8); }
+.th-choice-ball.is-word { width: var(--th-answer-width); height: calc(var(--th-mark) + var(--th-space-6)); align-items: center; justify-content: center; border-radius: var(--th-radius-capsule); corner-shape: round; }
+.th-choice-ball.is-word.is-done { background: var(--th-habit); color: var(--th-on-color); }
+.th-choice-ball.is-word.is-done.is-tiny { background: color-mix(in srgb, var(--th-habit) var(--th-tint-share), var(--th-surface)); color: var(--th-habit); }
+.th-choice-ball.is-word.is-missed { background: var(--th-skip); color: var(--th-on-color); }
+.th-choice-ball.is-word.is-off-trigger { background: var(--th-fill-solid); color: var(--th-habit); }
 .th-choice-ball.is-word .th-mark { flex: none; }
-.th-choice-word { flex: none; padding-right: 8px; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; }
-button.th-choice.has-word:active .th-choice-ball { scale: 0.94; }
+.th-choice-word { flex: none; padding-right: var(--th-space-8); font-size: var(--th-font-answer); font-weight: var(--th-weight-semibold); letter-spacing: var(--th-tracking-tight); white-space: nowrap; }
+button.th-choice.has-word:active .th-choice-ball { scale: var(--th-word-press-scale); }
 /* Four answers don't fit a phone at that width: each one then hugs its sign and word. */
-.th-row-choices.is-crowded button.th-choice.has-word { margin-right: 6px; }
+.th-row-choices.is-crowded button.th-choice.has-word { margin-right: var(--th-space-6); }
 .th-row-choices.is-crowded button.th-choice.has-word:last-child { margin-right: 0; }
-.th-row-choices.is-crowded .th-choice-ball.is-word { width: auto; padding: 0 2px 0 5px; }
-.th-row-choices.is-crowded .th-choice-ball.is-word .th-mark { width: 24px; }
+.th-row-choices.is-crowded .th-choice-ball.is-word { width: auto; padding: 0 var(--th-space-2) 0 var(--th-space-5); }
+.th-row-choices.is-crowded .th-choice-ball.is-word .th-mark { width: var(--th-mark-phone); }
+
+/* The marbles fall over the list; the celebration line stands over them. */
+.th-jar { position: absolute; top: 0; left: 0; z-index: var(--th-layer-marbles); width: 100%; height: 100%; pointer-events: none; }
+.th-caption { position: absolute; left: 0; right: 0; bottom: calc(var(--th-tray-rest) + var(--th-caption-lift)); z-index: var(--th-layer-caption); width: max-content; max-width: calc(100% - 2 * var(--th-gutter)); height: var(--th-caption-height); margin: 0 auto; padding: 0 var(--th-space-14); display: flex; align-items: center; border: var(--th-line-width) solid var(--th-habit); border-radius: var(--th-radius-capsule); background: var(--th-surface); color: var(--th-habit); font-size: var(--th-font-small); font-weight: var(--th-weight-semibold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; animation: th-in var(--th-in-quick-time) ease; }
+
+/* Today's buttons on the month's line: answered count, All habits, new habit, help. */
+.th-tools { display: flex; align-items: center; gap: var(--th-space-8); }
+button.th-tool { position: relative; flex: none; width: var(--th-control); height: var(--th-control); padding: 0; border: none; border-radius: var(--th-radius-capsule); corner-shape: round; box-shadow: none; background: var(--th-fill); color: var(--th-muted); display: inline-flex; align-items: center; justify-content: center; gap: var(--th-space-4); font-size: var(--th-font-control); font-weight: var(--th-weight-semibold); line-height: 1; font-variant-numeric: tabular-nums; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button.th-tool:hover { background: var(--th-fill-hover); }
+.th-tool-icon { display: inline-flex; }
+.th-tool-icon svg { width: var(--th-icon-tool); height: var(--th-icon-tool); stroke-width: var(--th-icon-stroke); }
+button.th-tool-done { width: auto; padding: 0 var(--th-space-11) 0 var(--th-space-9); }
+button.th-tool-help { font-size: var(--th-font-answer); font-weight: var(--th-weight-bold); }
+button.th-tool.th-has-dot::after { content: ""; position: absolute; top: calc(-1 * var(--th-space-1)); right: calc(-1 * var(--th-space-1)); width: var(--th-badge); height: var(--th-badge); border-radius: var(--th-radius-circle); background: var(--th-accent); box-shadow: 0 0 0 var(--th-badge-ring) var(--th-surface); }
+/* On a past day a chip over the list says which one; its cross goes back to today. */
+.th-day-chip-line { display: flex; align-items: center; padding: var(--th-space-12) 0 0; }
+button.th-day-chip { display: inline-flex; align-items: center; gap: var(--th-space-6); height: var(--th-control); padding: 0 var(--th-space-6) 0 var(--th-space-12); border: none; border-radius: var(--th-radius-capsule); corner-shape: round; box-shadow: none; background: var(--th-accent-tint); color: var(--th-accent-text); font-size: var(--th-font-control); font-weight: var(--th-weight-semibold); cursor: pointer; }
+.th-day-chip-x { display: inline-flex; align-items: center; justify-content: center; width: var(--th-chip-x); height: var(--th-chip-x); border-radius: var(--th-radius-circle); background: var(--th-accent-tint-strong); }
+.th-day-chip-x svg { width: var(--th-icon-chip-x); height: var(--th-icon-chip-x); stroke-width: var(--th-chip-x-stroke); }
+
+/*
+ * The days, a phone's calendar: a tray at the bottom of the view over Obsidian's navbar, with a ground of its own, a
+ * hairline on top, and a shadow that grows as it is pulled up. Folded, it shows this week's dates; pulled up, earlier
+ * weeks and how much of each day was done. The marbles stand on its top edge. A finger on it moves the tray, never the
+ * page, whatever Obsidian lets its buttons do.
+ */
+.th-tray { touch-action: none; position: absolute; left: 0; right: 0; top: var(--th-tray-top); bottom: 0; z-index: var(--th-layer-tray); border-radius: var(--th-radius-tray) var(--th-radius-tray) 0 0; corner-shape: round; background: var(--th-surface); box-shadow: 0 var(--th-tray-hairline) 0 var(--th-line), 0 var(--th-tray-shadow-y) var(--th-tray-shadow-blur) rgba(var(--th-shadow-rgb), calc(var(--th-tray-shadow-alpha) * var(--th-open, 0))); -webkit-user-select: none; user-select: none; }
+button.th-tray-grip { position: absolute; left: 0; right: 0; top: 0; z-index: var(--th-layer-grip); display: block; width: 100%; height: var(--th-grip); padding: 0; border: none; border-radius: 0; box-shadow: none; background: transparent; cursor: grab; -webkit-tap-highlight-color: transparent; }
+button.th-tray-grip:hover { background: transparent; }
+.th-tray.is-dragging, .th-tray.is-dragging button.th-tray-grip { cursor: grabbing; }
+.th-tray-grabber { display: block; width: var(--th-grabber-width); height: var(--th-grabber-height); margin: var(--th-grabber-height) auto 0; border-radius: var(--th-radius-capsule); background: var(--th-faint); opacity: var(--th-grabber-opacity); }
+.th-cal { position: absolute; left: 0; right: 0; top: var(--th-grip); bottom: calc(var(--th-tray-inset) - var(--th-lift, 0px)); overflow: hidden; }
+.th-cal-weeks { position: absolute; left: 0; right: 0; top: var(--th-head-height, 0px); bottom: 0; overflow: hidden; }
+/* The weeks stand on the bottom: folded, only this week's dates show. */
+.th-cal-list { position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; }
+/* The head is a band of its own over the weeks that opens as the tray rises, after this week's row is whole. */
+.th-cal-head { position: absolute; left: 0; right: 0; top: 0; height: var(--th-head-height, 0px); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+/* The calendar keeps to the list's column, so on a wide tab its days stand under the habits, not across the tab. */
+.th-cal-line, .th-cal-week { box-sizing: border-box; width: 100%; max-width: var(--th-column); margin-left: auto; margin-right: auto; }
+.th-cal-line { flex: none; display: flex; align-items: center; gap: var(--th-space-2); height: var(--th-month-line); margin-bottom: var(--th-month-line-gap); padding: 0 var(--th-cal-edge, var(--th-gutter)); }
+/* The month reads as one of Today's section headers. */
+.th-cal-month { flex: none; margin-right: var(--th-space-6); font-size: var(--th-font-header); line-height: var(--th-leading-header); font-weight: var(--th-weight-bold); color: var(--th-text); }
+button.th-cal-arrow { flex: none; width: var(--th-control); height: var(--th-control); padding: 0; border: none; border-radius: var(--th-radius-capsule); corner-shape: round; box-shadow: none; background: transparent; color: var(--th-muted); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button.th-cal-arrow:hover, button.th-cal-arrow.mobile-tap { background: transparent; }
+button.th-cal-arrow:disabled { color: var(--th-faint); opacity: var(--th-dim); cursor: default; }
+button.th-cal-arrow svg { width: var(--th-icon); height: var(--th-icon); fill: none; stroke: currentColor; stroke-width: var(--th-arrow-stroke); stroke-linecap: round; stroke-linejoin: round; }
+.th-cal-tools { margin-left: auto; }
+.th-cal-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); flex: 0 0 var(--th-week-row); height: var(--th-week-row); padding-left: var(--th-week-pad); padding-right: var(--th-week-pad); }
+button.th-cal-day { position: relative; height: var(--th-week-row); margin: 0; padding: 0; border: none; border-radius: 0; box-shadow: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button.th-cal-day:hover, button.th-cal-day.mobile-tap, button.th-tray-grip.mobile-tap { background: transparent; }
+button.th-cal-day:disabled { cursor: default; opacity: 1; }
+.th-cal-date { position: relative; width: var(--th-control); height: var(--th-control); border-radius: var(--th-radius-circle); display: flex; align-items: center; justify-content: center; font-size: var(--th-font-body); line-height: var(--th-leading-date); font-weight: var(--th-weight-regular); color: var(--th-text); }
+/* How much of a day was done: a ring in Obsidian's accent, drawn as far round as that; it draws itself in as the tray rises. */
+.th-cal-ring { position: absolute; left: calc(50% - var(--th-ring) / 2); top: calc(50% - var(--th-ring) / 2); width: var(--th-ring); height: var(--th-ring); pointer-events: none; }
+.th-cal-ring-track, .th-cal-ring-arc { fill: none; stroke-width: var(--th-day-ring-stroke); }
+.th-cal-ring-track { stroke: var(--th-line); }
+.th-cal-ring-arc { stroke: var(--th-accent); stroke-linecap: round; }
+.th-cal-figure { position: relative; top: var(--th-figure-shift, 0px); }
+.th-cal-baseline { display: inline-block; width: 0; height: 0; vertical-align: baseline; }
+.th-cal-day.is-today .th-cal-date { color: var(--th-accent-text); font-weight: var(--th-weight-semibold); }
+.th-cal-day.is-selected:not(.is-today) .th-cal-date { background: var(--th-accent); color: var(--th-on-accent); font-weight: var(--th-weight-semibold); }
+.th-cal-day.is-off .th-cal-date { color: var(--th-faint); }
+
+/*
+ * A computer's calendar sits over the list instead of in a tray, with the tray's parts and measures: the month's line
+ * with its arrows and Today's buttons, then the shown day's week, or the whole month once the month's name is clicked.
+ * It keeps one left edge and one right edge with the list: the first day's ring starts where the habits' circles start,
+ * the last one ends where Today's last button ends, the rest spread evenly between.
+ */
+.th-week { --th-circle-edge: calc((var(--th-slot) - var(--th-mark)) / 2 - var(--th-slot-pull)); flex: 0 0 auto; box-sizing: border-box; width: 100%; max-width: var(--th-column); margin: 0 auto; padding: var(--th-space-14) var(--th-gutter) 0; }
+.th-week-line { display: flex; align-items: center; gap: var(--th-space-2); height: var(--th-month-line); margin-bottom: var(--th-month-line-gap); }
+button.th-week-title { height: var(--th-month-line); padding: 0; border: none; border-radius: 0; box-shadow: none; background: transparent; cursor: pointer; }
+button.th-week-title:hover { background: transparent; }
+.th-week-tools { margin-left: auto; }
+.th-week-row { display: flex; justify-content: space-between; margin-left: var(--th-circle-edge); }
+.th-week-row button.th-cal-day { flex: 0 0 var(--th-ring); width: var(--th-ring); height: var(--th-week-row); }
+/* On a computer the letters of the month and of the section headers start where the circles do, not their boxes; the past day's chip and All habits' way back too. */
+body:not(.is-mobile) .th-today button.th-week-title { margin-left: calc(-1 * var(--th-ink-pull)); }
+body:not(.is-mobile) .th-today .th-sheet .th-group { margin-left: calc(-1 * var(--th-ink-pull)); }
+body:not(.is-mobile) .th-today .th-day-chip-line { margin-left: calc(-1 * var(--th-chip-pull)); }
+body:not(.is-mobile) .th-today .th-sheet-head button.th-back { margin-left: calc(-1 * var(--th-back-pull)); }
+/* On a computer the answers that slide into a row are the phone's size: a computer's bigger circle must not grow them. */
+body:not(.is-mobile) .th-today .th-row-choices { --th-mark: var(--th-mark-phone); }
+
+/* A habit's year in its note: a dot per day, in the habit's colour as it went. */
+.th-year { display: flex; gap: var(--th-space-6); margin-top: var(--th-space-22); }
+.th-year-labels { flex: 0 0 auto; display: flex; flex-direction: column; gap: var(--th-space-3); padding-top: calc(var(--th-dot) + var(--th-space-3)); font-size: var(--th-font-micro); color: var(--th-faint); }
+.th-year-labels span { height: var(--th-dot); line-height: var(--th-dot); }
+.th-year-scroll { flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.th-year-scroll::-webkit-scrollbar { display: none; }
+.th-year-weeks { display: inline-flex; gap: var(--th-space-3); }
+.th-year-week { display: flex; flex-direction: column; gap: var(--th-space-3); width: var(--th-dot); }
+.th-year-month { height: var(--th-dot); font-size: var(--th-font-micro); line-height: var(--th-dot); color: var(--th-faint); white-space: nowrap; overflow: visible; }
+.th-year-day { box-sizing: border-box; width: var(--th-dot); height: var(--th-dot); border-radius: var(--th-radius-circle); corner-shape: round; border: var(--th-stroke) solid var(--th-line); background: transparent; }
+.th-year-day.is-tiny { border-color: var(--th-habit); background: var(--th-habit); }
+.th-year-day.is-full { border-color: var(--th-habit); background: radial-gradient(circle, var(--th-on-color) 0 var(--th-full-dot-core), var(--th-habit) var(--th-full-dot-edge)); }
+.th-year-day.is-missed { border-color: transparent; background: var(--th-line); }
+.th-year-day.is-off-trigger { border-color: transparent; background: radial-gradient(circle, var(--th-habit) 0 var(--th-small-dot-core), var(--th-line) var(--th-small-dot-edge)); }
+.th-year-day.is-off { border-color: transparent; background: radial-gradient(circle, var(--th-line) 0 var(--th-small-dot-core), transparent var(--th-small-dot-edge)); }
+.th-year-day.is-before,
+.th-year-day.is-future { opacity: var(--th-outside-opacity); }
+.th-year-day.is-today { box-shadow: inset 0 0 0 var(--th-today-ring) var(--th-text); }
+.th-year-day.is-today.is-tiny,
+.th-year-day.is-today.is-full { box-shadow: inset 0 0 0 var(--th-today-ring) var(--th-habit), inset 0 0 0 var(--th-today-ring-gap) var(--th-bg); }
+
+.th-history-row { display: grid; grid-template-columns: var(--th-history-date-column) var(--th-history-icon-column) minmax(0, 1fr); align-items: start; padding: var(--th-space-11) 0; border-bottom: var(--th-line-width) solid var(--th-line); font-size: var(--th-font-answer); }
+.th-history-date { padding-top: var(--th-space-1); font-size: var(--th-font-small); color: var(--th-faint); }
+.th-history-icon { width: var(--th-history-icon); height: var(--th-history-icon); margin-top: var(--th-space-5); box-sizing: border-box; border-radius: var(--th-radius-circle); background: var(--th-faint); }
+.th-history-icon.is-missed { background: transparent; border: var(--th-stroke) solid var(--th-faint); }
+.th-history-icon.is-change { background: var(--th-habit); }
+.th-history-text { color: var(--th-text); overflow-wrap: anywhere; }
+.th-history-note { display: block; margin-top: var(--th-space-2); font-size: var(--th-font-small); color: var(--th-faint); }
+
+/* Sheets: Edit and New habit */
+.th-sheet-body { padding: var(--th-space-4) 0 var(--th-space-8); }
+.th-sheet-group { padding: var(--th-space-14) 0 var(--th-space-6); }
+
+.th-style-picker { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--th-space-10); padding: 0 0 var(--th-space-16); }
+button.th-style-tile { height: auto; display: flex; flex-direction: column; align-items: center; gap: var(--th-space-8); padding: var(--th-space-14) var(--th-space-6) var(--th-space-10); border: var(--th-stroke) solid var(--th-line); border-radius: var(--th-radius-tile); background: var(--th-bg); box-shadow: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button.th-style-tile.is-selected { border-color: var(--th-accent); }
+.th-style-marbles { display: flex; align-items: flex-end; justify-content: center; height: var(--th-style-marbles); }
+.th-style-marbles img { display: block; margin-left: calc(-1 * var(--th-space-6)); }
+.th-style-marbles img:first-child { margin-left: 0; }
+.th-style-name { font-size: var(--th-font-ui-small); color: var(--th-text); }
+
+/* A habit's panel in its note, in Obsidian's own Properties look. */
+.th-habit-panel { --th-dot: var(--th-panel-dot); -webkit-user-select: none; user-select: none; }
+.th-habit-panel .th-habit-days { cursor: pointer; }
+.th-habit-panel .metadata-property-value:has(.th-panel-cell) { align-items: flex-start; }
+.th-panel-cell { flex: 1 1 auto; min-width: 0; padding: var(--th-property-padding); color: var(--th-property-text); font-size: var(--th-property-font); }
+.th-panel-stats { display: flex; flex-wrap: wrap; gap: 0 var(--th-space-16); }
+.th-panel-stat-value { font-weight: var(--th-weight-semibold); font-variant-numeric: tabular-nums; }
+.th-habit-panel .th-year { margin: 0; padding: 0; }
+.th-panel-history-toggle { display: inline-flex; align-items: center; gap: var(--th-space-4); cursor: pointer; }
+.th-panel-chevron { display: inline-flex; color: var(--th-muted); transition: transform var(--th-fast); }
+.th-panel-chevron svg { width: var(--th-icon-chevron); height: var(--th-icon-chevron); }
+.th-panel-history-toggle[aria-expanded="true"] .th-panel-chevron { transform: rotate(90deg); }
+.th-panel-quiet { padding-inline-start: var(--th-space-6); color: var(--th-faint); }
+.th-archived { display: flex; align-items: center; justify-content: space-between; gap: var(--th-space-12); margin: 0 0 var(--th-space-8); padding: var(--th-space-8) var(--th-space-12); border-radius: var(--th-radius-panel); background: var(--th-surface); }
+.th-archived-text { font-size: var(--th-font-small); color: var(--th-muted); }
+.th-habit-panel .th-history-row { grid-template-columns: var(--th-panel-date-column) var(--th-panel-icon-column) minmax(0, 1fr); padding: var(--th-space-4) 0 0; border-bottom: none; font-size: inherit; color: inherit; }
+.th-habit-panel .th-history-date { color: var(--th-muted); font-size: inherit; padding-top: 0; }
+
+/* Screen corner calibration: a band along the screen edge that is equally thin everywhere when the radius is right. */
+.th-calibration { position: fixed; inset: 0; z-index: var(--th-layer-calibration); background: var(--th-calibration-band); }
+.th-calibration-screen { position: absolute; inset: var(--th-band); background: var(--th-calibration-ground); border-radius: max(0px, calc(var(--th-corner) - var(--th-band))); corner-shape: round; }
+.th-calibration-marble { position: absolute; width: var(--th-marble); height: var(--th-marble); border-radius: var(--th-radius-circle); corner-shape: round; background: var(--th-calibration-corner); }
+.th-calibration-marble.is-top-left { top: var(--th-corner-inset); left: var(--th-corner-inset); }
+.th-calibration-marble.is-top-right { top: var(--th-corner-inset); right: var(--th-corner-inset); }
+.th-calibration-marble.is-bottom-left { bottom: var(--th-corner-inset); left: var(--th-corner-inset); }
+.th-calibration-marble.is-bottom-right { bottom: var(--th-corner-inset); right: var(--th-corner-inset); }
+.th-calibration-panel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(var(--th-calibration-panel), calc(100% - var(--th-space-64))); display: flex; flex-direction: column; gap: var(--th-space-12); color: var(--th-calibration-text); text-align: center; }
+.th-calibration-title { font-size: var(--th-font-ui-large); font-weight: var(--th-weight-semibold); }
+.th-calibration-hint { font-size: var(--th-font-ui-small); color: var(--th-calibration-hint); }
+.th-calibration-value { font-size: var(--th-font-calibration); font-weight: var(--th-weight-bold); font-variant-numeric: tabular-nums; }
+.th-calibration-row { display: flex; align-items: center; gap: var(--th-space-12); }
+.th-calibration-row input { flex: 1; min-width: 0; }
+.th-calibration-row button { width: var(--th-slot); height: var(--th-slot); border-radius: var(--th-radius-circle); corner-shape: round; padding: 0; font-size: var(--th-font-sheet-title); }
+.th-calibration-actions { display: flex; justify-content: center; gap: var(--th-space-12); }
+
+/* Marble sizes, picked on Today: a card of sliders over the top of the list, the marbles stay in view below it. */
+.th-size-calibration { position: absolute; top: calc(var(--th-top-inset, 0px) + var(--th-space-8)); left: var(--th-gutter); right: var(--th-gutter); z-index: var(--th-layer-overlay); max-width: calc(var(--th-column) - 2 * var(--th-gutter)); margin: 0 auto; padding: var(--th-space-12) var(--th-space-16); border-radius: var(--th-radius-overlay); background: var(--th-surface); box-shadow: var(--th-shadow-lifted); }
+.th-size-calibration-title { margin-bottom: var(--th-space-8); padding-inline-start: var(--th-space-16); font-size: var(--th-font-ui-medium); font-weight: var(--th-weight-semibold); }
+.th-size-calibration .setting-item { align-items: center; padding: var(--th-space-8); border-top: none; border-radius: var(--th-radius-setting); }
+.th-size-calibration .setting-item-info { flex: 0 0 var(--th-setting-label); padding-inline-start: var(--th-space-8); }
+.th-size-calibration .th-size-stepper { flex: 1 1 auto; min-width: 0; gap: var(--th-space-8); }
+.th-size-calibration .th-size-stepper input[type="range"] { flex: 1 1 auto; min-width: 0; width: auto; }
+.th-size-calibration button.th-size-step { flex: none; width: var(--th-slot); height: var(--th-slot); border-radius: var(--th-radius-circle); corner-shape: round; padding: 0; font-size: var(--th-font-sheet-title); }
+.th-size-calibration .modal-button-container { flex-wrap: wrap; margin: var(--th-space-12) 0 0; padding: 0; }
+.is-phone .th-size-calibration .modal-button-container { display: grid; grid-template-columns: 1fr 1fr; }
+
+/* A disclosure that opens a guide to the recipe's fields. */
+button.th-disclosure { display: flex; align-items: center; justify-content: flex-start; gap: var(--th-space-6); width: 100%; height: auto; margin-top: var(--th-space-14); padding: var(--th-space-10) 0; border: none; border-top: var(--th-line-width) solid var(--th-line); border-radius: 0; box-shadow: none; background: transparent; color: var(--th-text); font-size: var(--th-font-ui-small); font-weight: var(--th-weight-semibold); cursor: pointer; }
+.th-disclosure-icon { display: inline-flex; color: var(--th-faint); transition: transform var(--th-fast); }
+.th-disclosure-icon svg { width: var(--th-icon-chevron); height: var(--th-icon-chevron); }
+button.th-disclosure[aria-expanded="true"] .th-disclosure-icon { transform: rotate(90deg); }
+.th-disclosure-note { color: var(--th-faint); font-weight: var(--th-weight-regular); }
+.th-guide { margin-top: var(--th-space-6); display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--th-space-12) var(--th-space-16); font-size: var(--th-font-ui-small); line-height: var(--th-leading-text); }
+.th-guide-name { font-weight: var(--th-weight-semibold); color: var(--th-text); max-width: var(--th-guide-name); }
+.th-guide-text { color: var(--th-muted); }
+.th-recipe-guide { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--th-space-10) var(--th-space-14); margin: var(--th-space-2) 0 var(--th-space-10); padding: var(--th-space-12) var(--th-space-14); border-radius: var(--th-radius-panel); background: var(--th-surface); font-size: var(--th-font-ui-small); line-height: var(--th-leading-text); }
+.th-recipe-guide-name { font-weight: var(--th-weight-semibold); color: var(--th-text); }
+.th-recipe-guide-text { color: var(--th-muted); }
+.th-recipe-guide-example { margin-top: var(--th-space-2); color: var(--th-faint); font-style: italic; }
+
+.th-check { display: flex; align-items: center; gap: var(--th-space-8); padding: 0 0 var(--th-space-12); font-size: var(--th-font-small); color: var(--th-muted); }
+
+.th-probe { display: none; }
+.th-habit-note .metadata-property.th-own-property, .th-habit-note .metadata-container.th-only-own { display: none; }
