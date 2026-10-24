@@ -562,7 +562,7 @@ body:not(.is-mobile) .th-today .th-row-choices { --th-mark: var(--th-mark-phone)
 .th-grid-head + .th-grid-group { padding-top: var(--th-space-15); }
 .th-grid-group { cursor: default; }
 .th-grid-name { padding-top: var(--th-space-8); font-size: var(--th-font-body); line-height: var(--th-leading-body); letter-spacing: var(--th-tracking-tight); color: var(--th-text); overflow-wrap: anywhere; -webkit-user-select: none; user-select: none; }
-.th-grid-when { margin-left: var(--th-space-6); font-size: var(--th-font-small); color: var(--th-faint); }
+.th-grid-when { margin-left: var(--th-space-6); font-size: var(--th-font-small); line-height: 1; color: var(--th-faint); }
 .th-grid-cell { display: flex; align-items: center; justify-content: center; height: var(--th-row-height); }
 button.th-grid-cell { width: 100%; min-width: 0; margin: 0; padding: 0; border: none; border-radius: var(--th-radius-capsule); box-shadow: none; background: transparent; cursor: pointer; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
 button.th-grid-cell:hover { background: transparent; }
