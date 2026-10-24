@@ -29,7 +29,7 @@ body {
 	--th-fill: rgba(118, 118, 128, 0.12);
 	--th-fill-hover: rgba(118, 118, 128, 0.18);
 	--th-fill-solid: color-mix(in srgb, rgb(118, 118, 128) 30%, var(--background-secondary));
-	/* How much of a habit's colour its tiny answer keeps, mixed into the surface. */
+	/* How much of the accent the tiny answer keeps, mixed into the surface. */
 	--th-tint-share: 30%;
 	--th-accent-tint: hsla(var(--interactive-accent-hsl), 0.14);
 	--th-accent-tint-strong: hsla(var(--interactive-accent-hsl), 0.2);
@@ -252,16 +252,16 @@ body {
 /* A phone's finger needs a smaller circle than a mouse would guess: the mark and its check shrink there. */
 .is-mobile .tiny-habits { --th-mark: var(--th-mark-phone); --th-icon-check: var(--th-icon-check-phone); font-family: var(--th-font-phone); }
 
-.th-habit { --th-habit: var(--interactive-accent); }
-.th-color-accent { --th-habit: var(--interactive-accent); }
-.th-color-red { --th-habit: var(--color-red); }
-.th-color-orange { --th-habit: var(--color-orange); }
-.th-color-yellow { --th-habit: var(--color-yellow); }
-.th-color-green { --th-habit: var(--color-green); }
-.th-color-cyan { --th-habit: var(--color-cyan); }
-.th-color-blue { --th-habit: var(--color-blue); }
-.th-color-purple { --th-habit: var(--color-purple); }
-.th-color-pink { --th-habit: var(--color-pink); }
+/* A habit's colour is its marbles' colour; the circles and the answers keep to Obsidian's accent. */
+.th-color-accent { --th-marble-color: var(--interactive-accent); }
+.th-color-red { --th-marble-color: var(--color-red); }
+.th-color-orange { --th-marble-color: var(--color-orange); }
+.th-color-yellow { --th-marble-color: var(--color-yellow); }
+.th-color-green { --th-marble-color: var(--color-green); }
+.th-color-cyan { --th-marble-color: var(--color-cyan); }
+.th-color-blue { --th-marble-color: var(--color-blue); }
+.th-color-purple { --th-marble-color: var(--color-purple); }
+.th-color-pink { --th-marble-color: var(--color-pink); }
 
 @keyframes th-pop { 0% { transform: scale(var(--th-pop-from)); } 55% { transform: scale(var(--th-pop-peak)); } 100% { transform: scale(1); } }
 @keyframes th-arc { from { stroke-dasharray: 0 var(--th-arc) var(--th-rest) 0; } to { stroke-dasharray: var(--th-arc) 0 var(--th-rest) 0; } }
@@ -291,21 +291,21 @@ button.th-link { display: inline-flex; align-items: center; gap: var(--th-space-
 button.th-link svg { width: var(--th-icon-small); height: var(--th-icon-small); }
 
 /*
- * The circle says how the day went, flat: the habit's colour with a check for the full action, a tint of it for the
- * tiny one, grey with a dash for skipped, the grey of cancel with a check of the habit's colour for a day done not at
- * the trigger. Today's answer buttons carry these same circles.
+ * The circle says how the day went, flat and in one colour for every habit: the accent with a check for the full action,
+ * a tint of it for the tiny one, grey with a dash for skipped, the grey of cancel with a check of the accent for a day
+ * done not at the trigger. Today's answer buttons carry these same circles.
  */
-.th-mark { box-sizing: border-box; width: var(--th-mark); height: var(--th-mark); border-radius: var(--th-radius-circle); border-width: var(--th-mark-stroke); border-style: solid; border-color: var(--th-habit); display: flex; align-items: center; justify-content: center; color: var(--th-on-color); transition: border-color var(--th-fast), background var(--th-fast); }
+.th-mark { box-sizing: border-box; width: var(--th-mark); height: var(--th-mark); border-radius: var(--th-radius-circle); border-width: var(--th-mark-stroke); border-style: solid; border-color: var(--th-accent); display: flex; align-items: center; justify-content: center; color: var(--th-on-color); transition: border-color var(--th-fast), background var(--th-fast); }
 .th-mark svg { width: var(--th-icon-check); height: var(--th-icon-check); stroke-width: var(--th-check-stroke); }
 .th-mark.is-done, .th-mark.is-missed, .th-mark.th-choice-cancel { border: none; }
-.th-mark.is-done { background: var(--th-habit); color: var(--th-on-color); }
-.th-mark.is-done.is-tiny { background: color-mix(in srgb, var(--th-habit) var(--th-tint-share), var(--th-surface)); color: var(--th-habit); }
+.th-mark.is-done { background: var(--th-accent); color: var(--th-on-accent); }
+.th-mark.is-done.is-tiny { background: color-mix(in srgb, var(--th-accent) var(--th-tint-share), var(--th-surface)); color: var(--th-accent); }
 .th-mark.is-done svg { stroke-width: var(--th-check-stroke-done); }
 .th-mark.is-missed { position: relative; background: var(--th-skip); }
 .th-mark.is-missed::after { content: ""; width: var(--th-dash-width); height: var(--th-dash-height); border-radius: var(--th-radius-capsule); background: var(--th-on-color); }
 .th-mark.is-asking { border-style: dashed; border-color: var(--th-faint); }
 .th-mark.th-choice-cancel { background: var(--th-fill-solid); color: var(--th-muted); }
-.th-mark.is-off-trigger { border: none; background: var(--th-fill-solid); color: var(--th-habit); }
+.th-mark.is-off-trigger { border: none; background: var(--th-fill-solid); color: var(--th-accent); }
 .th-mark.is-off-trigger svg { stroke-width: var(--th-check-stroke-done); }
 .th-mark.is-popping { animation: th-pop var(--th-pop-time) var(--th-ease-pop); }
 .th-mark.is-popping svg path, .th-mark.is-popping svg polyline { stroke-dasharray: var(--th-check-length); animation: th-draw var(--th-draw-time) var(--th-draw-delay) ease-out both; }
@@ -330,8 +330,8 @@ input.th-inline-input { flex: 1 1 auto; min-width: 0; height: var(--th-chip); pa
 .th-circles { display: flex; justify-content: space-between; gap: var(--th-space-6); margin-top: var(--th-space-10); }
 button.th-day { width: var(--th-answer); height: var(--th-answer); min-height: 0; padding: 0; border: var(--th-stroke) solid var(--th-line); border-radius: var(--th-radius-circle); box-shadow: none; background: transparent; color: var(--th-faint); font-size: var(--th-font-control); font-weight: var(--th-weight-semibold); cursor: pointer; }
 button.th-day.is-on { border-color: var(--th-strong); background: var(--th-strong); color: var(--th-on-strong); }
-button.th-swatch { width: var(--th-control); height: var(--th-control); padding: 0; border: none; border-radius: var(--th-radius-circle); box-shadow: none; background: var(--th-habit); cursor: pointer; }
-button.th-swatch.is-on { box-shadow: 0 0 0 var(--th-swatch-gap) var(--th-bg), 0 0 0 var(--th-swatch-ring) var(--th-habit); }
+button.th-swatch { width: var(--th-control); height: var(--th-control); padding: 0; border: none; border-radius: var(--th-radius-circle); box-shadow: none; background: var(--th-marble-color); cursor: pointer; }
+button.th-swatch.is-on { box-shadow: 0 0 0 var(--th-swatch-gap) var(--th-bg), 0 0 0 var(--th-swatch-ring) var(--th-marble-color); }
 
 /* Today: the habits on a panel under Obsidian's header, the marbles over them, and the days. */
 .tiny-habits.th-today { --th-tray-top: 100%; --th-tray-rest: 0px; --th-tray-inset: 0px; position: relative; height: 100%; padding: 0; overflow: hidden; }
@@ -366,14 +366,14 @@ button.th-archived-toggle { display: inline-flex; align-items: center; gap: var(
 .th-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
 .th-ring circle { fill: none; stroke-width: var(--th-closed-ring-stroke); stroke-linecap: round; stroke-dasharray: var(--th-arc) var(--th-rest); }
 .th-ring-track { stroke: var(--th-line); stroke-linecap: butt; }
-.th-ring-arc { stroke: var(--th-habit); }
+.th-ring-arc { stroke: var(--th-accent); }
 .th-ring-arc.is-missed { stroke: var(--th-faint); opacity: var(--th-dim); }
 .th-ring-block.is-fresh .th-ring-arc { animation: th-arc var(--th-arc-time) var(--th-ease-settle) both; }
 .th-ring-block.is-fresh .th-ring-count { animation: th-pop var(--th-count-pop-time) var(--th-ease-pop) var(--th-count-pop-delay) both; }
 .th-ring-count { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: var(--th-font-display); font-weight: var(--th-weight-bold); letter-spacing: var(--th-tracking-tighter); color: var(--th-text); font-variant-numeric: tabular-nums; }
 .th-ring-sub { margin-top: var(--th-space-6); font-size: var(--th-font-control); color: var(--th-muted); }
 
-/* The list: Reminders' rows, a circle in the habit's colour and the name. */
+/* The list: Reminders' rows, a circle and the name. */
 .th-group { display: flex; align-items: center; padding: var(--th-space-26) 0 var(--th-space-8); font-size: var(--th-font-header); line-height: var(--th-leading-header); font-weight: var(--th-weight-bold); color: var(--th-text); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: grab; }
 .th-column > .th-group:first-child { padding-top: var(--th-space-15); }
 .th-group.is-dragging { position: relative; z-index: var(--th-layer-lifted); background: var(--th-bg); }
@@ -430,10 +430,10 @@ button.th-choice.is-picked .th-choice-ball { filter: brightness(var(--th-picked-
 /* The sign and the word sit together in the middle of the capsule. */
 button.th-choice.has-word { flex: 0 0 auto; width: auto; margin-right: var(--th-space-8); }
 .th-choice-ball.is-word { width: var(--th-answer-width); height: calc(var(--th-mark) + var(--th-space-6)); align-items: center; justify-content: center; border-radius: var(--th-radius-capsule); corner-shape: round; }
-.th-choice-ball.is-word.is-done { background: var(--th-habit); color: var(--th-on-color); }
-.th-choice-ball.is-word.is-done.is-tiny { background: color-mix(in srgb, var(--th-habit) var(--th-tint-share), var(--th-surface)); color: var(--th-habit); }
+.th-choice-ball.is-word.is-done { background: var(--th-accent); color: var(--th-on-accent); }
+.th-choice-ball.is-word.is-done.is-tiny { background: color-mix(in srgb, var(--th-accent) var(--th-tint-share), var(--th-surface)); color: var(--th-accent); }
 .th-choice-ball.is-word.is-missed { background: var(--th-skip); color: var(--th-on-color); }
-.th-choice-ball.is-word.is-off-trigger { background: var(--th-fill-solid); color: var(--th-habit); }
+.th-choice-ball.is-word.is-off-trigger { background: var(--th-fill-solid); color: var(--th-accent); }
 .th-choice-ball.is-word .th-mark { flex: none; }
 .th-choice-word { flex: none; padding-right: var(--th-space-8); font-size: var(--th-font-answer); font-weight: var(--th-weight-semibold); letter-spacing: var(--th-tracking-tight); white-space: nowrap; }
 button.th-choice.has-word:active .th-choice-ball { scale: var(--th-word-press-scale); }
@@ -445,7 +445,7 @@ button.th-choice.has-word:active .th-choice-ball { scale: var(--th-word-press-sc
 
 /* The marbles fall over the list; the celebration line stands over them. */
 .th-jar { position: absolute; top: 0; left: 0; z-index: var(--th-layer-marbles); width: 100%; height: 100%; pointer-events: none; }
-.th-caption { position: absolute; left: 0; right: 0; bottom: calc(var(--th-tray-rest) + var(--th-caption-lift)); z-index: var(--th-layer-caption); width: max-content; max-width: calc(100% - 2 * var(--th-gutter)); height: var(--th-caption-height); margin: 0 auto; padding: 0 var(--th-space-14); display: flex; align-items: center; border: var(--th-line-width) solid var(--th-habit); border-radius: var(--th-radius-capsule); background: var(--th-surface); color: var(--th-habit); font-size: var(--th-font-small); font-weight: var(--th-weight-semibold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; animation: th-in var(--th-in-quick-time) ease; }
+.th-caption { position: absolute; left: 0; right: 0; bottom: calc(var(--th-tray-rest) + var(--th-caption-lift)); z-index: var(--th-layer-caption); width: max-content; max-width: calc(100% - 2 * var(--th-gutter)); height: var(--th-caption-height); margin: 0 auto; padding: 0 var(--th-space-14); display: flex; align-items: center; border: var(--th-line-width) solid var(--th-marble-color); border-radius: var(--th-radius-capsule); background: var(--th-surface); color: var(--th-marble-color); font-size: var(--th-font-small); font-weight: var(--th-weight-semibold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; animation: th-in var(--th-in-quick-time) ease; }
 
 /* Today's buttons on the month's line: answered count, All habits, new habit, help. */
 .th-tools { display: flex; align-items: center; gap: var(--th-space-8); }
@@ -526,7 +526,7 @@ body:not(.is-mobile) .th-today .th-sheet-head button.th-back { margin-left: calc
 /* On a computer the answers that slide into a row are the phone's size: a computer's bigger circle must not grow them. */
 body:not(.is-mobile) .th-today .th-row-choices { --th-mark: var(--th-mark-phone); }
 
-/* A habit's year in its note: a dot per day, in the habit's colour as it went. */
+/* A habit's year in its note: a dot per day, in the accent as it went. */
 .th-year { display: flex; gap: var(--th-space-6); margin-top: var(--th-space-22); }
 .th-year-labels { flex: 0 0 auto; display: flex; flex-direction: column; gap: var(--th-space-3); padding-top: calc(var(--th-dot) + var(--th-space-3)); font-size: var(--th-font-micro); color: var(--th-faint); }
 .th-year-labels span { height: var(--th-dot); line-height: var(--th-dot); }
@@ -536,22 +536,22 @@ body:not(.is-mobile) .th-today .th-row-choices { --th-mark: var(--th-mark-phone)
 .th-year-week { display: flex; flex-direction: column; gap: var(--th-space-3); width: var(--th-dot); }
 .th-year-month { height: var(--th-dot); font-size: var(--th-font-micro); line-height: var(--th-dot); color: var(--th-faint); white-space: nowrap; overflow: visible; }
 .th-year-day { box-sizing: border-box; width: var(--th-dot); height: var(--th-dot); border-radius: var(--th-radius-circle); corner-shape: round; border: var(--th-stroke) solid var(--th-line); background: transparent; }
-.th-year-day.is-tiny { border-color: var(--th-habit); background: var(--th-habit); }
-.th-year-day.is-full { border-color: var(--th-habit); background: radial-gradient(circle, var(--th-on-color) 0 var(--th-full-dot-core), var(--th-habit) var(--th-full-dot-edge)); }
+.th-year-day.is-tiny { border-color: var(--th-accent); background: var(--th-accent); }
+.th-year-day.is-full { border-color: var(--th-accent); background: radial-gradient(circle, var(--th-on-accent) 0 var(--th-full-dot-core), var(--th-accent) var(--th-full-dot-edge)); }
 .th-year-day.is-missed { border-color: transparent; background: var(--th-line); }
-.th-year-day.is-off-trigger { border-color: transparent; background: radial-gradient(circle, var(--th-habit) 0 var(--th-small-dot-core), var(--th-line) var(--th-small-dot-edge)); }
+.th-year-day.is-off-trigger { border-color: transparent; background: radial-gradient(circle, var(--th-accent) 0 var(--th-small-dot-core), var(--th-line) var(--th-small-dot-edge)); }
 .th-year-day.is-off { border-color: transparent; background: radial-gradient(circle, var(--th-line) 0 var(--th-small-dot-core), transparent var(--th-small-dot-edge)); }
 .th-year-day.is-before,
 .th-year-day.is-future { opacity: var(--th-outside-opacity); }
 .th-year-day.is-today { box-shadow: inset 0 0 0 var(--th-today-ring) var(--th-text); }
 .th-year-day.is-today.is-tiny,
-.th-year-day.is-today.is-full { box-shadow: inset 0 0 0 var(--th-today-ring) var(--th-habit), inset 0 0 0 var(--th-today-ring-gap) var(--th-bg); }
+.th-year-day.is-today.is-full { box-shadow: inset 0 0 0 var(--th-today-ring) var(--th-accent), inset 0 0 0 var(--th-today-ring-gap) var(--th-bg); }
 
 .th-history-row { display: grid; grid-template-columns: var(--th-history-date-column) var(--th-history-icon-column) minmax(0, 1fr); align-items: start; padding: var(--th-space-11) 0; border-bottom: var(--th-line-width) solid var(--th-line); font-size: var(--th-font-answer); }
 .th-history-date { padding-top: var(--th-space-1); font-size: var(--th-font-small); color: var(--th-faint); }
 .th-history-icon { width: var(--th-history-icon); height: var(--th-history-icon); margin-top: var(--th-space-5); box-sizing: border-box; border-radius: var(--th-radius-circle); background: var(--th-faint); }
 .th-history-icon.is-missed { background: transparent; border: var(--th-stroke) solid var(--th-faint); }
-.th-history-icon.is-change { background: var(--th-habit); }
+.th-history-icon.is-change { background: var(--th-accent); }
 .th-history-text { color: var(--th-text); overflow-wrap: anywhere; }
 .th-history-note { display: block; margin-top: var(--th-space-2); font-size: var(--th-font-small); color: var(--th-faint); }
 

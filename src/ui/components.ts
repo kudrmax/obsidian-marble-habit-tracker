@@ -97,7 +97,7 @@ export function colorCircles(parent: HTMLElement, initial: HabitColor | undefine
 	const options: ReadonlyArray<HabitColor | undefined> = [undefined, ...HABIT_COLORS];
 	const row = parent.createDiv("th-circles");
 	const buttons = options.map((color) => {
-		const button = row.createEl("button", { cls: ["th-swatch", "th-habit", colorClass(color)], attr: { "aria-label": color ?? "accent" } });
+		const button = row.createEl("button", { cls: ["th-swatch", colorClass(color)], attr: { "aria-label": color ?? "accent" } });
 		button.toggleClass("is-on", color === initial);
 		button.addEventListener("click", (event) => {
 			event.preventDefault();
