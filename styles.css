@@ -29,8 +29,14 @@ body {
 	--th-fill: rgba(118, 118, 128, 0.12);
 	--th-fill-hover: rgba(118, 118, 128, 0.18);
 	--th-fill-solid: color-mix(in srgb, rgb(118, 118, 128) 30%, var(--background-secondary));
-	/* How much of the accent the tiny answer keeps, mixed into the surface. */
+	/*
+	 * The tiny answer: the accent faded toward the page. A light page fades it toward white, where the accent's own check
+	 * reads; a dark one fades it less and toward black, where a white check does.
+	 */
 	--th-tint-share: 30%;
+	--th-tint-share-dark: 52%;
+	--th-tiny: color-mix(in srgb, var(--th-accent) var(--th-tint-share), var(--th-surface));
+	--th-on-tiny: var(--th-accent);
 	--th-accent-tint: hsla(var(--interactive-accent-hsl), 0.14);
 	--th-accent-tint-strong: hsla(var(--interactive-accent-hsl), 0.2);
 	--th-shadow-rgb: 0, 0, 0;
@@ -249,6 +255,8 @@ body {
 	--th-picked-brightness: 1.2;
 }
 
+body.theme-dark { --th-tiny: color-mix(in srgb, var(--th-accent) var(--th-tint-share-dark), var(--th-bg)); --th-on-tiny: var(--th-on-accent); }
+
 /* A phone's finger needs a smaller circle than a mouse would guess: the mark and its check shrink there. */
 .is-mobile .tiny-habits { --th-mark: var(--th-mark-phone); --th-icon-check: var(--th-icon-check-phone); font-family: var(--th-font-phone); }
 
@@ -292,14 +300,14 @@ button.th-link svg { width: var(--th-icon-small); height: var(--th-icon-small); 
 
 /*
  * The circle says how the day went, flat and in one colour for every habit: the accent with a check for the full action,
- * a tint of it for the tiny one, grey with a dash for skipped, the grey of cancel with a check of the accent for a day
+ * a fainter one for the tiny one, grey with a dash for skipped, the grey of cancel with a check of the accent for a day
  * done not at the trigger. Today's answer buttons carry these same circles.
  */
 .th-mark { box-sizing: border-box; width: var(--th-mark); height: var(--th-mark); border-radius: var(--th-radius-circle); border-width: var(--th-mark-stroke); border-style: solid; border-color: var(--th-accent); display: flex; align-items: center; justify-content: center; color: var(--th-on-color); transition: border-color var(--th-fast), background var(--th-fast); }
 .th-mark svg { width: var(--th-icon-check); height: var(--th-icon-check); stroke-width: var(--th-check-stroke); }
 .th-mark.is-done, .th-mark.is-missed, .th-mark.th-choice-cancel { border: none; }
 .th-mark.is-done { background: var(--th-accent); color: var(--th-on-accent); }
-.th-mark.is-done.is-tiny { background: color-mix(in srgb, var(--th-accent) var(--th-tint-share), var(--th-surface)); color: var(--th-accent); }
+.th-mark.is-done.is-tiny { background: var(--th-tiny); color: var(--th-on-tiny); }
 .th-mark.is-done svg { stroke-width: var(--th-check-stroke-done); }
 .th-mark.is-missed { position: relative; background: var(--th-skip); }
 .th-mark.is-missed::after { content: ""; width: var(--th-dash-width); height: var(--th-dash-height); border-radius: var(--th-radius-capsule); background: var(--th-on-color); }
@@ -431,7 +439,7 @@ button.th-choice.is-picked .th-choice-ball { filter: brightness(var(--th-picked-
 button.th-choice.has-word { flex: 0 0 auto; width: auto; margin-right: var(--th-space-8); }
 .th-choice-ball.is-word { width: var(--th-answer-width); height: calc(var(--th-mark) + var(--th-space-6)); align-items: center; justify-content: center; border-radius: var(--th-radius-capsule); corner-shape: round; }
 .th-choice-ball.is-word.is-done { background: var(--th-accent); color: var(--th-on-accent); }
-.th-choice-ball.is-word.is-done.is-tiny { background: color-mix(in srgb, var(--th-accent) var(--th-tint-share), var(--th-surface)); color: var(--th-accent); }
+.th-choice-ball.is-word.is-done.is-tiny { background: var(--th-tiny); color: var(--th-on-tiny); }
 .th-choice-ball.is-word.is-missed { background: var(--th-skip); color: var(--th-on-color); }
 .th-choice-ball.is-word.is-off-trigger { background: var(--th-fill-solid); color: var(--th-accent); }
 .th-choice-ball.is-word .th-mark { flex: none; }
