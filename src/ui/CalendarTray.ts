@@ -2,6 +2,7 @@ import { LocalDate } from "../domain/LocalDate";
 import { DAY_RING_LENGTH, DAY_RING_RADIUS, DESIGN } from "./design";
 import { Box } from "./jar/JarPhysics";
 import { CalendarDay, CalendarMonth, StripDay, calendarMonths, dayTitle, donePercent, monthTitle, monthWeeks } from "./today";
+import { mondayOf } from "./week";
 
 /** Over the weeks: room under the grabber, then one line with the month, its arrows and Today's buttons. */
 const HEAD_ROOM = 14;
@@ -50,8 +51,8 @@ const clamp = (value: number) => Math.min(1, Math.max(0, value));
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3.4);
 
 /**
- * Today's calendar, in a tray at the bottom of the view over Obsidian's navbar. Folded, it shows this week's dates;
- * pulled up, the rest of the month comes in above them, each date in a ring of how much of that day was done, under a
+ * Today's calendar, in a tray at the bottom of the view over Obsidian's navbar. Folded, it shows this week's dates, or
+ * on the week's grid the dates of the week on show; pulled up, the rest of the month comes in above them, each date in a ring of how much of that day was done, under a
  * line with the month, arrows to the months before and Today's buttons. Let go, it stays on the nearest whole week. Its
  * top edge is the floor the marbles stand on, wherever it is: rising, it carries them up and they hop off it.
  */
@@ -73,6 +74,8 @@ export class CalendarTray {
 	private monthIndex = -1;
 	private shownDay: LocalDate | null = null;
 	private today: LocalDate | null = null;
+	/** A day of the week the folded tray shows; its month shows no week after it. */
+	private rest: LocalDate | null = null;
 	private pick: (day: LocalDate) => void = () => undefined;
 	/** How far in from the grid's sides its outer rings start, so the month and the buttons line up with them. */
 	private edge = -1;
@@ -176,17 +179,27 @@ export class CalendarTray {
 	}
 
 	/**
-	 * Takes the calendar's days and draws the month on show: this month unless an earlier one was opened with the arrows.
-	 * The shown day is picked; a tap on another day picks it.
+	 * Takes the calendar's days and draws the month on show: the month of `rest` unless another one was opened with the
+	 * arrows. Folded, the tray shows the week of `rest`: this week on Today, the week on show on the week's grid. The
+	 * shown day is picked; a tap on another day picks it.
 	 */
-	show(days: readonly StripDay[], shown: LocalDate, today: LocalDate, pick: (day: LocalDate) => void): void {
+	show(days: readonly StripDay[], shown: LocalDate, today: LocalDate, pick: (day: LocalDate) => void, rest: LocalDate = today): void {
+		const restMoved = !this.rest?.equals(rest);
 		this.days = days;
 		this.shownDay = shown;
 		this.today = today;
+		this.rest = rest;
 		this.pick = pick;
 		this.months = calendarMonths(days, today);
-		if (this.monthIndex < 0 || this.monthIndex >= this.months.length) this.monthIndex = this.months.length - 1;
+		if (this.monthIndex < 0 || this.monthIndex >= this.months.length || (restMoved && this.raised <= 1)) this.monthIndex = this.restIndex();
 		this.renderMonth();
+	}
+
+	/** The month the folded tray rests on: the one of `rest`. */
+	private restIndex(): number {
+		const rest = this.rest;
+		const index = rest ? this.months.findIndex((month) => month.year === rest.year && month.month === rest.month) : -1;
+		return index < 0 ? this.months.length - 1 : index;
 	}
 
 	private arrow(line: HTMLElement, label: string, path: string, step: number): HTMLButtonElement {
@@ -213,7 +226,9 @@ export class CalendarTray {
 		const month = this.months[this.monthIndex];
 		const today = this.today;
 		if (!month || !today) return;
-		const weeks = monthWeeks(this.days, month, today);
+		const rest = this.rest;
+		const all = monthWeeks(this.days, month, today);
+		const weeks = rest && this.monthIndex === this.restIndex() ? all.filter((week) => !week[0].date.isAfter(mondayOf(rest))) : all;
 		this.weeks.empty();
 		this.rings = [];
 		this.drawn = -1;
@@ -452,12 +467,12 @@ export class CalendarTray {
 
 	/**
 	 * Moves the tray to `target` above its rest, within its range, on iOS's settling curve, and taps when it opens or
-	 * folds. Folding goes back to this month, so the folded tray always shows this week.
+	 * folds. Folding goes back to the month it rests on, so the folded tray always shows its week.
 	 */
 	private settle(target: number): void {
 		cancelAnimationFrame(this.settleFrame);
-		if (target <= 0 && this.monthIndex !== this.months.length - 1) {
-			this.monthIndex = this.months.length - 1;
+		if (target <= 0 && this.monthIndex !== this.restIndex()) {
+			this.monthIndex = this.restIndex();
 			this.renderMonth();
 		}
 		const to = Math.min(this.maxUp(), Math.max(0, target));

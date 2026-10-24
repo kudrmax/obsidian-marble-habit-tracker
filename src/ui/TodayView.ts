@@ -32,7 +32,7 @@ import { SizeCalibration } from "./SizeCalibration";
 import { ScreenChrome } from "./ScreenChrome";
 import { WeekCalendar } from "./WeekCalendar";
 import { WeekGrid } from "./WeekGrid";
-import { StripDay, calendarWeek, closedDayLine, dayStrip, dayTitle, winsLabel, offersShrink, todayEntries } from "./today";
+import { closedDayLine, dayStrip, dayTitle, winsLabel, offersShrink, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
 import { sameWeek, weekGroups, weekTitle } from "./week";
 
@@ -389,15 +389,14 @@ export class TodayView extends ItemView {
 	private renderWeek(column: HTMLElement, all: readonly HabitEntry[]): void {
 		const today = this.ui.service.today();
 		const shown = this.shownDay();
-		const days = this.renderCalendar(all);
+		this.renderCalendar(all);
 		this.renderHead();
+		if (!sameWeek(shown, today)) column.appendChild(this.backChip(weekTitle(shown, today), "Back to this week"));
 		this.showTools(this.renderTools(0, false));
 		const focused = this.menu ?? this.asking;
 		const answering = this.answering;
 		const rows = this.grid?.render(column, {
 			today,
-			above: sameWeek(shown, today) ? undefined : this.backChip(weekTitle(shown, today), "Back to this week"),
-			days: calendarWeek(days, shown, today),
 			groups: weekGroups(all, shown, today),
 			focus: focused && answering ? { path: focused, day: answering } : null,
 			popping: (path, day) => this.celebrating.has(this.cellKey(path, day)),
@@ -531,16 +530,17 @@ export class TodayView extends ItemView {
 
 	/**
 	 * The calendar in the tray, on Today and in All habits, with the shown day picked; a tap on a day shows it on Today,
-	 * or its week on the grid. Over a computer's grid only the month's line is left, its arrows a week each way.
+	 * or its week on the grid. Over the grid the days are the grid's columns: the folded tray rests on the week on show,
+	 * and a computer's week stays that week, its arrows a week each way.
 	 */
-	private renderCalendar(all: readonly HabitEntry[]): StripDay[] {
+	private renderCalendar(all: readonly HabitEntry[]): void {
 		const today = this.ui.service.today();
 		const days = dayStrip(all, today, this.ui.settings().wins);
 		const pick = (day: LocalDate) => this.showDay(day);
-		this.tray?.show(days, this.shownDay(), today, pick);
-		if (this.showsWeek()) this.week?.follow(days, this.shownDay(), today, pick);
+		const grid = this.showsWeek();
+		this.tray?.show(days, this.shownDay(), today, pick, grid ? this.shownDay() : today);
+		if (grid) this.week?.follow(days, this.shownDay(), today, pick);
 		else this.week?.show(days, this.shownDay(), today, pick);
-		return days;
 	}
 
 	/** Today's buttons, on the month's line wherever the calendar is. */

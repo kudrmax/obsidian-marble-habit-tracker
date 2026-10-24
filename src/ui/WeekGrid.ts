@@ -1,11 +1,9 @@
 import { DayMark } from "../domain/DayMark";
 import { Habit } from "../domain/Habit";
-import { LocalDate, WEEKDAYS, Weekday } from "../domain/LocalDate";
-import { dayRing, markCircle } from "./components";
-import { CalendarDay, dayTitle, donePercent } from "./today";
+import { LocalDate, WEEKDAYS } from "../domain/LocalDate";
+import { markCircle } from "./components";
+import { dayTitle } from "./today";
 import { WeekCell, WeekGroup } from "./week";
-
-const WEEKDAY_CAPS: Record<Weekday, string> = { mon: "Mo", tue: "Tu", wed: "We", thu: "Th", fri: "Fr", sat: "Sa", sun: "Su" };
 
 /** What the circles do: a click on an empty one opens the answers, on a marked one clears it; a right-click opens the answers. */
 export interface WeekGridActions {
@@ -21,10 +19,6 @@ export interface WeekFocus {
 
 export interface WeekGridState {
 	readonly today: LocalDate;
-	/** Over the weekdays, standing with them: the chip that names a week that isn't this one. */
-	readonly above?: HTMLElement;
-	/** The week's days, Monday to Sunday, with how much of each was done. */
-	readonly days: readonly CalendarDay[];
 	readonly groups: readonly WeekGroup[];
 	readonly focus: WeekFocus | null;
 	popping(path: string, day: LocalDate): boolean;
@@ -39,10 +33,10 @@ export interface WeekGridRow {
 }
 
 /**
- * The week as a grid: the weekdays and dates over seven columns, then every habit by section with a circle for each of
- * its days, drawn as Today draws them. On a phone a habit's name stands over its circles, in the tray's columns; on a
- * computer it stands to their left, each date is in a ring of how much of the day was done, and today's column is a
- * capsule from its date down to the last habit.
+ * The week as Today's list with seven circles a habit: the sections and names as on Today, the circles as Today draws
+ * them. The days are the calendar's own, so the grid draws none: on a phone the circles stand over the tray's dates,
+ * the name over its circles; on a computer they stand under the week over the list, the name to their left, and
+ * today's column is a capsule down from today's date.
  */
 export class WeekGrid {
 	constructor(
@@ -52,36 +46,17 @@ export class WeekGrid {
 
 	render(parent: HTMLElement, state: WeekGridState): Map<string, WeekGridRow> {
 		const grid = parent.createDiv("th-grid");
-		const todayIndex = state.days.findIndex((day) => day.date.equals(state.today));
-		if (this.wide && todayIndex >= 0) grid.createDiv("th-grid-today").style.setProperty("--th-grid-later", String(WEEKDAYS.length - 1 - todayIndex));
-		this.renderHead(grid, state);
 		const rows = new Map<string, WeekGridRow>();
+		let todayColumn = -1;
 		for (const group of state.groups) {
 			if (group.section !== undefined) grid.createDiv({ cls: "th-group th-grid-group", text: group.section });
-			for (const { path, habit, cells } of group.rows) rows.set(path, this.renderRow(grid, path, habit, cells, state));
+			for (const { path, habit, cells } of group.rows) {
+				rows.set(path, this.renderRow(grid, path, habit, cells, state));
+				todayColumn = cells.findIndex((cell) => cell.date.equals(state.today));
+			}
 		}
+		if (this.wide && todayColumn >= 0) grid.createDiv("th-grid-today").style.setProperty("--th-grid-later", String(WEEKDAYS.length - 1 - todayColumn));
 		return rows;
-	}
-
-	/** The weekdays over their dates, standing over the circles' columns while the habits scroll under them. */
-	private renderHead(grid: HTMLElement, state: WeekGridState): void {
-		const head = grid.createDiv("th-grid-head");
-		if (state.above) head.appendChild(state.above);
-		const line = head.createDiv("th-grid-line");
-		line.createDiv("th-grid-name");
-		const days = line.createDiv("th-grid-strip");
-		for (const day of state.days) {
-			const off = day.future || day.outside;
-			const percent = off ? null : donePercent(day);
-			const title = dayTitle(day.date, state.today);
-			const cell = days.createDiv({ cls: "th-grid-day th-cal-day", attr: { "aria-label": percent === null ? title : `${title}, ${percent}% done` } });
-			cell.toggleClass("is-today", day.date.equals(state.today));
-			cell.toggleClass("is-off", off);
-			cell.createDiv({ cls: "th-grid-weekday", text: WEEKDAY_CAPS[day.date.weekday()] });
-			const date = cell.createDiv("th-grid-date");
-			if (this.wide && !off) dayRing(date, (percent ?? 0) / 100);
-			date.createSpan("th-cal-date").createSpan({ cls: "th-cal-figure", text: String(day.date.day) });
-		}
 	}
 
 	private renderRow(grid: HTMLElement, path: string, habit: Habit, cells: readonly WeekCell[], state: WeekGridState): WeekGridRow {
@@ -95,11 +70,10 @@ export class WeekGrid {
 		return { habit, row, strip };
 	}
 
-	/** A day to answer is a circle to click; a day that isn't one of the habit's is a dot; the rest stay empty. */
+	/** A day up to today is a circle to click; a day to come keeps its place, empty. */
 	private renderCell(strip: HTMLElement, path: string, cell: WeekCell, state: WeekGridState): void {
-		if (cell.kind !== "due") {
-			const still = strip.createDiv({ cls: ["th-grid-cell", `is-${cell.kind}`] });
-			if (cell.kind === "off") still.createSpan("th-grid-rest");
+		if (cell.kind === "future") {
+			strip.createDiv("th-grid-cell");
 			return;
 		}
 		const button = strip.createEl("button", { cls: "th-grid-cell" });

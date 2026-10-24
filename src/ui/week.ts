@@ -5,8 +5,8 @@ import { LocalDate, WEEKDAYS } from "../domain/LocalDate";
 import { dayMonth } from "./format";
 import { groupBySection, visibleEntries } from "./order";
 
-/** How a habit's day stands in the week: still to come, before the habit began, not one of its days, or one to answer. */
-export type WeekCellKind = "future" | "before" | "off" | "due";
+/** How a habit's day stands in the week: still to come, or one to answer. */
+export type WeekCellKind = "future" | "due";
 
 export interface WeekCell {
 	readonly date: LocalDate;
@@ -33,12 +33,10 @@ export function sameWeek(a: LocalDate, b: LocalDate): boolean {
 	return mondayOf(a).equals(mondayOf(b));
 }
 
-/** A day is answered the way Today answers it: when it is one of the habit's days, or already marked. */
+/** Every day up to today is a circle to answer, whatever the habit's days; the days to come are empty. */
 export function weekCell(habit: Habit, date: LocalDate, today: LocalDate): WeekCell {
 	if (date.isAfter(today)) return { date, kind: "future" };
-	const mark = habit.markOn(date);
-	if (mark || habit.isScheduled(date)) return { date, kind: "due", mark };
-	return { date, kind: date.isBefore(habit.createdOn) ? "before" : "off" };
+	return { date, kind: "due", mark: habit.markOn(date) };
 }
 
 /** Every habit that isn't archived, by section as on Today, each with its days from Monday to Sunday of `day`'s week. */

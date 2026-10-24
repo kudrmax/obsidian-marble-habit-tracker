@@ -12,7 +12,7 @@ const WEEK_DAYS = 7;
  * Today's calendar on a computer, over the list instead of in a tray to pull up: a line with the month, its arrows and
  * Today's buttons, then the week of the shown day, each date in a ring of how much of that day was done. A click on
  * the month opens the whole month in place, and closes it again; the arrows step by what is on show, a week or a
- * month. A click on a day shows it. Over the week's grid, which draws its days itself, only the line is left.
+ * month. A click on a day shows it. Over the week's grid the week stays one week, its days over the grid's columns.
  */
 export class WeekCalendar {
 	readonly el: HTMLElement;
@@ -28,7 +28,7 @@ export class WeekCalendar {
 	private pick: (day: LocalDate) => void = () => undefined;
 	/** The whole month on show, instead of one week. */
 	private open = false;
-	/** Only the month's line, over the week's grid: the arrows step the shown day a week. */
+	/** Over the week's grid: always one week, the shown day's, and the arrows step the shown day a week. */
 	private grid = false;
 	/** A day in the week on show, while only a week is. */
 	private week: LocalDate | null = null;
@@ -67,7 +67,7 @@ export class WeekCalendar {
 		this.render();
 	}
 
-	/** The month's line alone, over the week's grid: it names the shown day's month, and the arrows pick a day a week away. */
+	/** The shown day's week over the week's grid: the month's name only names it, and the arrows pick a day a week away. */
 	follow(days: readonly StripDay[], shown: LocalDate, today: LocalDate, pick: (day: LocalDate) => void): void {
 		this.grid = true;
 		this.open = false;
@@ -142,7 +142,7 @@ export class WeekCalendar {
 		if (this.grid) this.title.removeAttribute("aria-expanded");
 		else this.title.setAttr("aria-expanded", String(this.open));
 		this.title.setAttr("aria-label", this.grid ? this.title.getText() : this.open ? "Show one week" : "Show the whole month");
-		const rows = this.grid ? [] : this.open && month ? monthWeeks(this.days, month, today) : [calendarWeek(this.days, week, today)];
+		const rows = this.open && month ? monthWeeks(this.days, month, today) : [calendarWeek(this.days, week, today)];
 		this.weeks.empty();
 		for (const days of rows) {
 			const row = this.weeks.createDiv("th-week-row");
