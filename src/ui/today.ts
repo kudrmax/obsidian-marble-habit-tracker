@@ -1,9 +1,8 @@
 import { HabitEntry } from "../application/ports";
 import { DEFAULT_WIN_RULE, DayMark, WinRule, isWin } from "../domain/DayMark";
-import { Habit } from "../domain/Habit";
 import { LocalDate, WEEKDAYS } from "../domain/LocalDate";
-import { needsRedesign } from "../domain/RedesignRule";
-import { longDate } from "./format";
+import { REDESIGN_WEEKS, RedesignReason } from "../domain/RedesignRule";
+import { RecipeLabels, longDate } from "./format";
 import { visibleEntries } from "./order";
 
 
@@ -192,8 +191,14 @@ export function todayEntries(entries: readonly HabitEntry[], today: LocalDate): 
 	);
 }
 
-/** A miss offers to make the habit tinier when its reason is the shrink reason, or after too many misses in a row. */
-export function offersShrink(habit: Habit, mark: DayMark, threshold: number, shrinkReason: string): boolean {
-	if (mark.kind !== "missed") return false;
-	return (shrinkReason !== "" && mark.reason === shrinkReason) || needsRedesign(habit, threshold);
+/** What the orange line under a habit that needs a change says. */
+export function redesignLine(reason: RedesignReason, labels: RecipeLabels): string {
+	switch (reason.kind) {
+		case "skips":
+			return `${reason.count} ${reason.count === 1 ? "skip" : "skips"} in a row`;
+		case "lowShare":
+			return `${reason.percent}% done in ${REDESIGN_WEEKS} weeks`;
+		case "offTrigger":
+			return `Mostly not at ${labels.of("anchor")}`;
+	}
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HabitEntry } from "../src/application/ports";
-import { TINY, missed } from "../src/domain/DayMark";
-import { calendarMonths, calendarWeek, closedDayLine, dayLabel, dayStrip, dayTitle, donePercent, monthTitle, monthWeeks, trayWeeks, totalWins, winsLabel, winsSince, offersShrink, todayEntries } from "../src/ui/today";
+import { RecipeLabels } from "../src/ui/format";
+import { calendarMonths, calendarWeek, closedDayLine, dayLabel, dayStrip, dayTitle, donePercent, monthTitle, monthWeeks, redesignLine, trayWeeks, totalWins, winsLabel, winsSince, todayEntries } from "../src/ui/today";
 import { d } from "./support/dates";
 import { habitNote } from "./support/habits";
 
@@ -240,19 +240,18 @@ describe("todayEntries", () => {
 	});
 });
 
-describe("offersShrink", () => {
-	it("offers a tinier recipe when it felt too big", () => {
-		expect(offersShrink(habitNote("Read"), missed("Felt too big"), 3, "Felt too big")).toBe(true);
-		expect(offersShrink(habitNote("Read"), missed("Felt too big"), 3, "")).toBe(false);
-		expect(offersShrink(habitNote("Read"), missed("Forgot"), 3, "Felt too big")).toBe(false);
+describe("redesignLine", () => {
+	const labels = new RecipeLabels({ anchor: "trigger", tiny: "tiny action", full: "action", celebration: "celebration", schedule: "days" });
+
+	it("says why the habit needs a change", () => {
+		expect(redesignLine({ kind: "skips", count: 5 }, labels)).toBe("5 skips in a row");
+		expect(redesignLine({ kind: "skips", count: 1 }, labels)).toBe("1 skip in a row");
+		expect(redesignLine({ kind: "lowShare", percent: 45 }, labels)).toBe("45% done in 2 weeks");
+		expect(redesignLine({ kind: "offTrigger" }, labels)).toBe("Mostly not at trigger");
 	});
 
-	it("offers it after too many misses in a row", () => {
-		const habit = habitNote("Read", { missed: [{ date: "2026-10-08", reason: "a" }, { date: "2026-10-07", reason: "b" }, { date: "2026-10-06", reason: "c" }] });
-		expect(offersShrink(habit, missed("Forgot"), 3, "Felt too big")).toBe(true);
-	});
-
-	it("never offers it for done days", () => {
-		expect(offersShrink(habitNote("Read"), TINY, 3, "Felt too big")).toBe(false);
+	it("names the trigger by its label", () => {
+		const own = new RecipeLabels({ anchor: "якорь", tiny: "tiny action", full: "action", celebration: "celebration", schedule: "days" });
+		expect(redesignLine({ kind: "offTrigger" }, own)).toBe("Mostly not at якорь");
 	});
 });

@@ -23,6 +23,8 @@ body {
 	--th-hover: var(--background-modifier-hover);
 	/* White, for a check or a word on a filled colour. */
 	--th-on-color: #ffffff;
+	/* The orange of a habit that isn't working and needs a change. */
+	--th-attention: var(--color-orange);
 	/* The grey of a skipped day, iOS's system grey. */
 	--th-skip: rgb(142, 142, 147);
 	/* iOS's fill: a quiet ground for small round buttons, and, mixed into the surface, the ground of cancel. */
@@ -100,7 +102,6 @@ body {
 	--th-grabber-height: 5px;
 	--th-chip-x: 18px;
 	--th-caption-height: 32px;
-	--th-link-height: 32px;
 	--th-closed-ring: 168px;
 	--th-style-marbles: 68px;
 	--th-history-icon: 10px;
@@ -155,6 +156,8 @@ body {
 	--th-leading-header: 25px;
 	--th-leading-date: 24px;
 	--th-leading-body: 22px;
+	/* The line under a name that needs a change: what the row's height leaves of the name's line, so the row keeps its height. */
+	--th-leading-attention: calc(var(--th-row-height) - var(--th-leading-body));
 	--th-leading-title: 1.12;
 	--th-leading-text: 1.4;
 	--th-weight-regular: var(--font-normal);
@@ -301,8 +304,6 @@ button.th-button-large { width: var(--th-button-large); height: var(--th-button-
 button.th-button-large svg { width: var(--th-icon-large); height: var(--th-icon-large); }
 
 
-button.th-link { display: inline-flex; align-items: center; gap: var(--th-space-6); height: var(--th-link-height); padding: 0; border: none; box-shadow: none; background: transparent; color: var(--th-accent); font-size: var(--th-font-small); cursor: pointer; }
-button.th-link svg { width: var(--th-icon-small); height: var(--th-icon-small); }
 
 /*
  * The circle says how the day went, flat and in one colour for every habit: the accent with a check for the full action,
@@ -408,12 +409,15 @@ button.th-archived-toggle { display: inline-flex; align-items: center; gap: var(
 .th-row-text { flex: 1 1 auto; min-width: 0; padding: var(--th-space-9) 0; cursor: pointer; -webkit-user-select: none; user-select: none; }
 .th-row-title { font-size: var(--th-font-body); line-height: var(--th-leading-body); font-weight: var(--th-weight-regular); letter-spacing: var(--th-tracking-tight); color: var(--th-text); overflow-wrap: anywhere; }
 .th-row-sub { margin-top: var(--th-space-2); font-size: var(--th-font-small); color: var(--th-faint); }
+/* A habit that needs a change: its name and the orange line under it share the row's own height, so the circles keep their step. */
+.th-row-text.has-attention { display: flex; flex-direction: column; justify-content: center; min-height: var(--th-row-height); padding-top: 0; padding-bottom: 0; }
+button.th-row-attention { display: flex; align-items: center; justify-content: flex-start; gap: var(--th-space-1); height: auto; margin: 0; padding: 0; border: none; border-radius: 0; box-shadow: none; background: transparent; color: var(--th-attention); font-size: var(--th-font-small); line-height: var(--th-leading-attention); font-weight: var(--th-weight-regular); white-space: nowrap; cursor: pointer; }
+.th-row-attention-icon { display: inline-flex; }
+.th-row-attention-icon svg { width: var(--th-icon-small); height: var(--th-icon-small); }
 .th-row.is-answered .th-row-title { color: var(--th-faint); }
 .th-row.is-leaving { overflow: hidden; pointer-events: none; }
 .th-row.is-dragging { z-index: var(--th-layer-lifted); background: var(--th-bg); border-radius: var(--th-radius-panel); box-shadow: var(--th-shadow-lifted); scale: var(--th-drag-scale); transition: scale var(--th-fast), box-shadow var(--th-fast); }
 .th-row.is-shifting { transition: transform var(--th-shift-time) ease; }
-.th-row-extra { padding: 0 var(--th-gutter) var(--th-space-14) calc(var(--th-gutter) + var(--th-slot) - var(--th-space-6)); animation: th-in var(--th-in-quick-time) ease; }
-.th-row-extra .th-label { margin-bottom: var(--th-space-8); }
 /* The new-section zone shows only while a habit is being dragged. */
 .th-section-new { display: none; margin-top: var(--th-space-8); padding: var(--th-space-14) var(--th-space-16); border: var(--th-line-width) dashed var(--th-line); border-radius: var(--th-radius-panel); color: var(--th-faint); font-size: var(--th-font-ui-small); text-align: center; transition: border-color var(--th-fast), color var(--th-fast), background-color var(--th-fast); }
 .is-dragging-row .th-section-new { display: block; }
@@ -654,7 +658,6 @@ button.th-grid-cell:focus-visible { box-shadow: none; outline: none; }
  */
 .th-row-main.is-choosing .th-grid-strip { opacity: 0; pointer-events: none; }
 .is-week .th-row-choices { right: calc(var(--th-gutter) + (var(--th-grid-pitch) - var(--th-grid-gap) - var(--th-slot)) / 2); justify-content: flex-end; padding: 0; }
-.is-week .th-row-extra { padding-left: var(--th-gutter); }
 /* With no circle in front of the name, an open card's recipe stands as far in on the left as on the right, its panel under the name and the circles. */
 .is-week .th-card-recipe { margin-left: calc(var(--th-gutter) + var(--th-space-12)); }
 /* On a computer the grid takes a wider column, so the names keep their line beside the five days. */

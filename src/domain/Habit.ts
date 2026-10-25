@@ -9,6 +9,9 @@ export const TEXT_PARTS = ["anchor", "tiny", "full", "celebration"] as const;
 export type TextPart = (typeof TEXT_PARTS)[number];
 export type Part = TextPart | "schedule";
 
+/** The parts a redesign changes: when the habit happens and what is done. */
+const RECIPE_PARTS = ["anchor", "tiny", "full"] as const satisfies readonly TextPart[];
+
 const FORBIDDEN_NAME_CHARS = /[\\/:*?"<>|#^[\]]/;
 
 export const sameSchedule = (a: Schedule, b: Schedule): boolean => a.equals(b);
@@ -149,6 +152,14 @@ export class Habit {
 			versions.length ? [versions[versions.length - 1].since] : [],
 		);
 		return firsts.reduce((earliest, date) => (date.isBefore(earliest) ? date : earliest));
+	}
+
+	/** The day the recipe — trigger, tiny or full version — last changed; the day the habit began if it never did. */
+	get recipeChangedOn(): LocalDate {
+		return RECIPE_PARTS.map((part) => this.state.text[part].versions[0]?.since).reduce<LocalDate>(
+			(latest, date) => (date && date.isAfter(latest) ? date : latest),
+			this.createdOn,
+		);
 	}
 
 	text(part: TextPart): Component<string> {
