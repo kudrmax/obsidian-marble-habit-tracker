@@ -28,7 +28,6 @@ describe("loadSettings", () => {
 			cursorPush: true,
 			notAtTrigger: false,
 			wins: { offTrigger: false },
-			hintsSeen: false,
 			haptics: true,
 		});
 		expect(loadSettings(undefined)).toEqual(DEFAULT_SETTINGS);
@@ -60,7 +59,6 @@ describe("loadSettings", () => {
 				cursorPush: false,
 				notAtTrigger: true,
 				wins: { offTrigger: true },
-				hintsSeen: true,
 				haptics: false,
 			}),
 		).toEqual({
@@ -87,7 +85,6 @@ describe("loadSettings", () => {
 			cursorPush: false,
 			notAtTrigger: true,
 			wins: { offTrigger: true },
-			hintsSeen: true,
 			haptics: false,
 		});
 	});
