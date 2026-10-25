@@ -25,6 +25,8 @@ export interface HabitSettings {
 	merge: MergeRule;
 	/** The hour a new day starts; marks made past midnight but before it count for the day before. */
 	dayStartHour: number;
+	/** How many days the week view shows, up to the shown day. */
+	gridDays: number;
 	hideDone: boolean;
 	showWins: boolean;
 	celebrationLine: boolean;
@@ -55,6 +57,7 @@ export const DEFAULT_SETTINGS: HabitSettings = {
 	speed: 100,
 	merge: DEFAULT_MERGE_RULE,
 	dayStartHour: 5,
+	gridDays: 5,
 	hideDone: true,
 	showWins: true,
 	celebrationLine: true,
@@ -68,6 +71,8 @@ export const DEFAULT_SETTINGS: HabitSettings = {
 };
 
 export const MAX_DAY_START = 12;
+export const MIN_GRID_DAYS = 3;
+export const MAX_GRID_DAYS = 7;
 export const MIN_SPEED = 50;
 export const MAX_SPEED = 200;
 const MIN_MERGE = 2;
@@ -94,6 +99,7 @@ export function loadSettings(data: unknown): HabitSettings {
 		speed: integer(raw.speed, MIN_SPEED, MAX_SPEED, DEFAULT_SETTINGS.speed),
 		merge: loadMerge(raw.merge, (raw as Record<string, unknown>).mergeSize),
 		dayStartHour: integer(raw.dayStartHour, 0, MAX_DAY_START, DEFAULT_SETTINGS.dayStartHour),
+		gridDays: integer(raw.gridDays, MIN_GRID_DAYS, MAX_GRID_DAYS, DEFAULT_SETTINGS.gridDays),
 		hideDone: flag(raw.hideDone, DEFAULT_SETTINGS.hideDone),
 		showWins: flag(raw.showWins, DEFAULT_SETTINGS.showWins),
 		celebrationLine: flag(raw.celebrationLine, DEFAULT_SETTINGS.celebrationLine),

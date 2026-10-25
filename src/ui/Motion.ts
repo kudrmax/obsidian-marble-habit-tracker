@@ -21,11 +21,13 @@ const BUMP_SCALE = 1.08;
  */
 const SLIDE_MS = 320;
 const FADE_MS = 160;
-/** How far past the view's left edge the choices wait. */
+/** How far past the view's edge the choices wait. */
 const OFF_EDGE = 4;
 
 /** Stepping a day back or forward, opening All habits, or going back from it. */
 export type Slide = "earlier" | "later" | "push" | "pop";
+/** The edge of the view the choices come in from: Today's left, or the grid's right, where its circles are. */
+export type Side = "left" | "right";
 
 /**
  * The motion of Today. Today redraws from scratch on every change, so each effect is started on the fresh elements,
@@ -95,19 +97,21 @@ export class Motion {
 	 * on a computer, where the row may start far from it, and moves into place in one move, while
 	 * `content` — the circle and the name — fades where it is. Until the choices are in, a tap goes through them to the
 	 * row, which brings the row back, so nothing passing under the finger gets picked. `stop` ends all of it at once and
-	 * leaves the row as it is drawn.
+	 * leaves the row as it is drawn. From the right `side`, the mirror of all that.
 	 */
-	slideChoices(bar: HTMLElement, content: readonly HTMLElement[], view: HTMLElement): { stop(): void } {
+	slideChoices(bar: HTMLElement, content: readonly HTMLElement[], view: HTMLElement, side: Side = "left"): { stop(): void } {
 		const running: Animation[] = [];
 		const stop = () => {
 			for (const animation of running) animation.cancel();
 			bar.removeClass("is-arriving");
 		};
+		const first = bar.firstElementChild;
 		const last = bar.lastElementChild;
-		if (this.reduced() || !last) return { stop };
-		const distance = last.getBoundingClientRect().right - view.getBoundingClientRect().left + OFF_EDGE;
+		if (this.reduced() || !first || !last) return { stop };
+		const edge = view.getBoundingClientRect();
+		const offset = side === "left" ? edge.left - last.getBoundingClientRect().right - OFF_EDGE : edge.right - first.getBoundingClientRect().left + OFF_EDGE;
 		bar.addClass("is-arriving");
-		const slide = bar.animate([{ transform: `translateX(${-distance}px)` }, { transform: "none" }], { duration: SLIDE_MS, easing: SETTLE });
+		const slide = bar.animate([{ transform: `translateX(${offset}px)` }, { transform: "none" }], { duration: SLIDE_MS, easing: SETTLE });
 		running.push(slide);
 		for (const element of content) running.push(element.animate([{ opacity: 1 }, { opacity: 0 }], { duration: FADE_MS }));
 		slide.finished.then(
@@ -119,10 +123,10 @@ export class Motion {
 
 	/**
 	 * Closing the choices without an answer: `choices`, a copy of them as they stood, slides from there back past the
-	 * left edge of `view`, as far as they came, moving from the first frame, and the circle and the name fade in at once. Without a copy, they
+	 * edge of `view` they came from, as far as they came, moving from the first frame, and the circle and the name fade in at once. Without a copy, they
 	 * just fade in.
 	 */
-	refold(surface: HTMLElement, content: readonly HTMLElement[], choices: HTMLElement | null, view: HTMLElement): void {
+	refold(surface: HTMLElement, content: readonly HTMLElement[], choices: HTMLElement | null, view: HTMLElement, side: Side = "left"): void {
 		if (this.reduced()) return;
 		if (!choices) {
 			for (const element of content) element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: FADE_MS });
@@ -131,13 +135,19 @@ export class Motion {
 		choices.addClass("is-leaving");
 		surface.addClass("is-refolding");
 		surface.append(choices);
+		const first = choices.firstElementChild as HTMLElement | null;
 		const last = choices.lastElementChild as HTMLElement | null;
 		const from = new DOMMatrix(choices.style.transform).m41;
-		const start = surface.getBoundingClientRect().left - view.getBoundingClientRect().left;
-		const distance = last ? start + last.offsetLeft + last.offsetWidth + OFF_EDGE : 0;
-		const duration = distance > 0 ? SLIDE_MS * ((distance + from) / distance) : 0;
+		const box = surface.getBoundingClientRect();
+		const edge = view.getBoundingClientRect();
+		const distance =
+			side === "left"
+				? last ? box.left - edge.left + last.offsetLeft + last.offsetWidth + OFF_EDGE : 0
+				: first ? edge.right - box.left - first.offsetLeft + OFF_EDGE : 0;
+		const to = side === "left" ? -distance : distance;
+		const duration = distance > 0 ? SLIDE_MS * (Math.abs(to - from) / distance) : 0;
 		for (const element of content) element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: FADE_MS });
-		const leave = choices.animate([{ transform: `translateX(${from}px)` }, { transform: `translateX(${-distance}px)` }], { duration, easing: SETTLE, fill: "forwards" });
+		const leave = choices.animate([{ transform: `translateX(${from}px)` }, { transform: `translateX(${to}px)` }], { duration, easing: SETTLE, fill: "forwards" });
 		leave.finished.then(
 			() => {
 				choices.remove();

@@ -1,4 +1,5 @@
 import { MergeRule } from "../domain/Jar";
+import { DEFAULT_SETTINGS } from "../settings";
 
 export interface HelpRow {
 	readonly action: string;
@@ -16,7 +17,7 @@ export interface OffTriggerHelp {
  * Everything Today does that can't be seen until tried, as shown behind its "?" button.
  * Keep it in step with Today: a new gesture, or a changed one, belongs here.
  */
-export function helpRows(mobile: boolean, merge: MergeRule, offTrigger: OffTriggerHelp | null = null): HelpRow[] {
+export function helpRows(mobile: boolean, merge: MergeRule, offTrigger: OffTriggerHelp | null = null, gridDays = DEFAULT_SETTINGS.gridDays): HelpRow[] {
 	const tap = mobile ? "Tap" : "Click";
 	const words = offTrigger ? `Full, Tiny, Skip, and Anytime for a habit that may be done without its ${offTrigger.trigger}` : "Full, Tiny, Skip";
 	const off = offTrigger ? ` grey with a check of the accent for a day done not at the ${offTrigger.trigger},` : "";
@@ -30,7 +31,8 @@ export function helpRows(mobile: boolean, merge: MergeRule, offTrigger: OffTrigg
 			: { action: "The week above the list", result: "Each day in a ring of how much of it was done; click one to mark it, and the arrows step a week. Click the month's name to open the whole month in place, and again to close it; open, the arrows step a month." },
 		{ action: "✓ and a number", result: `How many answered habits are hidden. ${tap} it to show them and change an answer, and again to hide them.` },
 		{ action: "The day above the list", result: "On a past day it says which one; its ✕ goes back to today." },
-		{ action: "The list button", result: `Shows all habits, with the ones not due today and the archived ones. The days stay ${mobile ? "under" : "above"} them; ${tap.toLowerCase()} one to go back to Today on that day.` },
+		{ action: "The week button", result: `Turns Today into the last ${gridDays} days: every habit in its row from the list, its name on the left — it opens and moves as on the list — and a circle for each day on the right, under ${mobile ? "the dates in the folded bar" : "the dates over the list"}. ${tap} a circle to answer for that day — the answers slide over the row and the calendar picks the day — and a marked one to clear it. ${mobile ? `${tap} a day in the folded bar to end the days on it, or the arrows by them to step a day and the page with today's date to go back to today; pulled up, the bar marks the ${gridDays} days on the month — drag the mark along it or ${tap.toLowerCase()} a day` : `The arrows by the month step ${gridDays} days; the chip at the top goes back to today`}. ${tap} the button again for the list; the tab keeps the one it was left on.` },
+		{ action: "The list button", result: `Shows all habits, with the ones not due today and the archived ones. The days stay ${mobile ? "under" : "above"} them; ${tap.toLowerCase()} one to go back to Today on that day, or to its week.` },
 		{ action: "Marbles", result: `Every win drops a marble in its habit's color.${offWin} ${merge.smallPerMedium} small ones merge into a medium, ${merge.mediumPerBig} medium into a big.${mobile ? "" : " On a wide tab they grow, so its long floor still holds a pile."}` },
 		{ action: mobile ? "Tilt the phone" : "Move the mouse", result: "Rolls the marbles." },
 	];

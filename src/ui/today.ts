@@ -115,6 +115,24 @@ export function monthWeeks(days: readonly StripDay[], month: CalendarMonth, toda
 }
 
 /**
+ * A month as weeks from Monday, as the phone's tray lays it out: from the week of its first day to the week of its
+ * last, this month only up to this week, with `before` more weeks ahead of them. Every day keeps its counts whichever
+ * month it is in; the other months' days are outside.
+ */
+export function trayWeeks(days: readonly StripDay[], month: CalendarMonth, today: LocalDate, before = 0): CalendarDay[][] {
+	const known = new Map(days.map((day) => [day.date.toString(), day]));
+	const weeks = monthWeeks(days, month, today).map((week) => week.map((day) => day.date));
+	const earlier = Array.from({ length: before }, (_, index) => weeks[0].map((date) => date.addDays((index - before) * WEEKDAYS.length)));
+	return [...earlier, ...weeks].map((week) =>
+		week.map((date) => {
+			const outside = date.year !== month.year || date.month !== month.month;
+			const day = known.get(date.toString());
+			return day ? { ...day, outside } : { date, due: 0, done: 0, future: date.isAfter(today), outside };
+		}),
+	);
+}
+
+/**
  * The week from Monday that `day` is in, as the week over a computer's list shows it: the calendar's days keep their
  * counts, and days before the calendar starts are outside.
  */
