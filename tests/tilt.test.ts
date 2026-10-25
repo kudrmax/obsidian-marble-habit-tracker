@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { IN_HAND, TiltSensor, tiltGravity } from "../src/ui/jar/TiltSensor";
 
 const S = 0.45;
+const R = Math.PI / 180;
 const close = (point: { x: number; y: number }, x: number, y: number) => {
 	expect(point.x).toBeCloseTo(x, 3);
 	expect(point.y).toBeCloseTo(y, 3);
@@ -25,8 +26,37 @@ describe("tiltGravity", () => {
 	});
 
 	it("rolls to the side the phone leans to", () => {
-		close(tiltGravity(90, 30, 0, S), S / 2, S);
-		close(tiltGravity(90, -30, 0, S), -S / 2, S);
+		close(tiltGravity(40, 30, 0, S), Math.cos(40 * R) * 0.5 * S, Math.sin(40 * R) * S);
+		close(tiltGravity(40, -30, 0, S), -Math.cos(40 * R) * 0.5 * S, Math.sin(40 * R) * S);
+	});
+
+	it("rolls sideways when the phone stands upright and leans like a steering wheel", () => {
+		close(tiltGravity(60, 90, 0, S), S / 2, Math.sin(60 * R) * S);
+	});
+
+	it("does not roll sideways when an upright phone only turns about its own long side", () => {
+		close(tiltGravity(90, 30, 0, S), 0, S);
+	});
+
+	it("rolls to the lower edge when the phone is held face down above you", () => {
+		close(tiltGravity(180, 30, 0, S), -S / 2, 0);
+		close(tiltGravity(-180, -30, 0, S), S / 2, 0);
+		close(tiltGravity(150, 0, 0, S), 0, S / 2);
+	});
+
+	it("does not jump when the phone turns over past face down", () => {
+		const before = tiltGravity(179.9, 20, 0, S);
+		const after = tiltGravity(-179.9, 20, 0, S);
+		expect(Math.hypot(before.x - after.x, before.y - after.y)).toBeLessThan(0.002);
+	});
+
+	it("never pulls harder than the ground does", () => {
+		for (let beta = -180; beta <= 180; beta += 15) {
+			for (let gamma = -90; gamma <= 90; gamma += 15) {
+				const pull = tiltGravity(beta, gamma, 0, S);
+				expect(Math.hypot(pull.x, pull.y)).toBeLessThanOrEqual(S + 1e-9);
+			}
+		}
 	});
 
 	it("pulls up when the phone is held upside down", () => {

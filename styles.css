@@ -61,7 +61,6 @@ body {
 	--th-radius-tile: 14px;
 	--th-radius-panel: var(--radius-m);
 	--th-radius-overlay: var(--radius-l);
-	--th-radius-setting: 30px;
 
 	/* Lines */
 	--th-line-width: 1px;
@@ -573,9 +572,9 @@ button.th-week-title:hover { background: transparent; }
 .th-week-tools { margin-left: auto; }
 .th-week-row { display: flex; justify-content: space-between; margin-left: var(--th-circle-edge); }
 .th-week-row button.th-cal-day { flex: 0 0 var(--th-ring); width: var(--th-ring); height: var(--th-week-row); }
-/* On a computer the letters of the month and of the section headers start where the circles do, not their boxes; the past day's chip and All habits' way back too. */
+/* On a computer the letters of the month and of the section headers start where the circles do, not their boxes; the past day's chip and All habits' way back too. On the grid no circle leads a row, so the headers start where the names do. */
 body:not(.is-mobile) .th-today button.th-week-title { margin-left: calc(-1 * var(--th-ink-pull)); }
-body:not(.is-mobile) .th-today .th-sheet .th-group { margin-left: calc(-1 * var(--th-ink-pull)); }
+body:not(.is-mobile) .th-today:not(.is-week) .th-sheet .th-group { margin-left: calc(-1 * var(--th-ink-pull)); }
 body:not(.is-mobile) .th-today .th-day-chip-line { margin-left: calc(-1 * var(--th-chip-pull)); }
 body:not(.is-mobile) .th-today .th-sheet-head button.th-back { margin-left: calc(-1 * var(--th-back-pull)); }
 /* The answers that slide into a row are the same size everywhere, smaller than the circles they answer for. */
@@ -585,6 +584,14 @@ body:not(.is-mobile) .th-today .th-sheet-head button.th-back { margin-left: calc
  * circles, the day being answered picked. The month's name opens nothing and the dates pick nothing.
  */
 .th-week.is-grid button.th-week-title { cursor: default; }
+/*
+ * The dates belong to the circles under them, not to the buttons over them: they stand well clear of the month's line
+ * and close over the list. Its arrows are bare, as by the phone's folded days.
+ */
+.th-week.is-grid .th-week-line { margin-bottom: var(--th-space-28); }
+.th-week.is-grid .th-week-row button.th-cal-day { height: var(--th-control); }
+body:not(.is-mobile) .th-today.is-week .th-column > .th-group:first-child { padding-top: 0; }
+.th-week.is-grid button.th-tool.th-cal-arrow { background: transparent; }
 .th-week.is-grid .th-week-row { justify-content: flex-end; margin: 0 calc((var(--th-mark) - var(--th-grid-pitch)) / 2) 0 0; }
 .th-week.is-grid .th-week-row button.th-cal-day { flex: 0 0 var(--th-grid-pitch); width: var(--th-grid-pitch); }
 /*
@@ -706,16 +713,20 @@ button.th-style-tile.is-selected { border-color: var(--th-accent); }
 .th-calibration-row button { width: var(--th-slot); height: var(--th-slot); border-radius: var(--th-radius-circle); corner-shape: round; padding: 0; font-size: var(--th-font-sheet-title); }
 .th-calibration-actions { display: flex; justify-content: center; gap: var(--th-space-12); }
 
-/* Marble sizes, picked on Today: a card of sliders over the top of the list, the marbles stay in view below it. */
-.th-size-calibration { position: absolute; top: calc(var(--th-top-inset, 0px) + var(--th-space-8)); left: var(--th-gutter); right: var(--th-gutter); z-index: var(--th-layer-overlay); max-width: calc(var(--th-column) - 2 * var(--th-gutter)); margin: 0 auto; padding: var(--th-space-12) var(--th-space-16); border-radius: var(--th-radius-overlay); background: var(--th-surface); box-shadow: var(--th-shadow-lifted); }
-.th-size-calibration-title { margin-bottom: var(--th-space-8); padding-inline-start: var(--th-space-16); font-size: var(--th-font-ui-medium); font-weight: var(--th-weight-semibold); }
-.th-size-calibration .setting-item { align-items: center; padding: var(--th-space-8); border-top: none; border-radius: var(--th-radius-setting); }
-.th-size-calibration .setting-item-info { flex: 0 0 var(--th-setting-label); padding-inline-start: var(--th-space-8); }
-.th-size-calibration .th-size-stepper { flex: 1 1 auto; min-width: 0; gap: var(--th-space-8); }
-.th-size-calibration .th-size-stepper input[type="range"] { flex: 1 1 auto; min-width: 0; width: auto; }
-.th-size-calibration button.th-size-step { flex: none; width: var(--th-slot); height: var(--th-slot); border-radius: var(--th-radius-circle); corner-shape: round; padding: 0; font-size: var(--th-font-sheet-title); }
-.th-size-calibration .modal-button-container { flex-wrap: wrap; margin: var(--th-space-12) 0 0; padding: 0; }
-.is-phone .th-size-calibration .modal-button-container { display: grid; grid-template-columns: 1fr 1fr; }
+/* Marbles, tuned on Today: a card of sliders over the top of the list, the marbles stay in view below it. */
+.th-marble-calibration { position: absolute; top: calc(var(--th-top-inset, 0px) + var(--th-space-8)); left: var(--th-gutter); right: var(--th-gutter); z-index: var(--th-layer-overlay); max-width: calc(var(--th-column) - 2 * var(--th-gutter)); margin: 0 auto; padding: var(--th-space-8) var(--th-space-12) var(--th-space-12); border-radius: var(--th-radius-overlay); background: var(--th-surface); box-shadow: var(--th-shadow-lifted); }
+.th-marble-calibration-header { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--th-space-8); margin-bottom: var(--th-space-4); }
+.th-marble-calibration-header button:last-child { justify-self: end; }
+.th-marble-calibration-header button:first-child { justify-self: start; }
+.th-marble-calibration-title { font-size: var(--th-font-ui-medium); font-weight: var(--th-weight-semibold); }
+.th-marble-calibration .setting-item { align-items: center; min-height: 0; margin: 0; padding: var(--th-space-2) 0; border: none; border-radius: 0; background: none; }
+.th-marble-calibration .setting-item-info { flex: 0 0 var(--th-setting-label); margin: 0; padding: 0; }
+.th-marble-calibration .setting-item-description { padding: 0; font-variant-numeric: tabular-nums; }
+.th-marble-calibration .th-marble-stepper { flex: 1 1 auto; min-width: 0; gap: var(--th-space-8); }
+.th-marble-calibration .th-marble-stepper .slider-value { display: none; }
+.th-marble-calibration .th-marble-stepper input[type="range"] { flex: 1 1 auto; min-width: 0; width: auto; }
+.th-marble-calibration button.th-marble-step { flex: none; width: var(--th-slot); height: var(--th-slot); border-radius: var(--th-radius-circle); corner-shape: round; padding: 0; font-size: var(--th-font-sheet-title); }
+.th-marble-calibration-actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--th-space-8); margin-top: var(--th-space-8); }
 
 /* A disclosure that opens a guide to the recipe's fields. */
 button.th-disclosure { display: flex; align-items: center; justify-content: flex-start; gap: var(--th-space-6); width: 100%; height: auto; margin-top: var(--th-space-14); padding: var(--th-space-10) 0; border: none; border-top: var(--th-line-width) solid var(--th-line); border-radius: 0; box-shadow: none; background: transparent; color: var(--th-text); font-size: var(--th-font-ui-small); font-weight: var(--th-weight-semibold); cursor: pointer; }

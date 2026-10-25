@@ -2,7 +2,7 @@ import { DayMark } from "../domain/DayMark";
 import { Habit } from "../domain/Habit";
 import { LocalDate, WEEKDAYS } from "../domain/LocalDate";
 import { dayMonth } from "./format";
-import { CalendarDay, StripDay } from "./today";
+import { CalendarDay, CalendarMonth, StripDay } from "./today";
 
 /** How a habit's day stands in the grid: still to come, or one to answer. */
 export type WeekCellKind = "future" | "due";
@@ -35,6 +35,17 @@ export function daysUpTo(days: readonly StripDay[], end: LocalDate, today: Local
 		const day = known.get(date.toString());
 		return day ? { ...day, outside: false } : { date, due: 0, done: 0, future: date.isAfter(today), outside: true };
 	});
+}
+
+/**
+ * Where the grid's days end after a step of a day back or on, as the arrows by them take it on a phone and on a
+ * computer alike: never past today, nor back before the calendar's first month; null where the step can't go.
+ */
+export function stepDays(end: LocalDate, step: -1 | 1, today: LocalDate, months: readonly CalendarMonth[]): LocalDate | null {
+	const first = months[0];
+	const earliest = first ? LocalDate.of(first.year, first.month, 1) : today;
+	if (step > 0 ? !end.isBefore(today) : !end.isAfter(earliest)) return null;
+	return end.addDays(step);
 }
 
 /** The `count` days up to `end` as dates, with the year when it is another year: "Oct 4 – 8", "Sep 29 – Oct 3". */

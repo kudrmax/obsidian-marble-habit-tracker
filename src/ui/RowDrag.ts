@@ -1,6 +1,5 @@
-const LIFT_MS = 400;
-/** How far a finger may wander before the hold counts as a scroll instead of a lift. */
-const SLOP = 8;
+import { HOLD_MS, HOLD_SLOP } from "./PressHold";
+
 /** How far a pressed mouse moves before it picks the row up; a mouse lifts at once, as drag and drop does on a computer. */
 const MOUSE_SLOP = 4;
 const SLOT = "[data-slot]";
@@ -91,7 +90,7 @@ export class RowDrag {
 		const mouse = event.pointerType === "mouse";
 		this.pressed = { element, kind: row ? "row" : "header", x: event.clientX, y: event.clientY, mouse };
 		window.clearTimeout(this.timer);
-		if (!mouse) this.timer = window.setTimeout(() => this.lift(), LIFT_MS);
+		if (!mouse) this.timer = window.setTimeout(() => this.lift(), HOLD_MS);
 	};
 
 	private lift(): void {
@@ -166,7 +165,7 @@ export class RowDrag {
 		if (pressed.mouse && moved > MOUSE_SLOP) {
 			this.lift();
 			this.move(event.clientY);
-		} else if (!pressed.mouse && moved > SLOP) this.release();
+		} else if (!pressed.mouse && moved > HOLD_SLOP) this.release();
 	};
 
 	private readonly touchMove = (event: TouchEvent) => {

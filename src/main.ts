@@ -83,14 +83,17 @@ export default class MarbleHabitTrackerPlugin extends Plugin implements Settings
 		this.refreshViews();
 	}
 
-	async calibrateMarbleSizes(end: () => void): Promise<void> {
+	async calibrateMarbles(end: () => void): Promise<void> {
 		const view = await this.openGrid();
 		if (!view) {
 			end();
 			return;
 		}
-		view.calibrateSizes((sizes) => {
-			this.config.marbleSizes = sizes;
+		view.calibrateMarbles((feel) => {
+			this.config.marbleSizes = feel.sizes;
+			this.config.speed = feel.speed;
+			this.config.gravity = feel.gravity;
+			this.config.bounce = feel.bounce;
 			void this.saveSettings();
 		}, end);
 	}
