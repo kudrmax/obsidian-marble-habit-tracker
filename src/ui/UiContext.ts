@@ -14,6 +14,4 @@ export interface UiContext {
 	labels(): RecipeLabels;
 	openHabit(path: string, leaf?: WorkspaceLeaf): void;
 	newHabit(): void;
-	/** Remembers, in synced settings, that the help behind "?" was opened. */
-	markHintsSeen(): void;
 }

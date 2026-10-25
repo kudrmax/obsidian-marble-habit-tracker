@@ -37,8 +37,6 @@ export interface HabitSettings {
 	/** Habits may be marked as done without their trigger. */
 	notAtTrigger: boolean;
 	wins: WinRule;
-	/** The help behind Today's "?" was opened once; until then the button carries a dot. */
-	hintsSeen: boolean;
 	haptics: boolean;
 }
 
@@ -66,7 +64,6 @@ export const DEFAULT_SETTINGS: HabitSettings = {
 	cursorPush: true,
 	notAtTrigger: false,
 	wins: DEFAULT_WIN_RULE,
-	hintsSeen: false,
 	haptics: true,
 };
 
@@ -108,7 +105,6 @@ export function loadSettings(data: unknown): HabitSettings {
 		cursorPush: flag(raw.cursorPush, DEFAULT_SETTINGS.cursorPush),
 		notAtTrigger: flag(raw.notAtTrigger, DEFAULT_SETTINGS.notAtTrigger),
 		wins: loadWins(raw.wins),
-		hintsSeen: flag(raw.hintsSeen, DEFAULT_SETTINGS.hintsSeen),
 		haptics: flag(raw.haptics, DEFAULT_SETTINGS.haptics),
 	};
 }

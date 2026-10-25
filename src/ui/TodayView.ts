@@ -13,8 +13,6 @@ import { computeStats } from "../domain/Stats";
 import { DayWatcher } from "./DayWatcher";
 import { EditSheet } from "./EditSheet";
 import { Haptics } from "./Haptics";
-import { helpRows } from "./help";
-import { HelpModal } from "./HelpModal";
 import { Hsl, parseColor } from "./jar/color";
 import { MarbleSizes, floorScale, scaleSizes } from "./jar/JarAssets";
 import { JarCanvas, JarItem } from "./jar/JarCanvas";
@@ -571,7 +569,7 @@ export class TodayView extends ItemView {
 
 	/**
 	 * The tray's buttons over the calendar, small and round: on Today, how many answered habits are hidden (a tap shows
-	 * them) and All habits; on both screens, a new habit and the help.
+	 * them) and All habits; on both screens, a new habit.
 	 */
 	private renderTools(hidden: number, foldable: boolean): HTMLElement {
 		const tools = createDiv("th-tools");
@@ -594,14 +592,6 @@ export class TodayView extends ItemView {
 			button("All habits", "list", () => this.showAll());
 		}
 		button("New habit", "plus", () => this.ui.newHabit());
-		const help = tools.createEl("button", { cls: "th-tool th-tool-help", text: "?", attr: { "aria-label": "How it works", "data-tooltip-position": "top" } });
-		help.toggleClass("th-has-dot", !this.ui.settings().hintsSeen);
-		help.addEventListener("click", () => {
-			const settings = this.ui.settings();
-			const offTrigger = settings.notAtTrigger ? { trigger: this.ui.labels().of("anchor"), win: settings.wins.offTrigger } : null;
-			new HelpModal(this.app, helpRows(Platform.isMobile, settings.merge, offTrigger, settings.gridDays)).open();
-			this.ui.markHintsSeen();
-		});
 		return tools;
 	}
 
