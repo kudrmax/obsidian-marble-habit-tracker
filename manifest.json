@@ -1,7 +1,7 @@
 {
   "id": "marble-habit-tracker",
   "name": "Marble Habit Tracker",
-  "version": "1.29.0",
+  "version": "1.30.0",
   "minAppVersion": "1.7.2",
   "description": "A habit tracker where every win drops a marble into a jar. Close the day, watch the marbles merge, tilt your phone to roll them. Habits live in Markdown notes.",
   "author": "kudrmax",
