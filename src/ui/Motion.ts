@@ -6,8 +6,6 @@ export const SPRING = "cubic-bezier(0.34, 1.4, 0.64, 1)";
 export const LEAVE_HOLD_MS = 420;
 const LEAVE_FOLD_MS = 280;
 export const LEAVE_MS = LEAVE_HOLD_MS + LEAVE_FOLD_MS;
-/** Something answered closes as fast as an answered row folds. */
-export const CLOSE_MS = LEAVE_FOLD_MS;
 
 const DAY_MS = 260;
 const PUSH_MS = 380;
@@ -23,8 +21,11 @@ const BUMP_SCALE = 1.08;
  */
 const SLIDE_MS = 320;
 const FADE_MS = 160;
+/** A menu grows out of its control from this share of its size, and fades when it goes. */
+const MENU_MS = 240;
+const MENU_FROM = 0.5;
 /** Long enough for any move a tap starts to have played out. */
-export const SETTLE_MS = Math.max(SLIDE_MS, GROW_MS, LEAVE_FOLD_MS);
+export const SETTLE_MS = Math.max(SLIDE_MS, GROW_MS, LEAVE_FOLD_MS, MENU_MS);
 /** How far past the view's edge the choices wait. */
 const OFF_EDGE = 4;
 
@@ -83,18 +84,26 @@ export class Motion {
 		);
 	}
 
-	/** Something answered `since` ms ago folds to nothing at once, carrying on from where it was after a redraw. */
-	close(element: HTMLElement, since: number): void {
+	/** A menu grows out of the control it belongs to, from the point its transform-origin names, as on iOS. */
+	popOut(menu: HTMLElement): void {
 		if (this.reduced()) return;
-		element.addClass("is-closing");
-		const animation = element.animate(
+		menu.animate(
 			[
-				{ height: `${element.offsetHeight}px`, opacity: 1 },
-				{ height: "0px", opacity: 0 },
+				{ opacity: 0, transform: `scale(${MENU_FROM})` },
+				{ opacity: 1, transform: "none" },
 			],
-			{ duration: CLOSE_MS, easing: SETTLE, fill: "forwards" },
+			{ duration: MENU_MS, easing: SETTLE },
 		);
-		animation.currentTime = Math.min(Math.max(0, Date.now() - since), CLOSE_MS);
+	}
+
+	/** Something going away fades where it is; resolves when it has. */
+	fadeOut(element: HTMLElement): Promise<void> {
+		if (this.reduced()) return Promise.resolve();
+		const animation = element.animate([{ opacity: 1 }, { opacity: 0 }], { duration: FADE_MS, easing: SETTLE, fill: "forwards" });
+		return animation.finished.then(
+			() => undefined,
+			() => undefined,
+		);
 	}
 
 	/** Something about to close folds away first; resolves when it is gone. */

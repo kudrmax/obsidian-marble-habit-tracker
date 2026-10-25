@@ -1,5 +1,5 @@
 /**
- * The measures the calendar lays itself out with in code. Each one is also a token in styles.css, named in
+ * The measures Today lays itself out with in code. Each one is also a token in styles.css, named in
  * DESIGN_TOKENS; tests/styles.test.ts fails when the two differ, so they change together.
  */
 export const DESIGN = {
@@ -17,6 +17,10 @@ export const DESIGN = {
 	dayRingStroke: 2,
 	/** The rounded corners of the tray's top edge, which the marbles roll along. */
 	trayCorner: 24,
+	/** The room between the view's sides and the list, which a menu keeps too. */
+	gutter: 20,
+	/** How far the menu of reasons stands off its Skip and the view's edges. */
+	reasonsOffset: 8,
 } as const;
 
 export type DesignMeasure = keyof typeof DESIGN;
@@ -30,6 +34,8 @@ export const DESIGN_TOKENS: Readonly<Record<DesignMeasure, string>> = {
 	ring: "--th-ring",
 	dayRingStroke: "--th-day-ring-stroke",
 	trayCorner: "--th-radius-tray",
+	gutter: "--th-gutter",
+	reasonsOffset: "--th-space-8",
 };
 
 /** A date's ring drawn inside its box, its stroke kept within. */

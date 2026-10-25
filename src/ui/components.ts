@@ -9,7 +9,7 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 const SPARK_PATH = "M0 -10 C1.2 -2.6 2.6 -1.2 10 0 C2.6 1.2 1.2 2.6 0 10 C-1.2 2.6 -2.6 1.2 -10 0 C-2.6 -1.2 -1.2 -2.6 0 -10 Z";
 const WEEKDAY_LETTERS: Record<Weekday, string> = { mon: "M", tue: "T", wed: "W", thu: "T", fri: "F", sat: "S", sun: "S" };
 
-export type IconName = "check" | "x" | "minus" | "plus" | "spark" | "shrink" | "back" | "unlink";
+export type IconName = "check" | "x" | "minus" | "plus" | "spark" | "shrink" | "back" | "unlink" | "pencil";
 
 const LUCIDE: Partial<Record<IconName, string>> = { shrink: "minimize-2", back: "chevron-left" };
 
@@ -92,12 +92,6 @@ export function iconButton(parent: HTMLElement, options: ButtonOptions): HTMLBut
 	const button = parent.createEl("button", { cls, attr: { "aria-label": options.label, title: options.label } });
 	icon(button, options.icon);
 	button.addEventListener("click", (event) => options.onClick(event));
-	return button;
-}
-
-export function chip(parent: HTMLElement, text: string, onClick: () => void, variant?: "quiet" | "strong"): HTMLButtonElement {
-	const button = parent.createEl("button", { cls: variant ? ["th-chip", `th-chip-${variant}`] : "th-chip", text });
-	button.addEventListener("click", onClick);
 	return button;
 }
 
