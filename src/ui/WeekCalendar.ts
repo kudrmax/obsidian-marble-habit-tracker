@@ -1,7 +1,7 @@
 import { LocalDate } from "../domain/LocalDate";
 import { dayRing, toolButton } from "./components";
 import { CalendarDay, CalendarMonth, StripDay, calendarMonths, calendarWeek, dayTitle, donePercent, monthTitle, monthWeeks } from "./today";
-import { daysUpTo, mondayOf } from "./week";
+import { daysUpTo, mondayOf, stepDays } from "./week";
 
 const WEEK_DAYS = 7;
 
@@ -27,7 +27,7 @@ export class WeekCalendar {
 	private pick: (day: LocalDate) => void = () => undefined;
 	/** The whole month on show, instead of one week. */
 	private open = false;
-	/** Over the grid: the grid's days up to the shown day, and the arrows step the shown day as many days. */
+	/** Over the grid: the grid's days up to the shown day, and the arrows step the shown day a day at a time. */
 	private grid = false;
 	/** Over the grid, the day being answered. */
 	private focus: LocalDate | null = null;
@@ -70,7 +70,7 @@ export class WeekCalendar {
 
 	/**
 	 * Over the grid: the `count` days up to the shown day as its columns' dates, plain, with the day being answered picked.
-	 * The month's name names the shown day's month, and the arrows step `count` days.
+	 * The month's name names the shown day's month, and the arrows step a day.
 	 */
 	follow(days: readonly StripDay[], shown: LocalDate, today: LocalDate, pick: (day: LocalDate) => void, focus: LocalDate | null, count: number): void {
 		this.grid = true;
@@ -91,7 +91,7 @@ export class WeekCalendar {
 	}
 
 	/** The month's arrows: Today's round tools, with a chevron; their labels follow what they step. */
-	private arrow(line: HTMLElement, chevron: string, step: number): HTMLButtonElement {
+	private arrow(line: HTMLElement, chevron: string, step: -1 | 1): HTMLButtonElement {
 		const button = toolButton(line, "", chevron, () => this.turn(step));
 		button.addClass("th-cal-arrow");
 		return button;
@@ -106,14 +106,14 @@ export class WeekCalendar {
 
 	/**
 	 * A week or a month before or after the one on show, never past this week nor before the calendar starts. Over the
-	 * grid, the day as many days away as the grid shows is picked, today at the latest.
+	 * grid, a day back or on, as the arrows by the phone's folded days step.
 	 */
-	private turn(step: number): void {
+	private turn(step: -1 | 1): void {
 		const today = this.today;
 		if (!today || !this.week) return;
 		if (this.grid) {
-			const end = this.week.addDays(this.count * step);
-			if (this.canStep(step)) this.pick(end.isAfter(today) ? today : end);
+			const end = stepDays(this.week, step, today, this.months);
+			if (end) this.pick(end);
 			return;
 		}
 		if (this.open) {
@@ -124,15 +124,6 @@ export class WeekCalendar {
 			this.week = week;
 		}
 		this.render();
-	}
-
-	/** Over the grid, a step on goes as far as today, and a step back no earlier than the calendar's first day. */
-	private canStep(step: number): boolean {
-		const today = this.today;
-		const first = this.days[0]?.date;
-		const end = this.week;
-		if (!today || !first || !end) return false;
-		return step > 0 ? end.isBefore(today) : !end.addDays(-this.count).isBefore(first);
 	}
 
 	private canShowWeek(day: LocalDate): boolean {
@@ -164,10 +155,10 @@ export class WeekCalendar {
 			const row = this.weeks.createDiv("th-week-row");
 			for (const day of days) this.renderDay(row, day, today);
 		}
-		this.previous.setAttr("aria-label", this.grid ? "Five days back" : this.open ? "Previous month" : "Previous week");
-		this.next.setAttr("aria-label", this.grid ? "Five days on" : this.open ? "Next month" : "Next week");
-		this.previous.disabled = this.grid ? !this.canStep(-1) : this.open ? this.monthIndex <= 0 : !this.canShowWeek(week.addDays(-WEEK_DAYS));
-		this.next.disabled = this.grid ? !this.canStep(1) : this.open ? this.monthIndex >= this.months.length - 1 : !this.canShowWeek(week.addDays(WEEK_DAYS));
+		this.previous.setAttr("aria-label", this.grid ? "Previous day" : this.open ? "Previous month" : "Previous week");
+		this.next.setAttr("aria-label", this.grid ? "Next day" : this.open ? "Next month" : "Next week");
+		this.previous.disabled = this.grid ? !stepDays(week, -1, today, this.months) : this.open ? this.monthIndex <= 0 : !this.canShowWeek(week.addDays(-WEEK_DAYS));
+		this.next.disabled = this.grid ? !stepDays(week, 1, today, this.months) : this.open ? this.monthIndex >= this.months.length - 1 : !this.canShowWeek(week.addDays(WEEK_DAYS));
 	}
 
 	/** The month a week belongs to: the one its Thursday is in, as calendars count weeks. */

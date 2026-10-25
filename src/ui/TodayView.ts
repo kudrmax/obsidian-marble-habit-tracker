@@ -530,7 +530,7 @@ export class TodayView extends ItemView {
 	/**
 	 * The calendar in the tray, on Today and in All habits, with the shown day picked; a tap on a day shows it on Today.
 	 * Over the grid the calendar's row is the grid's own days, a date over or under each column, the day being answered
-	 * picked: the folded tray's on a phone, the week over the list on a computer, whose arrows step as many days. Pulled
+	 * picked: the folded tray's on a phone, the week over the list on a computer. On both the arrows by them step a day. Pulled
 	 * up, the phone's tray marks them on the month with a band, and moving it moves the grid's days.
 	 */
 	private renderCalendar(all: readonly HabitEntry[]): void {
@@ -544,7 +544,7 @@ export class TodayView extends ItemView {
 		if (grid) this.tray?.showRange(days, today, { end: shown, count, move: (end) => this.moveDays(end) });
 		else this.tray?.show(days, shown, today, pick);
 		this.tray?.setStrip(grid ? { days: daysUpTo(days, shown, today, count), focus } : null);
-		if (grid) this.week?.follow(days, shown, today, pick, focus, count);
+		if (grid) this.week?.follow(days, shown, today, (end) => this.moveDays(end), focus, count);
 		else this.week?.show(days, shown, today, pick);
 	}
 

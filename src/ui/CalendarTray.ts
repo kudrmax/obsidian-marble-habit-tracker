@@ -1,5 +1,6 @@
 import { LocalDate } from "../domain/LocalDate";
 import { toolButton } from "./components";
+import { stepDays } from "./week";
 import { DAY_RING_LENGTH, DAY_RING_RADIUS, DESIGN } from "./design";
 import { Box } from "./jar/JarPhysics";
 import { CalendarDay, CalendarMonth, StripDay, calendarMonths, dayTitle, donePercent, monthTitle, trayWeeks } from "./today";
@@ -302,11 +303,11 @@ export class CalendarTray {
 		this.stripDays = strip?.days.map((day) => day.date) ?? [];
 		const range = this.range;
 		if (strip && range && this.today) {
-			const first = this.months[0];
-			const earliest = first ? LocalDate.of(first.year, first.month, 1) : this.today;
-			const latest = !range.end.isBefore(this.today);
-			this.arrow(this.steps, "Previous day", "chevron-left", () => this.moveTo(range.end.addDays(-1))).disabled = !range.end.isAfter(earliest);
-			this.arrow(this.steps, "Next day", "chevron-right", () => this.moveTo(range.end.addDays(1))).disabled = latest;
+			const back = stepDays(range.end, -1, this.today, this.months);
+			const on = stepDays(range.end, 1, this.today, this.months);
+			const latest = !on;
+			this.arrow(this.steps, "Previous day", "chevron-left", () => back && this.moveTo(back)).disabled = !back;
+			this.arrow(this.steps, "Next day", "chevron-right", () => on && this.moveTo(on)).disabled = !on;
 			if (!latest) this.todayButton(this.steps);
 			this.latest.toggle(!latest);
 			this.writeToday(this.latest);
