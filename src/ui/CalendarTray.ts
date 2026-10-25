@@ -19,6 +19,8 @@ const REST_LIFT = DESIGN.weekRow / 2 + BOTTOM_GAP - REST_HEIGHT / 2;
 const FIGURES = "0123456789";
 /** How far the tray rises before this week's row is whole. */
 const ROW_WHOLE = DESIGN.weekRow + DESIGN.grip + BOTTOM_GAP - REST_HEIGHT;
+/** A line put over the tray's first line takes as much room as the folded tray gives its dates. */
+const TOP_LINE = REST_HEIGHT - DESIGN.grip - BOTTOM_GAP + REST_LIFT;
 /** How far the tray rises while the rings draw themselves round: up to its first stop, with the head open. */
 const RINGS_DRAWN = ROW_WHOLE + HEAD;
 /** The furthest the tray goes up: enough for a month of six weeks, and over the week's grid the week before it. */
@@ -106,6 +108,11 @@ export class CalendarTray {
 	private readonly weeks: HTMLElement;
 	/** Over the week's grid, arrows in the folded row that move its days a day at a time. */
 	private readonly steps: HTMLElement;
+	/** A line over the first one, the tray grown by it: see `setTopLine`. */
+	private readonly topLine: HTMLElement;
+	/** How much of the top line's room is open now; it opens and closes as the tray settles. */
+	private lineRoom = 0;
+	private lineFrame = 0;
 	private days: readonly StripDay[] = [];
 	/** Over the week's grid, the days the folded row shows. */
 	private stripDays: readonly LocalDate[] = [];
@@ -192,6 +199,7 @@ export class CalendarTray {
 		this.latest = this.todayButton(line);
 		this.tools = line.createDiv("th-cal-tools");
 		this.steps = this.calendar.createDiv("th-cal-steps");
+		this.topLine = this.tray.createDiv("th-tray-line");
 		this.tray.addEventListener("pointerdown", this.pointerDown);
 		window.addEventListener("pointermove", this.pointerMove);
 		window.addEventListener("pointerup", this.pointerUp);
@@ -215,6 +223,8 @@ export class CalendarTray {
 	destroy(): void {
 		this.resizer.disconnect();
 		cancelAnimationFrame(this.settleFrame);
+		cancelAnimationFrame(this.lineFrame);
+		this.settleFrame = 0;
 		window.removeEventListener("pointermove", this.pointerMove);
 		window.removeEventListener("pointerup", this.pointerUp);
 		window.removeEventListener("pointercancel", this.pointerCancel);
@@ -234,6 +244,29 @@ export class CalendarTray {
 		this.fitTitle();
 	}
 
+	/**
+	 * Puts `line` over the tray's first line, or takes it away: the tray grows by a line at its top for it, everything
+	 * under it staying where it was, so this week's dates, the month's line and Today's buttons all stay in reach. The
+	 * line rides the tray as it moves and folds under the finger, with it as without.
+	 */
+	setTopLine(line: HTMLElement | null): void {
+		if (line) {
+			this.topLine.empty();
+			this.topLine.appendChild(line);
+		}
+		this.openLine(line ? TOP_LINE : 0);
+	}
+
+	/** How far the tray's top edge stands above where it rests folded. */
+	raisedBy(): number {
+		return Math.max(0, this.raised) + this.lineRoom;
+	}
+
+	/** Whether the tray is moving: a finger on it, or settling where it was let go. */
+	isMoving(): boolean {
+		return this.drag !== null || this.bandDrag !== null || this.settleFrame !== 0;
+	}
+
 	/** The tray keeps its place while `held` says so; call `refit` once it no longer holds. */
 	holdWhile(held: () => boolean): void {
 		this.held = held;
@@ -249,7 +282,7 @@ export class CalendarTray {
 
 	/** The tray where it is now, as the box the marbles stand on. */
 	box(): Box {
-		return { left: 0, top: this.restTop - this.raised, right: this.width, bottom: this.height, radius: DESIGN.trayCorner };
+		return { left: 0, top: this.restTop - this.raised - this.lineRoom, right: this.width, bottom: this.height, radius: DESIGN.trayCorner };
 	}
 
 	/**
@@ -732,7 +765,7 @@ export class CalendarTray {
 	 * rest, not every frame it moves, so the list isn't laid out again all the way.
 	 */
 	private room(): void {
-		const height = Math.round(this.root.clientHeight - this.restTop + this.raised);
+		const height = Math.round(this.root.clientHeight - this.restTop + this.raised + this.lineRoom);
 		if (height === this.roomHeight) return;
 		this.roomHeight = height;
 		this.root.style.setProperty("--th-tray-height", `${height}px`);
@@ -748,7 +781,7 @@ export class CalendarTray {
 		this.width = this.root.clientWidth;
 		const restTop = height - this.inset - REST_HEIGHT;
 		this.restTop = restTop;
-		const top = restTop - this.raised;
+		const top = restTop - this.raised - this.lineRoom;
 		// The tray's own position goes on the tray, so only it is styled again as it moves, not the whole view.
 		this.tray.style.setProperty("--th-tray-top", `${top}px`);
 		if (this.ready && top !== this.lastTop) this.onMove();
@@ -780,6 +813,27 @@ export class CalendarTray {
 		this.tray.toggleClass("is-up", up);
 	}
 
+	/**
+	 * Opens the top line's room to `target`, or closes it, on the tray's settling curve: the tray's top edge rises or
+	 * falls by it and the marbles on it with it. Closed, the line goes.
+	 */
+	private openLine(target: number): void {
+		cancelAnimationFrame(this.lineFrame);
+		const from = this.lineRoom;
+		const start = performance.now();
+		const step = (now: number) => {
+			const t = Math.min(1, (now - start) / SETTLE_MS);
+			this.lineRoom = from + (target - from) * easeOut(t);
+			this.tray.style.setProperty("--th-line-room", `${this.lineRoom.toFixed(2)}px`);
+			this.place();
+			if (t < 1) return void (this.lineFrame = requestAnimationFrame(step));
+			this.lineFrame = 0;
+			this.room();
+			if (target === 0) this.topLine.empty();
+		};
+		this.lineFrame = requestAnimationFrame(step);
+	}
+
 	/** Where the finger puts the tray, giving way less and less past either end of its range. */
 	private bounded(raised: number): number {
 		const max = this.maxUp();
@@ -791,6 +845,7 @@ export class CalendarTray {
 	private readonly pointerDown = (event: PointerEvent) => {
 		if (event.button !== 0 || this.grabBand(event)) return;
 		cancelAnimationFrame(this.settleFrame);
+		this.settleFrame = 0;
 		this.drag = { pointer: event.pointerId, startY: event.clientY, startRaised: this.raised, lastY: event.clientY, lastAt: event.timeStamp, speed: 0, moving: false };
 	};
 
@@ -944,6 +999,7 @@ export class CalendarTray {
 			this.raised = from + (to - from) * easeOut(t);
 			this.place();
 			if (t < 1) return void (this.settleFrame = requestAnimationFrame(step));
+			this.settleFrame = 0;
 			this.room();
 			if (to <= 0 && this.revealed()) this.forget();
 		};

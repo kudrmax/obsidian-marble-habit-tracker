@@ -29,12 +29,15 @@ import { IN_HAND, TiltSensor } from "./jar/TiltSensor";
 import { Placement, arrange, groupBySection, visibleEntries } from "./order";
 import { Drop, RowDrag } from "./RowDrag";
 import { PressHold } from "./PressHold";
+import { LastAnswer } from "./LastAnswer";
+import { MarkChange } from "./undo";
+import { undoLine } from "./UndoLine";
 import { SectionNameModal } from "./SectionNameModal";
 import { MarbleCalibration } from "./MarbleCalibration";
 import { ScreenChrome } from "./ScreenChrome";
 import { WeekCalendar } from "./WeekCalendar";
 import { WeekGrid } from "./WeekGrid";
-import { closedDayLine, dayStrip, dayTitle, winsLabel, offersShrink, todayEntries } from "./today";
+import { MARK_WORDS, closedDayLine, dayStrip, dayTitle, winsLabel, offersShrink, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
 import { daysTitle, daysUpTo, weekCells } from "./week";
 
@@ -50,8 +53,6 @@ const ARC_STAGGER_MS = 90;
 /** How long the circle of a just-marked habit keeps popping, while its row is still on screen. */
 const POP_MS = 450;
 const CAPTION_MS = 2000;
-/** The word on each answer: short and the same whatever the recipe's fields are called. */
-const CHOICE_WORDS: Record<Answer, string> = { full: "Full", tiny: "Tiny", offTrigger: "Anytime", skip: "Skip" };
 const ANSWER_MARKS: Record<Answer, DayMark> = { full: FULL, tiny: TINY, offTrigger: OFF_TRIGGER, skip: SKIPPED };
 const DAY_CHECK_MS = 60_000;
 /** Obsidian re-reads a note a moment after it is written, so the tap point has to wait for the new mark. */
@@ -81,6 +82,8 @@ export class TodayView extends ItemView {
 	private scrollEl!: HTMLElement;
 	private columnEl!: HTMLElement;
 	private captionEl: HTMLElement | null = null;
+	/** On a computer, the capsule that offers to undo the last answer; on a phone its line tops the tray. */
+	private undoEl: HTMLElement | null = null;
 	private jar: JarCanvas | null = null;
 	private chrome: ScreenChrome | null = null;
 	private keyboard: KeyboardWatch | null = null;
@@ -116,6 +119,7 @@ export class TodayView extends ItemView {
 	private readonly origins = new Map<string, { point: Point; at: number }>();
 	private readonly colors = new Map<string, Hsl>();
 	private readonly haptics = new Haptics(() => this.ui.settings().haptics);
+	private readonly lastAnswer = new LastAnswer((change) => this.showUndo(change));
 	private readonly motion = new Motion(() => this.ui.settings().reduceMotion);
 	/** Rows just answered, with when: they stay in the list until they have folded away. */
 	private readonly leaving = new Map<string, number>();
@@ -233,6 +237,7 @@ export class TodayView extends ItemView {
 		this.keyboard = keyboard;
 		this.jar.holdWhile(() => keyboard.isOpen());
 		this.tray?.holdWhile(() => keyboard.isOpen());
+		this.lastAnswer.holdWhile(() => this.tray?.isMoving() ?? false);
 		this.registerEvent(this.app.workspace.on("layout-change", () => this.chrome?.measure()));
 		this.registerDomEvent(window, "resize", () => this.chrome?.measure());
 		this.registerEvent(
@@ -285,6 +290,7 @@ export class TodayView extends ItemView {
 		this.panel = null;
 		window.clearTimeout(this.captionTimer);
 		window.clearTimeout(this.stylesTimer);
+		this.lastAnswer.destroy();
 		for (const timer of this.celebrating.values()) window.clearTimeout(timer);
 	}
 
@@ -407,6 +413,12 @@ export class TodayView extends ItemView {
 	/** The marbles fall over the list and stand on the calendar's tray, wherever it is, above Obsidian's bars. */
 	private updateFloor(): void {
 		this.jar?.setObstacles(this.tray ? [...this.shelves, this.tray.box()] : this.shelves);
+		this.liftCaption();
+	}
+
+	/** The celebration line stands over the tray's top edge wherever the tray is, so a tray pulled up never covers it. */
+	private liftCaption(): void {
+		if (this.tray) this.captionEl?.style.setProperty("--th-tray-raised", `${this.tray.raisedBy()}px`);
 	}
 
 	/** Starts what moves after a redraw: rows folding away, a new day or screen sliding in, a recipe growing open. */
@@ -802,7 +814,7 @@ export class TodayView extends ItemView {
 		const mirrored = side === "right";
 		const addCancel = () => this.answerButton(bar, "Cancel", ["th-choice-cancel"], "x").addEventListener("click", () => this.closeChoices());
 		const addAnswer = ({ answer, label, look, sign }: ReturnType<TodayView["answers"]>[number]) => {
-			const button = this.answerButton(bar, label, look, sign, CHOICE_WORDS[answer]);
+			const button = this.answerButton(bar, label, look, sign, MARK_WORDS[ANSWER_MARKS[answer].kind]);
 			button.dataset.answer = answer;
 			button.setAttr("aria-pressed", String(mark?.kind === ANSWER_MARKS[answer].kind));
 			button.toggleClass("is-picked", answer === "skip" && this.reasons?.path === path);
@@ -1024,6 +1036,7 @@ export class TodayView extends ItemView {
 		const { path } = open;
 		const day = this.answerDay();
 		const mark = missed(reason);
+		const before = this.markOn(path, day);
 		this.haptics.tap();
 		this.save(path, day, mark);
 		this.origins.delete(path);
@@ -1031,6 +1044,7 @@ export class TodayView extends ItemView {
 		this.reasons = null;
 		this.menu = null;
 		const habit = this.shownHabit(path);
+		if (habit) this.lastAnswer.offer({ path, name: habit.name, day, before, after: mark });
 		const { redesignThreshold, shrinkReason } = this.ui.settings();
 		this.shrink = habit && offersShrink(habit, mark, redesignThreshold, shrinkReason) ? path : null;
 		if (!this.shrink && this.foldsAnswered()) this.startLeaving(path);
@@ -1168,6 +1182,7 @@ export class TodayView extends ItemView {
 	private async answer(path: string, mark: DayMark | undefined, event?: MouseEvent): Promise<void> {
 		const day = this.answerDay();
 		const cell = this.cellKey(path, day);
+		const before = this.markOn(path, day);
 		const win = isWin(mark, this.ui.settings().wins);
 		if (!win) this.origins.delete(path);
 		const target = event?.currentTarget as HTMLElement | null | undefined;
@@ -1179,6 +1194,7 @@ export class TodayView extends ItemView {
 			this.unwritten.delete(cell);
 			this.pending.set(path, day, mark);
 			const habit = await this.write(path, day, mark);
+			this.lastAnswer.offer({ path, name: habit.name, day, before, after: mark });
 			this.menu = null;
 			this.reasons = null;
 			this.shrink = mark && offersShrink(habit, mark, this.ui.settings().redesignThreshold, this.ui.settings().shrinkReason) ? path : null;
@@ -1195,6 +1211,36 @@ export class TodayView extends ItemView {
 			this.pending.drop(path, day);
 			new Notice(error instanceof Error ? error.message : String(error));
 		}
+		this.render();
+	}
+
+	/** A habit's answer for a day, as Today shows it: the vault's, or one just chosen and not yet written. */
+	private markOn(path: string, day: LocalDate): DayMark | undefined {
+		return this.shownHabit(path)?.markOn(day);
+	}
+
+	/** Shows the last answer with Undo, or takes it away: on a phone over the tray's first line, the tray grown by it; on a computer in a capsule. */
+	private showUndo(change: MarkChange | null): void {
+		this.undoEl?.remove();
+		this.undoEl = null;
+		const line = change ? undoLine(change, this.ui.service.today(), () => this.undo(), () => this.lastAnswer.dismiss()) : null;
+		if (this.tray) return this.tray.setTopLine(line);
+		this.contentEl.toggleClass("has-undo", line !== null);
+		if (!line) return;
+		line.addClass("is-floating");
+		this.undoEl = this.contentEl.appendChild(line);
+	}
+
+	/** Puts the last answer's habit and day back the way they were before it, at once, the note written after. */
+	private undo(): void {
+		const change = this.lastAnswer.take();
+		if (!change) return;
+		this.haptics.tap();
+		this.stopCelebrating(this.cellKey(change.path, change.day));
+		this.leaving.delete(change.path);
+		if (this.reasons?.path === change.path) this.reasons = null;
+		if (this.shrink === change.path) this.shrink = null;
+		this.save(change.path, change.day, change.before);
 		this.render();
 	}
 
@@ -1255,6 +1301,7 @@ export class TodayView extends ItemView {
 		this.captionEl?.remove();
 		window.clearTimeout(this.captionTimer);
 		this.captionEl = this.contentEl.createDiv({ cls: ["th-caption", colorClass(habit.color)], text });
+		this.liftCaption();
 		this.captionTimer = window.setTimeout(() => {
 			this.captionEl?.remove();
 			this.captionEl = null;
