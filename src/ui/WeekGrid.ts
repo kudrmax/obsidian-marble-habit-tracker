@@ -1,13 +1,13 @@
-import { DayMark } from "../domain/DayMark";
 import { LocalDate } from "../domain/LocalDate";
 import { markCircle } from "./components";
+import { PressHold } from "./PressHold";
 import { dayTitle } from "./today";
 import { WeekCell } from "./week";
 
-/** What the circles do: a click on an empty one opens the answers, on a marked one clears it; a right-click opens the answers. */
+/** What the circles do: a click on an empty one opens the answers, a hold on a marked one clears it; a right-click opens the answers. */
 export interface WeekGridActions {
-	tap(path: string, day: LocalDate, mark: DayMark | undefined): void;
 	choose(path: string, day: LocalDate): void;
+	clear(path: string, day: LocalDate): void;
 }
 
 export interface WeekGridState {
@@ -21,7 +21,10 @@ export interface WeekGridState {
  * phone, so the grid draws none.
  */
 export class WeekGrid {
-	constructor(private readonly actions: WeekGridActions) {}
+	constructor(
+		private readonly actions: WeekGridActions,
+		private readonly hold: PressHold,
+	) {}
 
 	render(parent: HTMLElement, path: string, cells: readonly WeekCell[], state: WeekGridState): void {
 		const strip = parent.createDiv("th-grid-strip");
@@ -34,9 +37,10 @@ export class WeekGrid {
 			return;
 		}
 		const button = strip.createEl("button", { cls: "th-grid-cell" });
-		button.createSpan({ cls: "th-sr-only", text: `${dayTitle(cell.date, state.today)}: ${cell.mark ? "clear the mark" : "answer"}` });
+		button.createSpan({ cls: "th-sr-only", text: `${dayTitle(cell.date, state.today)}: ${cell.mark ? "hold to clear the mark" : "answer"}` });
 		markCircle(button, cell.mark).toggleClass("is-popping", state.popping(cell.date));
-		button.addEventListener("click", () => this.actions.tap(path, cell.date, cell.mark));
+		if (cell.mark) this.hold.attach(button, () => this.actions.clear(path, cell.date));
+		else button.addEventListener("click", () => this.actions.choose(path, cell.date));
 		button.addEventListener("contextmenu", (event) => {
 			event.preventDefault();
 			this.actions.choose(path, cell.date);

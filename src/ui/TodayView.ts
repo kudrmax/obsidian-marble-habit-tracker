@@ -26,6 +26,7 @@ import { Point } from "./jar/JarPhysics";
 import { IN_HAND, TiltSensor } from "./jar/TiltSensor";
 import { Placement, arrange, groupBySection, visibleEntries } from "./order";
 import { Drop, RowDrag } from "./RowDrag";
+import { PressHold } from "./PressHold";
 import { SectionNameModal } from "./SectionNameModal";
 import { MarbleCalibration } from "./MarbleCalibration";
 import { ScreenChrome } from "./ScreenChrome";
@@ -72,6 +73,7 @@ export class TodayView extends ItemView {
 	private chrome: ScreenChrome | null = null;
 	private keyboard: KeyboardWatch | null = null;
 	private rowDrag: RowDrag | null = null;
+	private hold: PressHold | null = null;
 	/** A redraw was asked for while a row was being dragged; it runs on drop. */
 	private stale = false;
 	private menu: string | null = null;
@@ -179,10 +181,15 @@ export class TodayView extends ItemView {
 			(drop) => this.dropped(drop),
 		);
 		this.jar = new JarCanvas(root, this.jarOptions());
-		this.grid = new WeekGrid({
-			tap: (path, day, mark) => this.tapCell(path, day, mark),
-			choose: (path, day) => this.showMenu(path, day),
-		});
+		const hold = new PressHold(root);
+		this.hold = hold;
+		this.grid = new WeekGrid(
+			{
+				choose: (path, day) => this.showMenu(path, day),
+				clear: (path, day) => this.clearMark(path, day),
+			},
+			hold,
+		);
 		// A phone keeps the days in a tray to pull up; a computer has the room to show them over the list, and a wide view
 		// grows the marbles so they still make a pile on its floor.
 		if (Platform.isMobile) this.tray = new CalendarTray(root, () => this.haptics.tap(), () => this.updateFloor());
@@ -242,6 +249,8 @@ export class TodayView extends ItemView {
 		this.keyboard = null;
 		this.rowDrag?.destroy();
 		this.rowDrag = null;
+		this.hold?.destroy();
+		this.hold = null;
 		this.jar?.destroy();
 		this.jar = null;
 		this.tray?.destroy();
@@ -886,7 +895,7 @@ export class TodayView extends ItemView {
 	private renderMark(parent: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {
 		const labels = this.ui.labels();
 		const choices = [habit.hasTiny ? labels.of("tiny") : "done", labels.of("full"), ...(this.canGoOffTrigger(habit) ? [`not at ${labels.of("anchor")}`] : [])];
-		const hint = mark ? "Clear the mark" : `Choose: ${choices.join(", ")} or skipped`;
+		const hint = mark ? "Hold to clear the mark" : `Choose: ${choices.join(", ")} or skipped`;
 		const button = parent.createEl("button", { cls: "th-mark-button", attr: { title: hint } });
 		button.createSpan({ cls: "th-sr-only", text: hint });
 		const circle = markCircle(button, mark);
@@ -897,11 +906,8 @@ export class TodayView extends ItemView {
 			event.preventDefault();
 			this.showMenu(path);
 		});
-		button.addEventListener("click", () => {
-			if (!mark) return this.showMenu(path);
-			this.haptics.tap();
-			void this.answer(path, undefined);
-		});
+		if (mark) this.hold?.attach(button, () => this.clearMark(path));
+		else button.addEventListener("click", () => this.showMenu(path));
 	}
 
 	private renderReasons(row: HTMLElement, path: string): void {
@@ -962,9 +968,8 @@ export class TodayView extends ItemView {
 		this.render();
 	}
 
-	/** A circle on the grid: an empty one opens the answers for its day, a marked one is cleared. */
-	private tapCell(path: string, day: LocalDate, mark: DayMark | undefined): void {
-		if (!mark) return this.showMenu(path, day);
+	/** A held marked circle: on the grid it clears the day of its own circle, on the list the shown day. */
+	private clearMark(path: string, day: LocalDate | null = null): void {
 		this.haptics.tap();
 		this.answering = day;
 		void this.answer(path, undefined);
