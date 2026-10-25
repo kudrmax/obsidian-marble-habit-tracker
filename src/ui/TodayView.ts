@@ -10,11 +10,12 @@ import { colorClass } from "./colors";
 import { IconName, chip, icon, iconButton, markCircle, toolButton } from "./components";
 import { recipeDays } from "./format";
 import { computeStats } from "../domain/Stats";
+import { MarbleFeel, marbleFeel } from "../settings";
 import { DayWatcher } from "./DayWatcher";
 import { EditSheet } from "./EditSheet";
 import { Haptics } from "./Haptics";
 import { Hsl, parseColor } from "./jar/color";
-import { MarbleSizes, floorScale, scaleSizes } from "./jar/JarAssets";
+import { floorScale, scaleSizes } from "./jar/JarAssets";
 import { JarCanvas, JarItem } from "./jar/JarCanvas";
 import { KeyboardWatch } from "./KeyboardWatch";
 import { LEAVE_MS, Motion, Side, Slide } from "./Motion";
@@ -26,7 +27,7 @@ import { IN_HAND, TiltSensor } from "./jar/TiltSensor";
 import { Placement, arrange, groupBySection, visibleEntries } from "./order";
 import { Drop, RowDrag } from "./RowDrag";
 import { SectionNameModal } from "./SectionNameModal";
-import { SizeCalibration } from "./SizeCalibration";
+import { MarbleCalibration } from "./MarbleCalibration";
 import { ScreenChrome } from "./ScreenChrome";
 import { WeekCalendar } from "./WeekCalendar";
 import { WeekGrid } from "./WeekGrid";
@@ -120,10 +121,10 @@ export class TodayView extends ItemView {
 	/** The choices as they stood when closed without an answer, to slide back out past the row's left edge. */
 	private leavingChoices: HTMLElement | null = null;
 	private shelves: readonly Box[] = [];
-	private calibration: SizeCalibration | null = null;
-	/** Sizes being tried on the sliders, shown instead of the saved ones until the calibration ends. */
-	private trialSizes: MarbleSizes | null = null;
-	private readonly tilt = new TiltSensor((gravity) => this.jar?.setGravity(gravity));
+	private calibration: MarbleCalibration | null = null;
+	/** The feel being tried on the sliders, shown instead of the saved one until the calibration ends. */
+	private trialFeel: MarbleFeel | null = null;
+	private readonly tilt = new TiltSensor((tilt) => this.jar?.setTilt(tilt));
 	/** How high the marbles last stood, as the list keeps room for them. */
 	private pile = -1;
 
@@ -260,12 +261,12 @@ export class TodayView extends ItemView {
 		this.render();
 	}
 
-	/** Puts the size sliders over Today: the marbles on screen follow them until they are saved or cancelled. */
-	calibrateSizes(save: (sizes: MarbleSizes) => void, end: () => void): void {
+	/** Puts the marble sliders over Today: the marbles on screen follow them until they are saved or cancelled. */
+	calibrateMarbles(save: (feel: MarbleFeel) => void, end: () => void): void {
 		this.calibration?.close();
-		this.calibration = new SizeCalibration(this.contentEl, this.ui.settings().marbleSizes, {
-			try: (sizes) => {
-				this.trialSizes = sizes;
+		this.calibration = new MarbleCalibration(this.contentEl, marbleFeel(this.ui.settings()), {
+			try: (feel) => {
+				this.trialFeel = feel;
 				this.jar?.setOptions(this.jarOptions());
 			},
 			drop: () => {
@@ -275,7 +276,7 @@ export class TodayView extends ItemView {
 			save,
 			end: () => {
 				this.calibration = null;
-				this.trialSizes = null;
+				this.trialFeel = null;
 				this.jar?.setOptions(this.jarOptions());
 				end();
 			},
@@ -1104,11 +1105,14 @@ export class TodayView extends ItemView {
 
 	private jarOptions() {
 		const settings = this.ui.settings();
+		const feel = this.trialFeel ?? marbleFeel(settings);
 		return {
 			material: settings.material,
 			reduceMotion: settings.reduceMotion,
-			sizes: scaleSizes(this.trialSizes ?? settings.marbleSizes, this.marbleScale),
-			speed: settings.speed / 100,
+			sizes: scaleSizes(feel.sizes, this.marbleScale),
+			speed: feel.speed / 100,
+			gravity: feel.gravity,
+			bounce: feel.bounce / 100,
 			screenCorners: this.ui.screenCorners(),
 			background: this.resolveVar("--background-primary"),
 			onImpact: (strength: number) => this.haptics.impact(strength),
@@ -1155,7 +1159,7 @@ export class TodayView extends ItemView {
 	private applyTilt(): void {
 		if (!this.tiltEnabled() || !Platform.isMobile) {
 			this.tilt.stop();
-			this.jar?.setGravity(IN_HAND);
+			this.jar?.setTilt(IN_HAND);
 			return;
 		}
 		if (!this.contentEl.isShown() || document.hidden) {

@@ -17,6 +17,8 @@ describe("loadSettings", () => {
 			material: "grain",
 			marbleSizes: { small: 24, medium: 44, big: 68 },
 			speed: 100,
+			gravity: 1000,
+			bounce: 20,
 			merge: { smallPerMedium: 7, mediumPerBig: 4 },
 			dayStartHour: 5,
 			gridDays: 5,
@@ -48,6 +50,8 @@ describe("loadSettings", () => {
 				material: "halftone",
 				marbleSizes: { small: 20, medium: 48, big: 80 },
 				speed: 150,
+				gravity: 2500,
+				bounce: 70,
 				merge: { smallPerMedium: 5, mediumPerBig: 3 },
 				dayStartHour: 3,
 				gridDays: 7,
@@ -74,6 +78,8 @@ describe("loadSettings", () => {
 			material: "halftone",
 			marbleSizes: { small: 20, medium: 48, big: 80 },
 			speed: 150,
+			gravity: 2500,
+			bounce: 70,
 			merge: { smallPerMedium: 5, mediumPerBig: 3 },
 			dayStartHour: 3,
 			gridDays: 7,
@@ -115,10 +121,25 @@ describe("loadSettings", () => {
 		expect(loadSettings({ gridDays: 4.5 }).gridDays).toBe(5);
 	});
 
-	it("replaces a speed outside 50–200% with the default", () => {
-		expect(loadSettings({ speed: 300 }).speed).toBe(100);
-		expect(loadSettings({ speed: 40 }).speed).toBe(100);
-		expect(loadSettings({ speed: 50 }).speed).toBe(50);
+	it("replaces a speed outside 10–400% with the default", () => {
+		expect(loadSettings({ speed: 450 }).speed).toBe(100);
+		expect(loadSettings({ speed: 5 }).speed).toBe(100);
+		expect(loadSettings({ speed: 10 }).speed).toBe(10);
+		expect(loadSettings({ speed: 400 }).speed).toBe(400);
+	});
+
+	it("replaces a bounce outside 0–100% or not whole with the default", () => {
+		expect(loadSettings({ bounce: 101 }).bounce).toBe(20);
+		expect(loadSettings({ bounce: 100 }).bounce).toBe(100);
+		expect(loadSettings({ bounce: -5 }).bounce).toBe(20);
+		expect(loadSettings({ bounce: 12.5 }).bounce).toBe(20);
+		expect(loadSettings({ bounce: 0 }).bounce).toBe(0);
+	});
+
+	it("replaces a gravity outside 100–7000 px/s² with the default", () => {
+		expect(loadSettings({ gravity: 50 }).gravity).toBe(1000);
+		expect(loadSettings({ gravity: 8000 }).gravity).toBe(1000);
+		expect(loadSettings({ gravity: 6500 }).gravity).toBe(6500);
 	});
 
 	it("replaces marble sizes out of range or not whole with defaults", () => {

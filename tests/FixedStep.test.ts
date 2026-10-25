@@ -36,6 +36,12 @@ describe("FixedStep", () => {
 		expect(clock.next(5000)).toBe(8);
 	});
 
+	it("keeps up four times faster on a 60 Hz screen", () => {
+		const clock = new FixedStep();
+		const steps = Array.from({ length: 60 }, (_, index) => clock.next((index * 1000) / 60, 4));
+		expect(steps.reduce((total, step) => total + step, 0)).toBeCloseTo(480, -1);
+	});
+
 	it("starts fresh after a reset", () => {
 		const clock = new FixedStep();
 		clock.next(0);

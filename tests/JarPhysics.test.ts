@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { JarPhysics } from "../src/ui/jar/JarPhysics";
+import { JarPhysics, STEPS_PER_SECOND, perStep } from "../src/ui/jar/JarPhysics";
 
 function settle(physics: JarPhysics, limit = 2000): number {
 	for (let frame = 1; frame <= limit; frame++) {
@@ -18,11 +18,11 @@ describe("JarPhysics", () => {
 		expect(physics.get("a")?.y).toBeCloseTo(288, 0);
 	});
 
-	it("accelerates while falling", () => {
-		const physics = new JarPhysics(200, 1000);
+	it("falls freely at 1000 px/s², nothing in the air slowing it", () => {
+		const physics = new JarPhysics(200, 2000);
 		physics.add({ id: "a", x: 100, y: 0, r: 12 });
-		for (let frame = 0; frame < 60; frame++) physics.step();
-		expect(physics.get("a")?.y).toBeGreaterThan(500);
+		for (let step = 0; step < STEPS_PER_SECOND; step++) physics.step();
+		expect(physics.get("a")?.y).toBeCloseTo(500, -1);
 	});
 
 	it("keeps bodies inside the walls", () => {
@@ -324,5 +324,199 @@ describe("JarPhysics", () => {
 		perFrame();
 		const best = Math.min(...Array.from({ length: 5 }, perFrame));
 		expect(best).toBeLessThan(4);
+	});
+
+	it("wakes a resting pile when the phone tilts slowly, a hair at a time", () => {
+		const physics = new JarPhysics(400, 300);
+		for (let index = 0; index < 10; index++) physics.add({ id: `b${index}`, x: 30 + index * 34, y: 280, r: 16 });
+		settle(physics, 5000);
+		expect(physics.isSettled()).toBe(true);
+		const pull = perStep(1000);
+		for (let degree = 0; degree <= 30; degree += 0.5) {
+			const angle = (degree * Math.PI) / 180;
+			physics.setGravity({ x: Math.sin(angle) * pull, y: Math.cos(angle) * pull });
+			if (physics.isSettled()) continue;
+			physics.step();
+		}
+		expect(physics.isSettled()).toBe(false);
+	});
+
+	describe("friction and rolling", () => {
+		it("lets touching marbles fly apart instead of sticking together", () => {
+			const physics = new JarPhysics(800, 800);
+			physics.setGravity({ x: 0, y: 0 });
+			physics.add({ id: "a", x: 380, y: 400, r: 20 });
+			physics.add({ id: "b", x: 420, y: 400, r: 20 });
+			physics.get("a")!.px = 380.1;
+			physics.get("b")!.px = 419.9;
+			for (let step = 0; step < 100; step++) physics.step();
+			const a = physics.get("a")!;
+			const b = physics.get("b")!;
+			expect(Math.hypot(b.x - a.x, b.y - a.y)).toBeGreaterThan(40 + 15);
+		});
+
+		it("lets a cluster thrown sideways fall apart, not fly as one piece", () => {
+			const physics = new JarPhysics(2000, 2000);
+			for (let index = 0; index < 4; index++) physics.add({ id: `m${index}`, x: 100 + index * 30, y: 1000, r: 15 });
+			for (const body of physics.bodies()) body.px = body.x - 2;
+			physics.get("m3")!.px = 190 - 2.3;
+			for (let step = 0; step < 120; step++) physics.step();
+			const xs = physics.bodies().map((body) => body.x).sort((a, b) => a - b);
+			expect(xs[3] - xs[2]).toBeGreaterThan(30 + 20);
+		});
+
+		it("a marble sliding along the floor starts to roll and rolls on at 5/7 of its speed", () => {
+			const physics = new JarPhysics(4000, 300);
+			physics.add({ id: "a", x: 100, y: 288, r: 12 });
+			physics.get("a")!.px = 100 - 3;
+			for (let step = 0; step < 240; step++) physics.step();
+			const a = physics.get("a")!;
+			expect(a.x - a.px).toBeCloseTo((3 * 5) / 7, 1);
+			expect(a.spin * a.r).toBeCloseTo(a.x - a.px, 1);
+		});
+
+		it("a marble balanced on another rolls off it instead of standing in a column", () => {
+			const physics = new JarPhysics(400, 300);
+			physics.add({ id: "low", x: 200, y: 288, r: 12 });
+			physics.add({ id: "high", x: 200.5, y: 264, r: 12 });
+			for (let step = 0; step < 600; step++) physics.step();
+			expect(physics.get("high")!.y).toBeCloseTo(288, 0);
+		});
+
+		it("never stacks a pile into columns: no marble balances on the one right under it with nothing beside it", () => {
+			const physics = new JarPhysics(402, 700);
+			for (let index = 0; index < 120; index++) physics.add({ id: `b${index}`, x: 15 + ((index * 53) % 372), y: -20 - index * 18, r: 6 + (index % 3) * 8 });
+			settle(physics, 20000);
+			const bodies = physics.bodies();
+			for (const body of bodies) {
+				if (body.y > 700 - body.r - 1 || body.x < body.r + 1 || body.x > 402 - body.r - 1) continue;
+				const touching = bodies.filter((other) => other !== body && Math.hypot(other.x - body.x, other.y - body.y) < body.r + other.r + 0.5);
+				const beside = touching.filter((other) => Math.abs(other.x - body.x) >= 1);
+				const under = touching.find((other) => other.y > body.y && Math.abs(other.x - body.x) < 1);
+				expect(under !== undefined && beside.length === 0, `${body.id} balances on ${under?.id}`).toBe(false);
+			}
+		});
+
+		it("doesn't fall asleep while a column against the wall is still toppling", () => {
+			const physics = new JarPhysics(402, 874);
+			for (let level = 0; level < 5; level++) {
+				physics.add({ id: `wall${level}`, x: 387, y: 859 - level * 30, r: 15 });
+				physics.add({ id: `next${level}`, x: 357, y: 859 - level * 30, r: 15 });
+			}
+			settle(physics, 20000);
+			expect(Math.min(...physics.bodies().map((body) => body.y))).toBeGreaterThan(859 - 2 * 30);
+		});
+	});
+
+	describe("bounce", () => {
+		/** Drops a body from high up and returns how high it rises again after its first hit, in px above the floor. */
+		function rebound(bounce: number): number {
+			const physics = new JarPhysics(200, 600);
+			physics.setBounce(bounce);
+			physics.add({ id: "a", x: 100, y: 12, r: 12 });
+			let falling = true;
+			let lowest = 0;
+			let highest = Infinity;
+			for (let frame = 0; frame < 400; frame++) {
+				const before = physics.get("a")!.y;
+				physics.step();
+				const y = physics.get("a")!.y;
+				if (falling && y < before) falling = false;
+				if (falling) lowest = y;
+				else if (y > before) break;
+				else highest = Math.min(highest, y);
+			}
+			return highest === Infinity ? 0 : lowest - highest;
+		}
+
+		/** Drops a body from 300 px above the top of whatever it lands on and returns how high it rises again, in px. */
+		function riseAfterHit(bounce: number, onto: "floor" | "marble" | "pile"): number {
+			const physics = new JarPhysics(200, 600);
+			physics.setBounce(bounce);
+			if (onto === "marble") physics.add({ id: "rest", x: 100, y: 588, r: 12 });
+			if (onto === "pile") {
+				for (let index = 0; index < 24; index++) physics.add({ id: `rest${index}`, x: 12 + ((index * 53) % 176), y: -30 * index, r: 12 });
+				physics.setBounce(0);
+				settle(physics, 5000);
+				physics.setBounce(bounce);
+			}
+			const summit = physics.bodies().reduce((top, body) => (body.y < top.y ? body : top), { x: 100, y: 612 });
+			physics.add({ id: "a", x: summit.x, y: summit.y - 24 - 300, r: 12 });
+			let lowest = 0;
+			let rising = false;
+			let highest = Infinity;
+			for (let frame = 0; frame < 400; frame++) {
+				const before = physics.get("a")!.y;
+				physics.step();
+				const y = physics.get("a")!.y;
+				if (!rising && y < before) rising = true;
+				if (!rising) lowest = y;
+				else if (y > before) break;
+				else highest = Math.min(highest, y);
+			}
+			return highest === Infinity ? 0 : lowest - highest;
+		}
+
+		it("bounces off a marble lying on the floor about as high as off the floor itself", () => {
+			const floor = riseAfterHit(0.5, "floor");
+			expect(riseAfterHit(0.5, "marble")).toBeGreaterThan(floor * 0.7);
+		});
+
+		it("bounces off the top of a pile about as high as off the floor itself", () => {
+			const floor = riseAfterHit(0.5, "floor");
+			expect(riseAfterHit(0.5, "pile")).toBeGreaterThan(floor * 0.7);
+		});
+
+		it("lands dead with no bounce", () => {
+			expect(rebound(0)).toBe(0);
+		});
+
+		it("comes back up off the floor, higher the bouncier it is", () => {
+			const soft = rebound(0.3);
+			const hard = rebound(0.7);
+			expect(soft).toBeGreaterThan(10);
+			expect(hard).toBeGreaterThan(soft * 2);
+			expect(hard).toBeLessThan(588);
+		});
+
+		it("still comes to rest on the floor, even at the bounciest, within the time its bounces take", () => {
+			const physics = new JarPhysics(200, 600);
+			physics.setBounce(0.95);
+			physics.add({ id: "a", x: 100, y: 12, r: 12 });
+			const hit = Math.sqrt(2 * perStep(1000) * 576);
+			const bouncing = (2 * hit) / perStep(1000) / (1 - 0.95);
+			expect(settle(physics, 2 * bouncing)).toBeLessThan(2 * bouncing);
+			expect(physics.get("a")?.y).toBeCloseTo(588, 0);
+		});
+
+		it("lets a pile settle instead of trembling, even at the bounciest", () => {
+			const physics = new JarPhysics(120, 400);
+			physics.setBounce(0.95);
+			for (let index = 0; index < 30; index++) physics.add({ id: `b${index}`, x: 15 + ((index * 37) % 90), y: -20 - index * 25, r: 6 + (index % 3) * 6 });
+			expect(settle(physics, 5000)).toBeLessThan(5000);
+		});
+
+		it("never gains energy in a crowded jar, so every pile comes to rest", () => {
+			for (const [width, count, spread] of [[400, 120, 53], [400, 60, 71], [200, 80, 29], [402, 200, 61]]) {
+				const physics = new JarPhysics(width, 700);
+				physics.setBounce(0.95);
+				for (let index = 0; index < count; index++) physics.add({ id: `b${index}`, x: 15 + ((index * spread) % (width - 30)), y: -20 - index * 18, r: 6 + (index % 3) * 8 });
+				expect(settle(physics, 3000)).toBeLessThan(3000);
+			}
+		});
+
+		it("knocks a resting body away when another one hits it", () => {
+			const still = new JarPhysics(400, 300);
+			const bouncy = new JarPhysics(400, 300);
+			bouncy.setBounce(0.8);
+			for (const physics of [still, bouncy]) {
+				physics.setGravity({ x: 0, y: 0 });
+				physics.add({ id: "a", x: 100, y: 150, r: 12 });
+				physics.add({ id: "b", x: 200, y: 150, r: 12 });
+				physics.get("a")!.px = 95;
+				for (let frame = 0; frame < 40; frame++) physics.step();
+			}
+			expect(bouncy.get("a")!.x).toBeLessThan(still.get("a")!.x);
+		});
 	});
 });
