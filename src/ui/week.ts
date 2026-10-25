@@ -1,9 +1,7 @@
-import { HabitEntry } from "../application/ports";
 import { DayMark } from "../domain/DayMark";
 import { Habit } from "../domain/Habit";
 import { LocalDate, WEEKDAYS } from "../domain/LocalDate";
 import { dayMonth } from "./format";
-import { groupBySection, visibleEntries } from "./order";
 import { CalendarDay, StripDay } from "./today";
 
 /** How a habit's day stands in the grid: still to come, or one to answer. */
@@ -13,17 +11,6 @@ export interface WeekCell {
 	readonly date: LocalDate;
 	readonly kind: WeekCellKind;
 	readonly mark?: DayMark;
-}
-
-export interface WeekRow {
-	readonly path: string;
-	readonly habit: Habit;
-	readonly cells: readonly WeekCell[];
-}
-
-export interface WeekGroup {
-	readonly section?: string;
-	readonly rows: readonly WeekRow[];
 }
 
 export function mondayOf(day: LocalDate): LocalDate {
@@ -36,19 +23,9 @@ export function weekCell(habit: Habit, date: LocalDate, today: LocalDate): WeekC
 	return { date, kind: "due", mark: habit.markOn(date) };
 }
 
-/** Every habit that isn't archived, by section as on Today, each with its `count` days up to `end`, oldest first. */
-export function weekGroups(entries: readonly HabitEntry[], end: LocalDate, today: LocalDate, count: number): WeekGroup[] {
-	const habits = visibleEntries(entries).flatMap((entry) => (entry.kind === "ok" ? [entry] : []));
-	return groupBySection(habits, (entry) => entry.habit.section)
-		.filter((group) => group.items.length > 0)
-		.map((group) => ({
-			section: group.section,
-			rows: group.items.map((entry) => ({
-				path: entry.path,
-				habit: entry.habit,
-				cells: gridDates(end, count).map((date) => weekCell(entry.habit, date, today)),
-			})),
-		}));
+/** A habit's `count` days up to `end`, oldest first, for its circles on the grid. */
+export function weekCells(habit: Habit, end: LocalDate, today: LocalDate, count: number): WeekCell[] {
+	return gridDates(end, count).map((date) => weekCell(habit, date, today));
 }
 
 /** The calendar's `count` days up to `end`, for the dates over the grid's columns; days before the calendar starts are outside. */

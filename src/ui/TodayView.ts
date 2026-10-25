@@ -34,7 +34,7 @@ import { WeekCalendar } from "./WeekCalendar";
 import { WeekGrid } from "./WeekGrid";
 import { closedDayLine, dayStrip, dayTitle, winsLabel, offersShrink, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
-import { daysTitle, daysUpTo, weekGroups } from "./week";
+import { daysTitle, daysUpTo, weekCells } from "./week";
 
 export const HABITS_VIEW = "tiny-habits-grid";
 /** The tool that turns Today into the week's grid and back. */
@@ -345,9 +345,16 @@ export class TodayView extends ItemView {
 			all.flatMap((entry) => (entry.kind === "ok" ? [entry] : [])),
 			(entry) => entry.habit.section,
 		).flatMap((group) => group.items.filter((item) => habits.some((habit) => habit.path === item.path)));
-		const shown = ordered.filter((entry) => !hideDone || this.showDone || open(entry));
+		this.renderRows(column, ordered.filter((entry) => !hideDone || this.showDone || open(entry)), entries);
+	}
+
+	/**
+	 * Habits in order, each section's header over its rows, the ones that can't be read under them and the zone to drop
+	 * a row on for a new section: the list and the grid lay them out alike, so both are rearranged by dragging alike.
+	 */
+	private renderRows(column: HTMLElement, rows: readonly Extract<HabitEntry, { kind: "ok" }>[], entries: readonly HabitEntry[]): void {
 		let section: string | undefined | null = null;
-		for (const entry of shown) {
+		for (const entry of rows) {
 			if (entry.habit.section !== section) {
 				section = entry.habit.section;
 				if (section !== undefined) this.renderSection(column, section);
@@ -383,31 +390,20 @@ export class TodayView extends ItemView {
 	}
 
 	/**
-	 * The days up to the shown day as a grid, as many as the settings say: every habit by section, a circle for each day, answered right there as
-	 * on the list, the answers sliding over the row while the calendar picks the day they are for.
+	 * The days up to the shown day as a grid, as many as the settings say: Today's rows for every habit, by section,
+	 * each with a circle for each day on its right, answered right there as on the list, the answers sliding over the
+	 * row while the calendar picks the day they are for. A computer names the days in a chip that goes back to today; a
+	 * phone's tray has a button for that.
 	 */
 	private renderWeek(column: HTMLElement, all: readonly HabitEntry[]): void {
 		const today = this.ui.service.today();
 		const shown = this.shownDay();
 		this.renderCalendar(all);
 		this.renderHead();
-		if (!shown.equals(today)) column.appendChild(this.backChip(daysTitle(shown, today, this.ui.settings().gridDays), "Back to today"));
+		if (!shown.equals(today) && !this.tray) column.appendChild(this.backChip(daysTitle(shown, today, this.ui.settings().gridDays), "Back to today"));
 		this.showTools(this.renderTools(0, false));
-		const answering = this.answering;
-		const rows = this.grid?.render(column, {
-			today,
-			groups: weekGroups(all, shown, today, this.ui.settings().gridDays),
-			popping: (path, day) => this.celebrating.has(this.cellKey(path, day)),
-		});
-		for (const [path, { habit, row, line }] of rows ?? []) {
-			const mark = answering ? habit.markOn(answering) : undefined;
-			if (this.menu === path) this.renderChoices(line, path, habit, mark, "right");
-			if (this.closing === path) this.refold(line, "right");
-			if (this.asking === path) this.renderReasons(row, path);
-			if (this.shrink === path && mark?.kind === "missed") this.renderShrink(row, path, habit);
-		}
-		for (const entry of all) if (entry.kind === "broken") this.renderBroken(column, entry);
-		this.playMotion(column);
+		const habits = all.flatMap((entry) => (entry.kind === "ok" ? [entry] : []));
+		this.renderRows(column, groupBySection(habits, (entry) => entry.habit.section).flatMap((group) => group.items), all);
 	}
 
 	private showsWeek(): boolean {
@@ -486,23 +482,25 @@ export class TodayView extends ItemView {
 	}
 
 	/**
-	 * A habit's card, the same on Today and in All habits: a circle, then its name, which opens its recipe.
-	 * `lead` puts Today's working circle in front; the card is returned for what goes under it.
+	 * A habit's card, the same on Today, on the grid and in All habits: a circle, then its name, which opens its recipe.
+	 * `lead` puts Today's working circle in front, or nothing for null; `trail` puts the grid's circles after the name.
+	 * The card is returned for what goes under it.
 	 */
 	private renderCard(
 		column: HTMLElement,
 		path: string,
 		habit: Habit,
-		options: { dimmed: boolean; sub?: string; attrs?: Record<string, string>; lead?: (main: HTMLElement) => void },
+		options: { dimmed: boolean; sub?: string; attrs?: Record<string, string>; lead?: ((main: HTMLElement) => void) | null; trail?: (main: HTMLElement) => void },
 	): HTMLElement {
 		const row = column.createDiv({ cls: "th-row", attr: options.attrs ?? {} });
 		row.toggleClass("is-answered", options.dimmed);
 		const main = row.createDiv("th-row-main");
 		if (options.lead) options.lead(main);
-		else main.createSpan("th-mark-slot").createSpan("th-mark");
+		else if (options.lead === undefined) main.createSpan("th-mark-slot").createSpan("th-mark");
 		const text = main.createDiv("th-row-text");
 		text.createDiv({ cls: "th-row-title", text: habit.name });
 		if (options.sub) text.createDiv({ cls: "th-row-sub", text: options.sub });
+		options.trail?.(main);
 		text.setAttribute("aria-expanded", String(this.expanded === path));
 		row.toggleClass("is-expanded", this.expanded === path);
 		text.addEventListener("click", () => void this.toggleRecipe(path));
@@ -746,19 +744,26 @@ export class TodayView extends ItemView {
 		text.addEventListener("click", () => void this.app.workspace.openLinkText(entry.path, "", "tab"));
 	}
 
+	/**
+	 * A habit's row on Today: on the list its circle for the shown day in front, answered dimmed; on the grid its
+	 * circles for the days on show after the name, and the answers for the day of the one tapped.
+	 */
 	private renderRow(column: HTMLElement, path: string, habit: Habit): void {
-		const today = this.shownDay();
-		const mark = habit.markOn(today);
+		const grid = this.showsWeek();
+		const day = grid ? this.answering : this.shownDay();
+		const mark = day ? habit.markOn(day) : undefined;
+		const side: Side = grid ? "right" : "left";
 		const row = this.renderCard(column, path, habit, {
-			dimmed: mark !== undefined,
+			dimmed: !grid && mark !== undefined,
 			attrs: { "data-slot": "row", "data-drag": path, "data-section": habit.section ?? "" },
-			lead: (main) => this.renderMark(main, path, habit, mark),
+			lead: grid ? null : (main) => this.renderMark(main, path, habit, mark),
+			trail: grid ? (main) => this.renderDays(main, path, habit) : undefined,
 		});
 		row.toggleClass("is-new", !this.shownRows.has(path));
 		this.renderingRows.add(path);
 		const main = row.querySelector<HTMLElement>(".th-row-main");
-		if (main && this.menu === path) this.renderChoices(main, path, habit, mark);
-		if (main && this.closing === path) this.refold(main);
+		if (main && this.menu === path) this.renderChoices(main, path, habit, mark, side);
+		if (main && this.closing === path) this.refold(main, side);
 		if (this.asking === path) this.renderReasons(row, path);
 		if (this.shrink === path && mark?.kind === "missed") this.renderShrink(row, path, habit);
 	}
@@ -877,6 +882,15 @@ export class TodayView extends ItemView {
 		open.appendText("Open note");
 		setIcon(open.createSpan("th-card-open-icon"), "arrow-up-right");
 		open.addEventListener("click", () => this.ui.openHabit(path, this.leaf));
+	}
+
+	/** The grid's circles for a habit, one for each day on show. */
+	private renderDays(main: HTMLElement, path: string, habit: Habit): void {
+		const today = this.ui.service.today();
+		this.grid?.render(main, path, weekCells(habit, this.shownDay(), today, this.ui.settings().gridDays), {
+			today,
+			popping: (day) => this.celebrating.has(this.cellKey(path, day)),
+		});
 	}
 
 	private renderMark(parent: HTMLElement, path: string, habit: Habit, mark: DayMark | undefined): void {

@@ -22,7 +22,7 @@ describe("helpRows", () => {
 	it("explains the last five days, moved along the bar's month on a phone and with the arrows on a computer", () => {
 		const week = (mobile: boolean) => helpRows(mobile, merge).find((row) => row.action === "The week button")?.result;
 		expect(week(true)).toContain("Tap a circle to answer for that day");
-		expect(week(true)).toContain("Tap a day in the folded bar to end the days on it, or the arrows by them to step a day; pulled up, the bar marks the 5 days on the month");
+		expect(week(true)).toContain("Tap a day in the folded bar to end the days on it, or the arrows by them to step a day and the page with today's date to go back to today; pulled up, the bar marks the 5 days on the month");
 		expect(week(false)).toContain("Click a circle to answer for that day");
 		expect(week(false)).toContain("The arrows by the month step 5 days");
 	});

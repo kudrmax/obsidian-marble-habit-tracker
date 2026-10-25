@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HabitEntry } from "../src/application/ports";
 import { dayStrip } from "../src/ui/today";
-import { daysTitle, daysUpTo, mondayOf, weekCell, weekGroups } from "../src/ui/week";
+import { daysTitle, daysUpTo, mondayOf, weekCell, weekCells } from "../src/ui/week";
 import { d } from "./support/dates";
 import { habitNote } from "./support/habits";
 
@@ -44,29 +44,13 @@ describe("weekCell", () => {
 	});
 });
 
-describe("weekGroups", () => {
-	it("lays every habit out by section, with the five days up to the shown day, oldest first", () => {
-		const read = ok("Read", { order: 0, section: "Morning" });
-		const floss = ok("Floss", { order: 1 });
-		const walk = ok("Walk", { order: 2, section: "Morning" });
-		const groups = weekGroups([read, floss, walk], thursday, thursday, 5);
-		expect(groups.map((group) => [group.section, group.rows.map((row) => row.habit.name)])).toEqual([
-			[undefined, ["Floss"]],
-			["Morning", ["Read", "Walk"]],
-		]);
-		expect(dates(groups[0].rows[0].cells)).toEqual(["2026-10-11", "2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15"]);
-		expect(groups[0].rows[0].cells.every((cell) => cell.kind === "due")).toBe(true);
-		expect(groups[0].rows[0].path).toBe("Habits/Floss.md");
-	});
-
-	it("drops sections left empty, archived habits and notes that can't be read", () => {
-		const groups = weekGroups(
-			[ok("Old", { archived: true, section: "Evening" }), ok("Read"), { kind: "broken", path: "Habits/X.md", name: "X", problem: "bad" }],
-			thursday,
-			thursday,
-			5,
-		);
-		expect(groups.map((group) => [group.section, group.rows.map((row) => row.habit.name)])).toEqual([[undefined, ["Read"]]]);
+describe("weekCells", () => {
+	it("gives a habit's five days up to the shown day, oldest first, each one to answer", () => {
+		const read = ok("Read", { done_tiny: ["2026-10-13"] });
+		const cells = weekCells(read.kind === "ok" ? read.habit : habitNote("Read"), thursday, thursday, 5);
+		expect(dates(cells)).toEqual(["2026-10-11", "2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15"]);
+		expect(cells.every((cell) => cell.kind === "due")).toBe(true);
+		expect(cells[2]).toMatchObject({ mark: { kind: "tiny" } });
 	});
 });
 

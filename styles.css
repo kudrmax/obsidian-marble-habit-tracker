@@ -225,6 +225,7 @@ body {
 
 	/* Layers, bottom to top */
 	--th-layer-list: 1;
+	--th-layer-carried: 1;
 	--th-layer-grip: 2;
 	--th-layer-sheet: 4;
 	--th-layer-lifted: 5;
@@ -350,7 +351,7 @@ button.th-swatch { width: var(--th-control); height: var(--th-control); padding:
 button.th-swatch.is-on { box-shadow: 0 0 0 var(--th-swatch-gap) var(--th-bg), 0 0 0 var(--th-swatch-ring) var(--th-marble-color); }
 
 /* Today: the habits on a panel under Obsidian's header, the marbles over them, and the days. */
-.tiny-habits.th-today { --th-tray-top: 100%; --th-tray-rest: 0px; --th-tray-inset: 0px; position: relative; height: 100%; padding: 0; overflow: hidden; }
+.tiny-habits.th-today { --th-tray-top: 100%; --th-tray-rest: 0px; --th-tray-height: 0px; --th-tray-inset: 0px; position: relative; height: 100%; padding: 0; overflow: hidden; }
 .is-phone .mod-root .workspace-leaf-content[data-type="tiny-habits-grid"] { --view-top-spacing: 0; }
 .is-phone.is-floating-nav .workspace-leaf-content[data-type="tiny-habits-grid"] .th-today,
 .is-phone.auto-full-screen .workspace-leaf-content[data-type="tiny-habits-grid"] .th-today { --th-top-inset: calc(var(--safe-area-inset-top) + var(--view-header-height) + var(--th-space-8)); }
@@ -358,7 +359,7 @@ button.th-swatch.is-on { box-shadow: 0 0 0 var(--th-swatch-gap) var(--th-bg), 0 
 /* Once the list scrolls, it fades out under the panel's top edge instead of being cut. */
 .th-sheet.is-scrolled .th-today-scroll { -webkit-mask-image: linear-gradient(to bottom, transparent, var(--th-mask-solid) var(--th-scroll-fade)); mask-image: linear-gradient(to bottom, transparent, var(--th-mask-solid) var(--th-scroll-fade)); }
 .th-today-scroll { position: relative; z-index: var(--th-layer-list); flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: none; }
-.th-column { box-sizing: border-box; max-width: var(--th-column); margin: 0 auto; padding: var(--th-space-4) var(--th-gutter) calc(var(--th-tray-rest) + var(--th-list-floor)); }
+.th-column { box-sizing: border-box; max-width: var(--th-column); margin: 0 auto; padding: var(--th-space-4) var(--th-gutter) calc(var(--th-tray-height) + var(--th-list-floor)); }
 .th-column:has(> .th-empty) { box-sizing: border-box; height: 100%; }
 .th-empty { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--th-space-28); padding: 0 var(--th-space-32) var(--th-space-120); text-align: center; }
 /* The header keeps to the list's column, so All habits' way back starts at the habits' edge on a wide tab too. */
@@ -529,7 +530,10 @@ button.th-cal-day:disabled { cursor: default; opacity: 1; }
 /* Over the week's grid the days are not buttons: a finger moves the band over the days on show along them. Days of the months around keep their rings, their dates greyed. */
 .th-cal-week div.th-cal-day { position: relative; height: var(--th-week-row); display: flex; align-items: center; justify-content: center; opacity: var(--th-month-in, 1); }
 /* The days on show travel, date and ring together, between their places in the folded row and their own on the month; the rest of the month comes in once the head is open. */
-.th-cal-week div.th-cal-day.is-carried { z-index: 1; opacity: 1; transform: translate(var(--th-carry-x, 0px), var(--th-carry-y, 0px)); }
+.th-cal-week div.th-cal-day.is-carried { z-index: var(--th-layer-carried); opacity: 1; transform: translate(var(--th-carry-x, 0px), var(--th-carry-y, 0px)); }
+/* So the days on show can rise straight to their week, the weeks aren't cut off under the head; the head covers them instead, and the days pass over it. */
+.th-tray.is-ranged .th-cal-weeks { overflow: visible; }
+.th-tray.is-ranged .th-cal-head { background: var(--th-surface); }
 .th-cal-day.is-other .th-cal-date { color: var(--th-muted); }
 /* The days on show: a band around their rings on each week they are in. It draws itself back from the last of them as the tray rises, slides from day to day, and deepens while a finger holds it. */
 .th-cal-band { position: absolute; top: calc((var(--th-week-row) - var(--th-ring)) / 2 - var(--th-space-2)); height: calc(var(--th-ring) + 2 * var(--th-space-2)); left: calc(var(--th-week-pad) + (100% - 2 * var(--th-week-pad)) * var(--th-band-first) - var(--th-ring) / 2 - var(--th-space-2) + var(--th-band-first-x, 0px)); right: calc(var(--th-week-pad) + (100% - 2 * var(--th-week-pad)) * (1 - var(--th-band-last)) - var(--th-ring) / 2 - var(--th-space-2) - var(--th-band-last-x, 0px)); transform: translateY(var(--th-band-y, 0px)); border-radius: var(--th-radius-capsule); corner-shape: round; background: var(--th-accent-tint); clip-path: inset(0 0 0 calc((1 - var(--th-band-shown)) * 100%) round var(--th-radius-capsule)); pointer-events: none; transition: left var(--th-shift-time) var(--th-ease-settle), right var(--th-shift-time) var(--th-ease-settle), opacity var(--th-shift-time) ease, background-color var(--th-quick-time) ease; }
@@ -572,23 +576,29 @@ body:not(.is-mobile) .th-today .th-sheet-head button.th-back { margin-left: calc
 /* The places under the grid's columns where the days on show sit while the tray is folded; only their places, never seen. */
 .th-cal-strip { position: absolute; left: 0; right: 0; bottom: 0; box-sizing: border-box; max-width: var(--th-column); height: var(--th-week-row); margin: 0 auto; display: flex; align-items: center; justify-content: flex-end; visibility: hidden; }
 .th-cal-strip:empty { display: none; }
-/* Folded over the grid, arrows on the left of the row move its days a day at a time; they go as the tray rises. */
-.th-cal-steps { position: absolute; left: 0; right: 0; bottom: 0; box-sizing: border-box; max-width: var(--th-column); height: var(--th-week-row); margin: 0 auto; padding-left: calc(var(--th-cal-edge, var(--th-gutter)) - (var(--th-control) - var(--th-icon)) / 2); display: flex; align-items: center; gap: var(--th-space-2); opacity: calc(1 - var(--th-open, 0)); pointer-events: none; }
+/*
+ * Folded over the grid, arrows on the left of the row move its days a day at a time, and the last one all the way to
+ * today. Rising, they travel up to the month's arrows and become them; those wait hidden until they arrive.
+ */
+.th-cal-steps { position: absolute; left: 0; right: 0; bottom: 0; box-sizing: border-box; max-width: var(--th-column); height: var(--th-week-row); margin: 0 auto; padding-left: calc(var(--th-cal-edge, var(--th-gutter)) - (var(--th-control) - var(--th-icon)) / 2); display: flex; align-items: center; gap: var(--th-space-2); transform: translate(var(--th-steps-x, 0px), var(--th-steps-y, 0px)); pointer-events: none; }
 .th-cal-steps:empty { display: none; }
 .th-tray:not(.is-up) .th-cal-steps button.th-cal-arrow { pointer-events: auto; }
+.th-tray.is-stepped-up .th-cal-steps { visibility: hidden; }
+.th-tray.is-ranged:not(.is-stepped-up) .th-cal-line .th-cal-arrow { visibility: hidden; }
+.th-tray:not(.is-ranged) .th-cal-latest { display: none; }
+button.th-cal-latest svg text { fill: currentColor; stroke: none; font-weight: var(--th-weight-semibold); }
 .th-cal-strip-days { flex: none; display: flex; margin-right: calc(var(--th-gutter) + (var(--th-mark) - var(--th-grid-pitch)) / 2); }
 .th-cal-strip .th-cal-day { flex: 0 0 var(--th-grid-pitch); display: flex; align-items: center; justify-content: center; height: var(--th-week-row); }
 
 /*
- * The grid: the last five days as Today's list, the same on a phone and on a computer. A habit is one of Today's rows,
- * its name on the left, cut short when long, its five circles on the right, one step apart, the last ending at the
- * list's right edge. The dates are the calendar's: over the circles on a computer, in the folded tray on a phone.
+ * The grid: the last few days on Today's own rows, the same on a phone and on a computer. A habit's name stands on the
+ * left without Today's circle in front, cut short when long; its circles stand after it, one step apart, the last
+ * ending at the list's right edge. The dates are the calendar's: over the circles on a computer, in the folded tray on
+ * a phone.
  */
-.th-grid { position: relative; }
-.th-column > .th-grid:first-child > .th-group:first-child { padding-top: var(--th-space-15); }
-.th-grid-group { cursor: default; }
-.th-grid-line { position: relative; display: flex; align-items: center; min-height: var(--th-row-height); }
-.th-grid-name { flex: 1 1 auto; min-width: 0; padding: var(--th-space-9) var(--th-space-12) var(--th-space-9) 0; font-size: var(--th-font-body); line-height: var(--th-leading-body); letter-spacing: var(--th-tracking-tight); color: var(--th-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; -webkit-user-select: none; user-select: none; }
+.is-week .th-row-main { padding-left: var(--th-gutter); }
+.is-week .th-row-text { padding-right: var(--th-space-8); }
+.is-week .th-row-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .th-grid-strip { flex: none; display: flex; margin-right: calc((var(--th-mark) - var(--th-grid-pitch)) / 2); }
 .th-grid-cell { flex: 0 0 var(--th-grid-pitch); width: var(--th-grid-pitch); height: var(--th-row-height); display: flex; align-items: center; justify-content: center; }
 button.th-grid-cell { margin: 0; padding: 0; border: none; border-radius: var(--th-radius-circle); box-shadow: none; background: transparent; cursor: pointer; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
@@ -600,9 +610,11 @@ button.th-grid-cell:focus-visible { box-shadow: none; outline: none; }
  * The answers are Today's turned round: cancel lands on the row's last circle, whichever was tapped, the answers line up
  * to its left, and the name and the circles fade, as on Today. They come in from past the view's right edge.
  */
-.th-grid-line.is-choosing .th-grid-name, .th-grid-line.is-choosing .th-grid-strip { opacity: 0; pointer-events: none; }
-.th-grid .th-row-choices { right: calc((var(--th-grid-pitch) - var(--th-grid-gap) - var(--th-slot)) / 2); justify-content: flex-end; padding: 0; }
-.th-grid .th-row-extra { padding: 0 0 var(--th-space-14); }
+.th-row-main.is-choosing .th-grid-strip { opacity: 0; pointer-events: none; }
+.is-week .th-row-choices { right: calc(var(--th-gutter) + (var(--th-grid-pitch) - var(--th-grid-gap) - var(--th-slot)) / 2); justify-content: flex-end; padding: 0; }
+.is-week .th-row-extra { padding-left: var(--th-gutter); }
+/* With no circle in front of the name, an open card's recipe stands as far in on the left as on the right, its panel under the name and the circles. */
+.is-week .th-card-recipe { margin-left: calc(var(--th-gutter) + var(--th-space-12)); }
 /* On a computer the grid takes a wider column, so the names keep their line beside the five days. */
 body:not(.is-mobile) .th-today.is-week { --th-column: var(--th-grid-column); }
 

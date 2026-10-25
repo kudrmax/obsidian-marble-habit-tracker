@@ -66,8 +66,12 @@ interface Ring {
 	/** How far round it was last drawn. */
 	drawn: number;
 }
-const CHEVRON_LEFT = "m15 18-6-6 6-6";
-const CHEVRON_RIGHT = "m9 18 6-6-6-6";
+const CHEVRON_LEFT = ["m15 18-6-6 6-6"];
+const CHEVRON_RIGHT = ["m9 18 6-6-6-6"];
+/** A calendar page with its two rings, today's date written on it. */
+const PAGE = ["M8 2v4", "M16 2v4", "M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"];
+/** Where today's date stands on the page, and how big, in the icon's own units. */
+const PAGE_DATE = { x: 12, y: 14.5, size: 10 };
 
 const fontOf = (element: HTMLElement) => {
 	const style = getComputedStyle(element);
@@ -93,6 +97,8 @@ export class CalendarTray {
 	private readonly title: HTMLElement;
 	private readonly previous: HTMLButtonElement;
 	private readonly next: HTMLButtonElement;
+	/** Over the grid, back to the days up to today, beside the month's arrows. */
+	private readonly latest: HTMLButtonElement;
 	/** Today's buttons, on the month's line. */
 	private readonly tools: HTMLElement;
 	private readonly weeks: HTMLElement;
@@ -129,6 +135,9 @@ export class CalendarTray {
 	/** How far up the tray was when the band was last drawn. */
 	private bandDrawn = -1;
 	private carried: Carried[] = [];
+	/** How far across the folded row's arrows travel to the month's, and how far they are now. */
+	private stepsAcross = 0;
+	private stepsShift = 0;
 	/** Over the grid, the day being answered, picked among the days on show. */
 	private focus: LocalDate | null = null;
 	/** The month whose week before it shows: once the days on show reach its first week, until the tray folds. */
@@ -166,6 +175,7 @@ export class CalendarTray {
 		this.title = line.createDiv("th-cal-month");
 		this.previous = this.arrow(line, "Previous month", CHEVRON_LEFT, () => this.turn(-1));
 		this.next = this.arrow(line, "Next month", CHEVRON_RIGHT, () => this.turn(1));
+		this.latest = this.todayButton(line);
 		this.tools = line.createDiv("th-cal-tools");
 		this.strip = this.calendar.createDiv("th-cal-strip");
 		this.steps = this.calendar.createDiv("th-cal-steps");
@@ -231,6 +241,7 @@ export class CalendarTray {
 	 */
 	show(days: readonly StripDay[], shown: LocalDate, today: LocalDate, pick: (day: LocalDate) => void): void {
 		this.range = null;
+		this.tray.removeClass("is-ranged");
 		this.update(days, shown, today, pick, today);
 	}
 
@@ -242,6 +253,7 @@ export class CalendarTray {
 	showRange(days: readonly StripDay[], today: LocalDate, range: TrayRange): void {
 		const moving = this.bandDrag !== null && this.range !== null;
 		this.range = range;
+		this.tray.addClass("is-ranged");
 		if (!moving) return this.update(days, range.end, today, () => undefined, range.end);
 		this.shownDay = range.end;
 		this.rest = range.end;
@@ -280,10 +292,39 @@ export class CalendarTray {
 		if (strip && range && this.today) {
 			const first = this.months[0];
 			const earliest = first ? LocalDate.of(first.year, first.month, 1) : this.today;
+			const latest = !range.end.isBefore(this.today);
 			this.arrow(this.steps, "Previous day", CHEVRON_LEFT, () => this.moveTo(range.end.addDays(-1))).disabled = !range.end.isAfter(earliest);
-			this.arrow(this.steps, "Next day", CHEVRON_RIGHT, () => this.moveTo(range.end.addDays(1))).disabled = !range.end.isBefore(this.today);
+			this.arrow(this.steps, "Next day", CHEVRON_RIGHT, () => this.moveTo(range.end.addDays(1))).disabled = latest;
+			if (!latest) this.todayButton(this.steps);
+			this.latest.toggle(!latest);
+			this.writeToday(this.latest);
 		}
+		this.measureSteps();
 		this.carry();
+	}
+
+	/** How far the month's arrows stand from the folded row's, across, for the folded ones to travel up to them. */
+	private measureSteps(): void {
+		const first = this.steps.querySelector<HTMLElement>(".th-cal-arrow");
+		if (!first) return;
+		this.stepsAcross = this.previous.getBoundingClientRect().left - first.getBoundingClientRect().left + this.stepsShift;
+		this.moveSteps();
+	}
+
+	/**
+	 * Carries the folded row's arrows up to the month's as the tray rises, there once the head is open; the month's own
+	 * wait hidden until then, and the folded ones hide once they are there.
+	 */
+	private moveSteps(): void {
+		const raised = Math.max(0, this.raised);
+		const travel = clamp(raised / (ROW_WHOLE + HEAD));
+		const head = Math.min(HEAD, Math.max(0, raised - ROW_WHOLE));
+		const lift = Math.max(0, REST_LIFT - this.raised);
+		const up = head - DESIGN.monthLineGap - DESIGN.monthLine / 2 - (REST_HEIGHT - BOTTOM_GAP - DESIGN.grip + raised + lift - DESIGN.weekRow / 2);
+		this.stepsShift = this.stepsAcross * travel;
+		this.steps.style.setProperty("--th-steps-x", `${this.stepsShift.toFixed(2)}px`);
+		this.steps.style.setProperty("--th-steps-y", `${(up * travel).toFixed(2)}px`);
+		this.tray.toggleClass("is-stepped-up", travel >= 1);
 	}
 
 	/** The month the folded tray rests on: the one of `rest`. */
@@ -297,15 +338,40 @@ export class CalendarTray {
 		return this.months.findIndex((known) => known.year === month.year && known.month === month.month);
 	}
 
-	private arrow(parent: HTMLElement, label: string, path: string, onClick: () => void): HTMLButtonElement {
+	private arrow(parent: HTMLElement, label: string, paths: readonly string[], onClick: () => void): HTMLButtonElement {
 		const button = parent.createEl("button", { cls: "th-cal-arrow", attr: { "aria-label": label } });
 		const svg = button.appendChild(document.createElementNS(SVG_NS, "svg"));
 		svg.setAttribute("viewBox", "0 0 24 24");
 		svg.setAttribute("aria-hidden", "true");
-		const stroke = svg.appendChild(document.createElementNS(SVG_NS, "path"));
-		stroke.setAttribute("d", path);
+		for (const path of paths) svg.appendChild(document.createElementNS(SVG_NS, "path")).setAttribute("d", path);
 		button.addEventListener("click", onClick);
 		return button;
+	}
+
+	/** Back to the days up to today: today's page from the calendar, its date on it. Away from today only. */
+	private todayButton(parent: HTMLElement): HTMLButtonElement {
+		const button = this.arrow(parent, "Up to today", PAGE, () => this.showLatest());
+		button.addClass("th-cal-latest");
+		const date = button.querySelector("svg")?.appendChild(document.createElementNS(SVG_NS, "text"));
+		date?.setAttribute("x", String(PAGE_DATE.x));
+		date?.setAttribute("y", String(PAGE_DATE.y));
+		date?.setAttribute("font-size", String(PAGE_DATE.size));
+		date?.setAttribute("text-anchor", "middle");
+		date?.setAttribute("dominant-baseline", "central");
+		this.writeToday(button);
+		return button;
+	}
+
+	private writeToday(button: HTMLButtonElement): void {
+		const date = button.querySelector("text");
+		if (date && this.today) date.textContent = String(this.today.day);
+	}
+
+	/** Back to the days up to today, on this month. */
+	private showLatest(): void {
+		if (!this.today) return;
+		this.monthIndex = this.months.length - 1;
+		this.moveTo(this.today);
 	}
 
 	/**
@@ -456,19 +522,18 @@ export class CalendarTray {
 	}
 
 	/**
-	 * Carries each day on show as far as the tray has risen: across to its column all the way up to where its week shows
-	 * whole, and up only once the head is open, rising with the tray from there, so it never passes under the head. Each
-	 * week's band stretches with its days, from the first of them there to the last.
+	 * Carries each day on show straight from its place in the folded row to its own on the month as the tray rises,
+	 * there once its week shows whole; on its way it passes over the head. Each week's band stretches with its days, from
+	 * the first of them there to the last.
 	 */
 	private moveCarried(): void {
 		const opened = Math.max(0, this.raised) - ROW_WHOLE - HEAD;
 		const shifts = new Map<number, { first: number; last: number; up: number }>();
 		let carrying = false;
 		for (const item of this.carried) {
-			const weeksUp = this.weekDates.length - 1 - item.week;
 			const travel = this.travel(item.week);
 			const x = item.across * (1 - travel);
-			const y = item.down * (1 - (weeksUp === 0 ? 1 : clamp(opened / (weeksUp * DESIGN.weekRow))));
+			const y = item.down * (1 - travel);
 			carrying ||= travel < 1;
 			item.cell.style.setProperty("--th-carry-x", `${x.toFixed(2)}px`);
 			item.cell.style.setProperty("--th-carry-y", `${y.toFixed(2)}px`);
@@ -491,6 +556,7 @@ export class CalendarTray {
 		if (!month || !today) return;
 		this.title.setText(monthTitle(month, today));
 		if (this.line.scrollWidth > this.line.clientWidth) this.title.setText(monthTitle(month, today, "short"));
+		this.measureSteps();
 	}
 
 	/**
@@ -636,6 +702,7 @@ export class CalendarTray {
 		if (this.ready && top !== this.lastTop) this.onMove();
 		this.lastTop = top;
 		this.root.style.setProperty("--th-tray-rest", `${height - restTop}px`);
+		this.root.style.setProperty("--th-tray-height", `${height - top}px`);
 		this.root.style.setProperty("--th-tray-inset", `${this.inset + BOTTOM_GAP}px`);
 		const raised = Math.max(0, this.raised);
 		// Rising, the room under this week's row grows back first and the row becomes whole; then the head opens over it, so
@@ -643,6 +710,7 @@ export class CalendarTray {
 		this.drawRings(clamp(raised / RINGS_DRAWN));
 		this.drawBand();
 		this.moveCarried();
+		this.moveSteps();
 		this.tray.style.setProperty("--th-head-height", `${Math.min(HEAD, Math.max(0, raised - ROW_WHOLE))}px`);
 		this.tray.style.setProperty("--th-open", String(clamp(raised / SHADOW_FADE)));
 		// Folded, this week's row hangs low so only its dates show; pushed below its rest, the tray takes them down with it.
