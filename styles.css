@@ -347,7 +347,18 @@ button.th-swatch { width: var(--th-control); height: var(--th-control); padding:
 button.th-swatch.is-on { box-shadow: 0 0 0 var(--th-swatch-gap) var(--th-bg), 0 0 0 var(--th-swatch-ring) var(--th-marble-color); }
 
 /* Today: the habits on a panel under Obsidian's header, the marbles over them, and the days. */
-.tiny-habits.th-today { --th-tray-top: 100%; --th-tray-rest: 0px; --th-tray-height: 0px; --th-tray-inset: 0px; position: relative; height: 100%; padding: 0; overflow: hidden; }
+/*
+ * What the tray sets as it moves, every frame. None is passed down to what is inside, so moving the tray restyles only
+ * the parts that read them, not every day of the month.
+ */
+@property --th-tray-top { syntax: "<length-percentage>"; inherits: false; initial-value: 100%; }
+@property --th-open { syntax: "<number>"; inherits: false; initial-value: 0; }
+@property --th-head-height { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@property --th-lift { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@property --th-tray-inset { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@property --th-band-shown { syntax: "<number>"; inherits: false; initial-value: 1; }
+
+.tiny-habits.th-today { --th-tray-rest: 0px; --th-tray-height: 0px; position: relative; height: 100%; padding: 0; overflow: hidden; }
 .is-phone .mod-root .workspace-leaf-content[data-type="tiny-habits-grid"] { --view-top-spacing: 0; }
 .is-phone.is-floating-nav .workspace-leaf-content[data-type="tiny-habits-grid"] .th-today,
 .is-phone.auto-full-screen .workspace-leaf-content[data-type="tiny-habits-grid"] .th-today { --th-top-inset: calc(var(--safe-area-inset-top) + var(--view-header-height) + var(--th-space-8)); }
@@ -522,13 +533,13 @@ button.th-cal-day:disabled { cursor: default; opacity: 1; }
 /* Over the week's grid the days are not buttons: a finger moves the band over the days on show along them. Days of the months around keep their rings, their dates greyed. */
 .th-cal-week div.th-cal-day { position: relative; height: var(--th-week-row); display: flex; align-items: center; justify-content: center; opacity: var(--th-month-in, 1); }
 /* The days on show travel, date and ring together, between their places in the folded row and their own on the month; the rest of the month comes in once the head is open. */
-.th-cal-week div.th-cal-day.is-carried { z-index: var(--th-layer-carried); opacity: 1; transform: translate(var(--th-carry-x, 0px), var(--th-carry-y, 0px)); }
+.th-cal-week div.th-cal-day.is-carried { z-index: var(--th-layer-carried); opacity: 1; transform: translate(calc(var(--th-carry, 0) * (var(--th-carry-columns) * 100% + var(--th-week-pad) - var(--th-gutter) - (var(--th-mark) - var(--th-grid-pitch)) / 2 - var(--th-carry-places) * var(--th-grid-pitch))), calc(var(--th-carry, 0) * var(--th-carry-weeks, 0) * var(--th-week-row))); }
 /* So the days on show can rise straight to their week, the weeks aren't cut off under the head; the head covers them instead, and the days pass over it. */
 .th-tray.is-ranged .th-cal-weeks { overflow: visible; }
 .th-tray.is-ranged .th-cal-head { background: var(--th-surface); }
 .th-cal-day.is-other .th-cal-date { color: var(--th-muted); }
 /* The days on show: a band around their rings on each week they are in. It draws itself back from the last of them as the tray rises, slides from day to day, and deepens while a finger holds it. */
-.th-cal-band { position: absolute; top: calc((var(--th-week-row) - var(--th-ring)) / 2 - var(--th-space-2)); height: calc(var(--th-ring) + 2 * var(--th-space-2)); left: calc(var(--th-week-pad) + (100% - 2 * var(--th-week-pad)) * var(--th-band-first) - var(--th-ring) / 2 - var(--th-space-2) + var(--th-band-first-x, 0px)); right: calc(var(--th-week-pad) + (100% - 2 * var(--th-week-pad)) * (1 - var(--th-band-last)) - var(--th-ring) / 2 - var(--th-space-2) - var(--th-band-last-x, 0px)); transform: translateY(var(--th-band-y, 0px)); border-radius: var(--th-radius-capsule); corner-shape: round; background: var(--th-accent-tint); clip-path: inset(0 0 0 calc((1 - var(--th-band-shown)) * 100%) round var(--th-radius-capsule)); pointer-events: none; transition: left var(--th-shift-time) var(--th-ease-settle), right var(--th-shift-time) var(--th-ease-settle), opacity var(--th-shift-time) ease, background-color var(--th-quick-time) ease; }
+.th-cal-band { position: absolute; top: calc((var(--th-week-row) - var(--th-ring)) / 2 - var(--th-space-2)); height: calc(var(--th-ring) + 2 * var(--th-space-2)); left: calc(var(--th-week-pad) + (100% - 2 * var(--th-week-pad)) * var(--th-band-first) - var(--th-ring) / 2 - var(--th-space-2) + var(--th-carry, 0) * (var(--th-band-first-columns, 0) * (100% - 2 * var(--th-week-pad)) + var(--th-week-pad) - var(--th-gutter) - (var(--th-mark) - var(--th-grid-pitch)) / 2 - var(--th-band-first-places, 0) * var(--th-grid-pitch))); right: calc(var(--th-week-pad) + (100% - 2 * var(--th-week-pad)) * (1 - var(--th-band-last)) - var(--th-ring) / 2 - var(--th-space-2) - var(--th-carry, 0) * (var(--th-band-last-columns, 0) * (100% - 2 * var(--th-week-pad)) + var(--th-week-pad) - var(--th-gutter) - (var(--th-mark) - var(--th-grid-pitch)) / 2 - var(--th-band-last-places, 0) * var(--th-grid-pitch))); transform: translateY(calc(var(--th-carry, 0) * var(--th-carry-weeks, 0) * var(--th-week-row))); border-radius: var(--th-radius-capsule); corner-shape: round; background: var(--th-accent-tint); clip-path: inset(0 0 0 calc((1 - var(--th-band-shown)) * 100%) round var(--th-radius-capsule)); pointer-events: none; transition: left var(--th-shift-time) var(--th-ease-settle), right var(--th-shift-time) var(--th-ease-settle), opacity var(--th-shift-time) ease, background-color var(--th-quick-time) ease; }
 .th-cal-band.is-empty { opacity: 0; }
 /* While the days on show travel, their band keeps up with them frame by frame; it slides from day to day only once they are home. */
 .th-tray.is-carrying .th-cal-band { transition: none; }
@@ -562,13 +573,6 @@ body:not(.is-mobile) .th-today .th-sheet-head button.th-back { margin-left: calc
 .th-week.is-grid .th-week-row { justify-content: flex-end; margin: 0 calc((var(--th-mark) - var(--th-grid-pitch)) / 2) 0 0; }
 .th-week.is-grid .th-week-row button.th-cal-day { flex: 0 0 var(--th-grid-pitch); width: var(--th-grid-pitch); }
 /*
- * Over the grid the folded tray shows the grid's own five days, each date under its column of circles. Pulled up,
- * they fade into the month as the tray's shadow comes in.
- */
-/* The places under the grid's columns where the days on show sit while the tray is folded; only their places, never seen. */
-.th-cal-strip { position: absolute; left: 0; right: 0; bottom: 0; box-sizing: border-box; max-width: var(--th-column); height: var(--th-week-row); margin: 0 auto; display: flex; align-items: center; justify-content: flex-end; visibility: hidden; }
-.th-cal-strip:empty { display: none; }
-/*
  * Folded over the grid, arrows on the left of the row move its days a day at a time, and the last one all the way to
  * today. Rising, they travel up to the month's arrows and become them; those wait hidden until they arrive.
  */
@@ -582,8 +586,6 @@ body:not(.is-mobile) .th-today .th-sheet-head button.th-back { margin-left: calc
 .th-tray:not(.is-ranged) .th-cal-latest { display: none; }
 svg.th-page-icon { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
 svg.th-page-icon text { fill: currentColor; stroke: none; font-weight: var(--th-weight-semibold); }
-.th-cal-strip-days { flex: none; display: flex; margin-right: calc(var(--th-gutter) + (var(--th-mark) - var(--th-grid-pitch)) / 2); }
-.th-cal-strip .th-cal-day { flex: 0 0 var(--th-grid-pitch); display: flex; align-items: center; justify-content: center; height: var(--th-week-row); }
 
 /*
  * The grid: the last few days on Today's own rows, the same on a phone and on a computer. A habit's name stands on the
