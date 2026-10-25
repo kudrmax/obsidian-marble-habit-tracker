@@ -3,7 +3,7 @@ import { toolButton } from "./components";
 import { stepDays } from "./week";
 import { DAY_RING_LENGTH, DAY_RING_RADIUS, DESIGN } from "./design";
 import { Box } from "./jar/JarPhysics";
-import { CalendarDay, CalendarMonth, StripDay, calendarMonths, dayTitle, donePercent, monthTitle, trayWeeks } from "./today";
+import { CalendarDay, CalendarMonth, StripDay, calendarMonths, dayLabel, donePercent, monthTitle, trayWeeks } from "./today";
 
 /** Over the weeks: room under the grabber, then one line with the month, its arrows and Today's buttons. */
 const HEAD_ROOM = 14;
@@ -669,12 +669,12 @@ export class CalendarTray {
 	private renderDay(row: HTMLElement, day: CalendarDay, week: number, selected: boolean, today: LocalDate): void {
 		const off = day.future;
 		const percent = off ? null : donePercent(day);
-		const title = dayTitle(day.date, today);
-		const button = row.createEl("button", { cls: "th-cal-day", attr: { "aria-label": percent === null ? title : `${title}, ${percent}% done`, "aria-pressed": String(selected) } });
+		const button = row.createEl("button", { cls: "th-cal-day", attr: { "aria-label": dayLabel(day, today), "aria-pressed": String(selected) } });
 		button.toggleClass("is-selected", selected);
 		button.toggleClass("is-today", day.date.equals(today));
 		button.toggleClass("is-off", off);
 		button.toggleClass("is-other", day.outside);
+		button.toggleClass("is-unanswered", day.unanswered > 0);
 		if (!off) this.renderRing(button, percent ?? 0, day.date, week);
 		button.createSpan("th-cal-date").createSpan({ cls: "th-cal-figure", text: String(day.date.day) });
 		button.disabled = off;
@@ -687,11 +687,11 @@ export class CalendarTray {
 	 */
 	private renderBandDay(row: HTMLElement, day: CalendarDay, week: number, today: LocalDate): void {
 		const percent = day.future ? null : donePercent(day);
-		const title = dayTitle(day.date, today);
-		const cell = row.createDiv({ cls: "th-cal-day", attr: { "data-date": day.date.toString(), "aria-label": percent === null ? title : `${title}, ${percent}% done` } });
+		const cell = row.createDiv({ cls: "th-cal-day", attr: { "data-date": day.date.toString(), "aria-label": dayLabel(day, today) } });
 		cell.toggleClass("is-today", day.date.equals(today));
 		cell.toggleClass("is-off", day.future);
 		cell.toggleClass("is-other", day.outside);
+		cell.toggleClass("is-unanswered", day.unanswered > 0);
 		if (!day.future) this.renderRing(cell, percent ?? 0, day.date, week);
 		cell.createSpan("th-cal-date").createSpan({ cls: "th-cal-figure", text: String(day.date.day) });
 	}

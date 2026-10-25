@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HabitEntry } from "../src/application/ports";
 import { TINY, missed } from "../src/domain/DayMark";
-import { calendarMonths, calendarWeek, closedDayLine, dayStrip, dayTitle, donePercent, monthTitle, monthWeeks, trayWeeks, totalWins, winsLabel, winsSince, offersShrink, todayEntries } from "../src/ui/today";
+import { calendarMonths, calendarWeek, closedDayLine, dayLabel, dayStrip, dayTitle, donePercent, monthTitle, monthWeeks, trayWeeks, totalWins, winsLabel, winsSince, offersShrink, todayEntries } from "../src/ui/today";
 import { d } from "./support/dates";
 import { habitNote } from "./support/habits";
 
@@ -83,6 +83,23 @@ describe("dayStrip", () => {
 		const on = (days: ReturnType<typeof dayStrip>) => days.find((day) => day.date.toString() === "2026-10-14");
 		expect(on(dayStrip([read, floss], thursday))).toMatchObject({ due: 2, done: 1 });
 		expect(on(dayStrip([read, floss], thursday, { offTrigger: true }))).toMatchObject({ due: 2, done: 2 });
+	});
+
+	it("counts the habits a past day still waits an answer for, skips answered, a habit's first day not", () => {
+		const read = ok("Read", { done_full: ["2026-10-14"], missed: [{ date: "2026-10-13", reason: "Forgot" }] });
+		const floss = ok("Floss", {
+			schedule: [{ value: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"], since: "2026-10-13" }],
+			trigger: [{ value: "brush my teeth", since: "2026-10-13" }],
+			action_tiny: [{ value: "floss one tooth", since: "2026-10-13" }],
+		});
+		const archived = ok("Run", { archived: true });
+		const days = dayStrip([read, floss, archived], thursday);
+		const on = (text: string) => days.find((day) => day.date.toString() === text);
+		expect(on("2026-10-12")).toMatchObject({ due: 1, unanswered: 1 });
+		expect(on("2026-10-13")).toMatchObject({ due: 2, unanswered: 0 });
+		expect(on("2026-10-14")).toMatchObject({ due: 2, unanswered: 1 });
+		expect(on("2026-10-15")).toMatchObject({ due: 2, unanswered: 0 });
+		expect(on("2026-10-16")).toMatchObject({ unanswered: 0 });
 	});
 });
 
@@ -178,11 +195,22 @@ describe("trayWeeks", () => {
 
 describe("donePercent", () => {
 	it("says how much of a day was done as a whole percent, and nothing for a day with nothing due", () => {
-		const day = (due: number, done: number) => ({ date: d("2026-10-15"), due, done, future: false });
+		const day = (due: number, done: number) => ({ date: d("2026-10-15"), due, done, unanswered: 0, future: false });
 		expect(donePercent(day(2, 1))).toBe(50);
 		expect(donePercent(day(3, 2))).toBe(67);
 		expect(donePercent(day(8, 8))).toBe(100);
 		expect(donePercent(day(0, 0))).toBeNull();
+	});
+});
+
+describe("dayLabel", () => {
+	it("names the day, how much of it was done and how many habits wait an answer", () => {
+		const today = d("2026-10-15");
+		const day = (date: string, due: number, done: number, unanswered: number) => ({ date: d(date), due, done, unanswered, future: d(date).isAfter(today) });
+		expect(dayLabel(day("2026-10-14", 4, 1, 2), today)).toBe("Yesterday, 25% done, 2 to answer");
+		expect(dayLabel(day("2026-10-15", 4, 4, 0), today)).toBe("Today, 100% done");
+		expect(dayLabel(day("2026-10-16", 4, 0, 0), today)).toBe("Fri, Oct 16");
+		expect(dayLabel(day("2026-10-12", 0, 0, 0), today)).toBe("Mon, Oct 12");
 	});
 });
 

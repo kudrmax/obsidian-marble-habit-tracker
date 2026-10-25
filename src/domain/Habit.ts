@@ -159,6 +159,14 @@ export class Habit {
 		return this.state.schedule.at(date)?.includes(date) ?? false;
 	}
 
+	/**
+	 * Whether a past day of the habit's is still without an answer. The day it was added never is: it may have been added
+	 * after the moment it is done.
+	 */
+	awaitsAnswer(date: LocalDate, today: LocalDate): boolean {
+		return date.isBefore(today) && !date.equals(this.createdOn) && this.isScheduled(date) && !this.markOn(date);
+	}
+
 	markOn(date: LocalDate): DayMark | undefined {
 		return this.state.marks.get(date.toString());
 	}
