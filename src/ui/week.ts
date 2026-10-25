@@ -4,8 +4,8 @@ import { LocalDate, WEEKDAYS } from "../domain/LocalDate";
 import { dayMonth } from "./format";
 import { CalendarDay, CalendarMonth, StripDay } from "./today";
 
-/** How a habit's day stands in the grid: still to come, or one to answer. */
-export type WeekCellKind = "future" | "due";
+/** How a habit's day stands in the grid: still to come, not one of its days, or one to answer. */
+export type WeekCellKind = "future" | "off" | "due";
 
 export interface WeekCell {
 	readonly date: LocalDate;
@@ -17,10 +17,15 @@ export function mondayOf(day: LocalDate): LocalDate {
 	return day.addDays(-WEEKDAYS.indexOf(day.weekday()));
 }
 
-/** Every day up to today is a circle to answer, whatever the habit's days; the days to come are empty. */
+/**
+ * A day up to today is a circle to answer the way Today answers it: when it is one of the habit's days, or already
+ * marked. Its other days, the days before it began and the days to come are empty.
+ */
 export function weekCell(habit: Habit, date: LocalDate, today: LocalDate): WeekCell {
 	if (date.isAfter(today)) return { date, kind: "future" };
-	return { date, kind: "due", mark: habit.markOn(date) };
+	const mark = habit.markOn(date);
+	if (mark || habit.isScheduled(date)) return { date, kind: "due", mark };
+	return { date, kind: "off" };
 }
 
 /** A habit's `count` days up to `end`, oldest first, for its circles on the grid. */
