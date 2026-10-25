@@ -569,6 +569,14 @@ body:not(.is-mobile) .th-today .th-sheet-head button.th-back { margin-left: calc
  * circles, the day being answered picked. The month's name opens nothing and the dates pick nothing.
  */
 .th-week.is-grid button.th-week-title { cursor: default; }
+/*
+ * The dates belong to the circles under them, not to the buttons over them: they stand well clear of the month's line
+ * and close over the list. Its arrows are bare, as by the phone's folded days.
+ */
+.th-week.is-grid .th-week-line { margin-bottom: var(--th-space-28); }
+.th-week.is-grid .th-week-row button.th-cal-day { height: var(--th-control); }
+body:not(.is-mobile) .th-today.is-week .th-column > .th-group:first-child { padding-top: 0; }
+.th-week.is-grid button.th-tool.th-cal-arrow { background: transparent; }
 .th-week.is-grid .th-week-row { justify-content: flex-end; margin: 0 calc((var(--th-mark) - var(--th-grid-pitch)) / 2) 0 0; }
 .th-week.is-grid .th-week-row button.th-cal-day { flex: 0 0 var(--th-grid-pitch); width: var(--th-grid-pitch); }
 /*
