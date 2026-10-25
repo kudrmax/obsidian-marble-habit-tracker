@@ -557,9 +557,9 @@ button.th-week-title:hover { background: transparent; }
 .th-week-tools { margin-left: auto; }
 .th-week-row { display: flex; justify-content: space-between; margin-left: var(--th-circle-edge); }
 .th-week-row button.th-cal-day { flex: 0 0 var(--th-ring); width: var(--th-ring); height: var(--th-week-row); }
-/* On a computer the letters of the month and of the section headers start where the circles do, not their boxes; the past day's chip and All habits' way back too. */
+/* On a computer the letters of the month and of the section headers start where the circles do, not their boxes; the past day's chip and All habits' way back too. On the grid no circle leads a row, so the headers start where the names do. */
 body:not(.is-mobile) .th-today button.th-week-title { margin-left: calc(-1 * var(--th-ink-pull)); }
-body:not(.is-mobile) .th-today .th-sheet .th-group { margin-left: calc(-1 * var(--th-ink-pull)); }
+body:not(.is-mobile) .th-today:not(.is-week) .th-sheet .th-group { margin-left: calc(-1 * var(--th-ink-pull)); }
 body:not(.is-mobile) .th-today .th-day-chip-line { margin-left: calc(-1 * var(--th-chip-pull)); }
 body:not(.is-mobile) .th-today .th-sheet-head button.th-back { margin-left: calc(-1 * var(--th-back-pull)); }
 /* The answers that slide into a row are the same size everywhere, smaller than the circles they answer for. */
