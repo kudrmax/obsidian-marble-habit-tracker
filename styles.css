@@ -91,6 +91,8 @@ body {
 	--th-control: 30px;
 	--th-dot: 16px;
 	--th-ring: 40px;
+	/* The dot under a past day's date while some habit there still waits an answer. */
+	--th-day-dot: 5px;
 	--th-week-row: 54px;
 	--th-month-line: 30px;
 	--th-grip: 14px;
@@ -554,6 +556,11 @@ button.th-cal-day:disabled { cursor: default; opacity: 1; }
 .th-cal-day.is-today .th-cal-date { color: var(--th-accent-text); font-weight: var(--th-weight-semibold); }
 .th-cal-day.is-selected:not(.is-today) .th-cal-date { background: var(--th-accent); color: var(--th-on-accent); font-weight: var(--th-weight-semibold); }
 .th-cal-day.is-off .th-cal-date { color: var(--th-faint); }
+/*
+ * A past day some habit still waits an answer for: a dot under its date, as Calendar marks a day that has events. The
+ * day on show has none: its disc leaves no room for it, and the list above it shows what is left.
+ */
+.th-cal-day.is-unanswered:not(.is-selected) .th-cal-date::after { content: ""; position: absolute; left: calc(50% - var(--th-day-dot) / 2); bottom: 0; width: var(--th-day-dot); height: var(--th-day-dot); border-radius: var(--th-radius-circle); background: var(--th-accent); }
 /* Over the week's grid the days are not buttons: a finger moves the band over the days on show along them. Days of the months around keep their rings, their dates greyed. */
 .th-cal-week div.th-cal-day { position: relative; height: var(--th-week-row); display: flex; align-items: center; justify-content: center; opacity: var(--th-month-in, 1); }
 /* The days on show travel, date and ring together, between their places in the folded row and their own on the month; the rest of the month comes in once the head is open. */

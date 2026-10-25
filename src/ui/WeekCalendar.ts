@@ -176,7 +176,7 @@ export class WeekCalendar {
 		button.toggleClass("is-selected", selected);
 		button.toggleClass("is-today", day.date.equals(today));
 		button.toggleClass("is-off", off);
-		button.toggleClass("is-unanswered", !off && !this.grid && day.unanswered > 0);
+		button.toggleClass("is-unanswered", !off && day.unanswered > 0);
 		if (!off && !this.grid) dayRing(button, (percent ?? 0) / 100);
 		button.createSpan("th-cal-date").createSpan({ cls: "th-cal-figure", text: String(day.date.day) });
 		button.disabled = off || this.grid;
