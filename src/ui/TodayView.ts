@@ -7,7 +7,7 @@ import { HabitColor } from "../domain/HabitColor";
 import { HabitBlock } from "./HabitBlock";
 import { buildJar } from "../domain/Jar";
 import { colorClass } from "./colors";
-import { IconName, chip, icon, iconButton, markCircle } from "./components";
+import { IconName, chip, icon, iconButton, markCircle, toolButton } from "./components";
 import { recipeDays } from "./format";
 import { computeStats } from "../domain/Stats";
 import { DayWatcher } from "./DayWatcher";
@@ -585,12 +585,7 @@ export class TodayView extends ItemView {
 				this.render();
 			});
 		}
-		const button = (label: string, iconName: string, onClick: () => void) => {
-			const element = tools.createEl("button", { cls: "th-tool", attr: { "aria-label": label, "data-tooltip-position": "top" } });
-			setIcon(element.createSpan("th-tool-icon"), iconName);
-			element.addEventListener("click", onClick);
-			return element;
-		};
+		const button = (label: string, iconName: string, onClick: () => void) => toolButton(tools, label, iconName, onClick);
 		if (this.screen === "today") {
 			const week = this.layout === "week";
 			const toggle = button("Week", WEEK_ICON, () => this.setLayout(week ? "day" : "week"));
@@ -1123,7 +1118,17 @@ export class TodayView extends ItemView {
 			screenCorners: this.ui.screenCorners(),
 			background: this.resolveVar("--background-primary"),
 			onImpact: (strength: number) => this.haptics.impact(strength),
+			onSettle: (top: number | null) => this.makeRoomForPile(top),
 		};
+	}
+
+	/**
+	 * The list keeps room under its last row for the marbles standing on the floor, however high they pile, so scrolled
+	 * down it ends above them.
+	 */
+	private makeRoomForPile(top: number | null): void {
+		const floor = this.tray?.box().top ?? this.contentEl.clientHeight;
+		this.contentEl.style.setProperty("--th-pile", `${Math.max(0, top === null ? 0 : floor - top)}px`);
 	}
 
 	/** On a computer the marbles grow with the view's width, so a wide floor still holds a pile and not a sparse line. */

@@ -1,11 +1,8 @@
 import { LocalDate } from "../domain/LocalDate";
-import { dayRing } from "./components";
+import { dayRing, toolButton } from "./components";
 import { CalendarDay, CalendarMonth, StripDay, calendarMonths, calendarWeek, dayTitle, donePercent, monthTitle, monthWeeks } from "./today";
 import { daysUpTo, mondayOf } from "./week";
 
-const SVG_NS = "http://www.w3.org/2000/svg";
-const CHEVRON_LEFT = "m15 18-6-6 6-6";
-const CHEVRON_RIGHT = "m9 18 6-6-6-6";
 const WEEK_DAYS = 7;
 
 /**
@@ -44,8 +41,8 @@ export class WeekCalendar {
 		const line = this.el.createDiv("th-week-line");
 		this.title = line.createEl("button", { cls: ["th-week-title", "th-cal-month"] });
 		this.title.addEventListener("click", () => this.toggle());
-		this.previous = this.arrow(line, CHEVRON_LEFT, -1);
-		this.next = this.arrow(line, CHEVRON_RIGHT, 1);
+		this.previous = this.arrow(line, "chevron-left", -1);
+		this.next = this.arrow(line, "chevron-right", 1);
 		this.tools = line.createDiv("th-week-tools");
 		this.weeks = this.el.createDiv("th-week-days");
 	}
@@ -93,13 +90,10 @@ export class WeekCalendar {
 		this.months = calendarMonths(days, today);
 	}
 
-	private arrow(line: HTMLElement, path: string, step: number): HTMLButtonElement {
-		const button = line.createEl("button", { cls: "th-cal-arrow", attr: { "data-tooltip-position": "top" } });
-		const svg = button.appendChild(document.createElementNS(SVG_NS, "svg"));
-		svg.setAttribute("viewBox", "0 0 24 24");
-		svg.setAttribute("aria-hidden", "true");
-		svg.appendChild(document.createElementNS(SVG_NS, "path")).setAttribute("d", path);
-		button.addEventListener("click", () => this.turn(step));
+	/** The month's arrows: Today's round tools, with a chevron; their labels follow what they step. */
+	private arrow(line: HTMLElement, chevron: string, step: number): HTMLButtonElement {
+		const button = toolButton(line, "", chevron, () => this.turn(step));
+		button.addClass("th-cal-arrow");
 		return button;
 	}
 

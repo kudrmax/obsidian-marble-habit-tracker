@@ -24,6 +24,8 @@ export interface JarOptions {
 	readonly screenCorners: number;
 	onMerge?(item: JarItem): void;
 	onImpact?(strength: number): void;
+	/** Once the marbles stand still: how high the highest one's top is, in the canvas's own pixels, or null with none. */
+	onSettle?(top: number | null): void;
 }
 
 const RANK: Record<JarSize, number> = { small: 0, medium: 1, big: 2 };
@@ -346,8 +348,10 @@ export class JarCanvas {
 		if (steps > 0 || this.born.size > 0) this.draw();
 		const now = performance.now();
 		for (const [key, start] of this.born) if (now - start > BORN_MS) this.born.delete(key);
-		if (!this.physics.isSettled() || this.born.size > 0) this.wake();
-		else this.clock.reset();
+		if (!this.physics.isSettled() || this.born.size > 0) return this.wake();
+		this.clock.reset();
+		const bodies = this.physics.bodies();
+		this.options.onSettle?.(bodies.length > 0 ? Math.min(...bodies.map((body) => body.y - body.r)) : null);
 	}
 
 	private assetOf(item: JarItem): AssetSpec {

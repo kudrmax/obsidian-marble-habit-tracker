@@ -66,7 +66,6 @@ body {
 	--th-check-stroke: 3.4px;
 	--th-check-stroke-done: 3.2px;
 	--th-icon-stroke: 2.3px;
-	--th-arrow-stroke: 2.3;
 	--th-chip-x-stroke: 3.2px;
 	--th-closed-ring-stroke: 7;
 	--th-day-ring-stroke: 2;
@@ -359,7 +358,7 @@ button.th-swatch.is-on { box-shadow: 0 0 0 var(--th-swatch-gap) var(--th-bg), 0 
 /* Once the list scrolls, it fades out under the panel's top edge instead of being cut. */
 .th-sheet.is-scrolled .th-today-scroll { -webkit-mask-image: linear-gradient(to bottom, transparent, var(--th-mask-solid) var(--th-scroll-fade)); mask-image: linear-gradient(to bottom, transparent, var(--th-mask-solid) var(--th-scroll-fade)); }
 .th-today-scroll { position: relative; z-index: var(--th-layer-list); flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: none; }
-.th-column { box-sizing: border-box; max-width: var(--th-column); margin: 0 auto; padding: var(--th-space-4) var(--th-gutter) calc(var(--th-tray-height) + var(--th-list-floor)); }
+.th-column { box-sizing: border-box; max-width: var(--th-column); margin: 0 auto; padding: var(--th-space-4) var(--th-gutter) calc(var(--th-tray-height) + max(var(--th-list-floor), var(--th-pile, 0px) + var(--th-space-16))); }
 .th-column:has(> .th-empty) { box-sizing: border-box; height: 100%; }
 .th-empty { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--th-space-28); padding: 0 var(--th-space-32) var(--th-space-120); text-align: center; }
 /* The header keeps to the list's column, so All habits' way back starts at the habits' edge on a wide tab too. */
@@ -472,6 +471,8 @@ button.th-choice.has-word:active .th-choice-ball { scale: var(--th-word-press-sc
 .th-tools { display: flex; align-items: center; gap: var(--th-space-8); }
 button.th-tool { position: relative; flex: none; width: var(--th-control); height: var(--th-control); padding: 0; border: none; border-radius: var(--th-radius-capsule); corner-shape: round; box-shadow: none; background: var(--th-fill); color: var(--th-muted); display: inline-flex; align-items: center; justify-content: center; gap: var(--th-space-4); font-size: var(--th-font-control); font-weight: var(--th-weight-semibold); line-height: 1; font-variant-numeric: tabular-nums; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 button.th-tool:hover { background: var(--th-fill-hover); }
+button.th-tool:disabled { color: var(--th-faint); opacity: var(--th-dim); cursor: default; }
+button.th-tool:disabled:hover { background: var(--th-fill); }
 button.th-tool.is-on { background: var(--th-accent-tint); color: var(--th-accent-text); }
 button.th-tool.is-on:hover { background: var(--th-accent-tint-strong); }
 .th-tool-icon { display: inline-flex; }
@@ -504,13 +505,9 @@ button.th-tray-grip:hover { background: transparent; }
 .th-cal-head { position: absolute; left: 0; right: 0; top: 0; height: var(--th-head-height, 0px); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
 /* The calendar keeps to the list's column, so on a wide tab its days stand under the habits, not across the tab. */
 .th-cal-line, .th-cal-week { box-sizing: border-box; width: 100%; max-width: var(--th-column); margin-left: auto; margin-right: auto; }
-.th-cal-line { flex: none; display: flex; align-items: center; gap: var(--th-space-2); height: var(--th-month-line); margin-bottom: var(--th-month-line-gap); padding: 0 var(--th-cal-edge, var(--th-gutter)); }
+.th-cal-line { flex: none; display: flex; align-items: center; gap: var(--th-space-8); height: var(--th-month-line); margin-bottom: var(--th-month-line-gap); padding: 0 var(--th-cal-edge, var(--th-gutter)); }
 /* The month reads as one of Today's section headers. */
-.th-cal-month { flex: none; margin-right: var(--th-space-6); font-size: var(--th-font-header); line-height: var(--th-leading-header); font-weight: var(--th-weight-bold); color: var(--th-text); }
-button.th-cal-arrow { flex: none; width: var(--th-control); height: var(--th-control); padding: 0; border: none; border-radius: var(--th-radius-capsule); corner-shape: round; box-shadow: none; background: transparent; color: var(--th-muted); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-button.th-cal-arrow:hover, button.th-cal-arrow.mobile-tap { background: transparent; }
-button.th-cal-arrow:disabled { color: var(--th-faint); opacity: var(--th-dim); cursor: default; }
-button.th-cal-arrow svg { width: var(--th-icon); height: var(--th-icon); fill: none; stroke: currentColor; stroke-width: var(--th-arrow-stroke); stroke-linecap: round; stroke-linejoin: round; }
+.th-cal-month { flex: none; font-size: var(--th-font-header); line-height: var(--th-leading-header); font-weight: var(--th-weight-bold); color: var(--th-text); }
 .th-cal-tools { margin-left: auto; }
 .th-cal-week { position: relative; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); flex: 0 0 var(--th-week-row); height: var(--th-week-row); padding-left: var(--th-week-pad); padding-right: var(--th-week-pad); }
 button.th-cal-day { position: relative; height: var(--th-week-row); margin: 0; padding: 0; border: none; border-radius: 0; box-shadow: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -549,7 +546,7 @@ button.th-cal-day:disabled { cursor: default; opacity: 1; }
  * the last one ends where Today's last button ends, the rest spread evenly between.
  */
 .th-week { --th-circle-edge: calc((var(--th-slot) - var(--th-mark)) / 2 - var(--th-slot-pull)); flex: 0 0 auto; box-sizing: border-box; width: 100%; max-width: var(--th-column); margin: 0 auto; padding: var(--th-space-14) var(--th-gutter) 0; }
-.th-week-line { display: flex; align-items: center; gap: var(--th-space-2); height: var(--th-month-line); margin-bottom: var(--th-month-line-gap); }
+.th-week-line { display: flex; align-items: center; gap: var(--th-space-8); height: var(--th-month-line); margin-bottom: var(--th-month-line-gap); }
 button.th-week-title { height: var(--th-month-line); padding: 0; border: none; border-radius: 0; box-shadow: none; background: transparent; cursor: pointer; }
 button.th-week-title:hover { background: transparent; }
 .th-week-tools { margin-left: auto; }
@@ -580,13 +577,16 @@ body:not(.is-mobile) .th-today .th-sheet-head button.th-back { margin-left: calc
  * Folded over the grid, arrows on the left of the row move its days a day at a time, and the last one all the way to
  * today. Rising, they travel up to the month's arrows and become them; those wait hidden until they arrive.
  */
-.th-cal-steps { position: absolute; left: 0; right: 0; bottom: 0; box-sizing: border-box; max-width: var(--th-column); height: var(--th-week-row); margin: 0 auto; padding-left: calc(var(--th-cal-edge, var(--th-gutter)) - (var(--th-control) - var(--th-icon)) / 2); display: flex; align-items: center; gap: var(--th-space-2); transform: translate(var(--th-steps-x, 0px), var(--th-steps-y, 0px)); pointer-events: none; }
+.th-cal-steps { position: absolute; left: 0; right: 0; bottom: 0; box-sizing: border-box; max-width: var(--th-column); height: var(--th-week-row); margin: 0 auto; padding-left: var(--th-cal-edge, var(--th-gutter)); display: flex; align-items: center; gap: var(--th-space-8); transform: translate(var(--th-steps-x, 0px), var(--th-steps-y, 0px)); pointer-events: none; }
 .th-cal-steps:empty { display: none; }
 .th-tray:not(.is-up) .th-cal-steps button.th-cal-arrow { pointer-events: auto; }
+/* Folded, they are bare so they don't draw the eye from the days; their discs come in as they rise to the month's. */
+.th-cal-steps button.th-tool, .th-cal-steps button.th-tool:disabled:hover { background: color-mix(in srgb, var(--th-fill) calc(var(--th-steps-fill, 0) * 100%), transparent); }
 .th-tray.is-stepped-up .th-cal-steps { visibility: hidden; }
 .th-tray.is-ranged:not(.is-stepped-up) .th-cal-line .th-cal-arrow { visibility: hidden; }
 .th-tray:not(.is-ranged) .th-cal-latest { display: none; }
-button.th-cal-latest svg text { fill: currentColor; stroke: none; font-weight: var(--th-weight-semibold); }
+svg.th-page-icon { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+svg.th-page-icon text { fill: currentColor; stroke: none; font-weight: var(--th-weight-semibold); }
 .th-cal-strip-days { flex: none; display: flex; margin-right: calc(var(--th-gutter) + (var(--th-mark) - var(--th-grid-pitch)) / 2); }
 .th-cal-strip .th-cal-day { flex: 0 0 var(--th-grid-pitch); display: flex; align-items: center; justify-content: center; height: var(--th-week-row); }
 

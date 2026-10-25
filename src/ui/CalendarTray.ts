@@ -1,4 +1,5 @@
 import { LocalDate } from "../domain/LocalDate";
+import { toolButton } from "./components";
 import { DAY_RING_LENGTH, DAY_RING_RADIUS, DESIGN } from "./design";
 import { Box } from "./jar/JarPhysics";
 import { CalendarDay, CalendarMonth, StripDay, calendarMonths, dayTitle, donePercent, monthTitle, trayWeeks } from "./today";
@@ -66,8 +67,6 @@ interface Ring {
 	/** How far round it was last drawn. */
 	drawn: number;
 }
-const CHEVRON_LEFT = ["m15 18-6-6 6-6"];
-const CHEVRON_RIGHT = ["m9 18 6-6-6-6"];
 /** A calendar page with its two rings, today's date written on it. */
 const PAGE = ["M8 2v4", "M16 2v4", "M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"];
 /** Where today's date stands on the page, and how big, in the icon's own units. */
@@ -173,8 +172,8 @@ export class CalendarTray {
 		this.line = this.head.createDiv("th-cal-line");
 		const line = this.line;
 		this.title = line.createDiv("th-cal-month");
-		this.previous = this.arrow(line, "Previous month", CHEVRON_LEFT, () => this.turn(-1));
-		this.next = this.arrow(line, "Next month", CHEVRON_RIGHT, () => this.turn(1));
+		this.previous = this.arrow(line, "Previous month", "chevron-left", () => this.turn(-1));
+		this.next = this.arrow(line, "Next month", "chevron-right", () => this.turn(1));
 		this.latest = this.todayButton(line);
 		this.tools = line.createDiv("th-cal-tools");
 		this.strip = this.calendar.createDiv("th-cal-strip");
@@ -293,8 +292,8 @@ export class CalendarTray {
 			const first = this.months[0];
 			const earliest = first ? LocalDate.of(first.year, first.month, 1) : this.today;
 			const latest = !range.end.isBefore(this.today);
-			this.arrow(this.steps, "Previous day", CHEVRON_LEFT, () => this.moveTo(range.end.addDays(-1))).disabled = !range.end.isAfter(earliest);
-			this.arrow(this.steps, "Next day", CHEVRON_RIGHT, () => this.moveTo(range.end.addDays(1))).disabled = latest;
+			this.arrow(this.steps, "Previous day", "chevron-left", () => this.moveTo(range.end.addDays(-1))).disabled = !range.end.isAfter(earliest);
+			this.arrow(this.steps, "Next day", "chevron-right", () => this.moveTo(range.end.addDays(1))).disabled = latest;
 			if (!latest) this.todayButton(this.steps);
 			this.latest.toggle(!latest);
 			this.writeToday(this.latest);
@@ -324,6 +323,7 @@ export class CalendarTray {
 		this.stepsShift = this.stepsAcross * travel;
 		this.steps.style.setProperty("--th-steps-x", `${this.stepsShift.toFixed(2)}px`);
 		this.steps.style.setProperty("--th-steps-y", `${(up * travel).toFixed(2)}px`);
+		this.steps.style.setProperty("--th-steps-fill", travel.toFixed(3));
 		this.tray.toggleClass("is-stepped-up", travel >= 1);
 	}
 
@@ -338,28 +338,34 @@ export class CalendarTray {
 		return this.months.findIndex((known) => known.year === month.year && known.month === month.month);
 	}
 
-	private arrow(parent: HTMLElement, label: string, paths: readonly string[], onClick: () => void): HTMLButtonElement {
-		const button = parent.createEl("button", { cls: "th-cal-arrow", attr: { "aria-label": label } });
-		const svg = button.appendChild(document.createElementNS(SVG_NS, "svg"));
-		svg.setAttribute("viewBox", "0 0 24 24");
-		svg.setAttribute("aria-hidden", "true");
-		for (const path of paths) svg.appendChild(document.createElementNS(SVG_NS, "path")).setAttribute("d", path);
-		button.addEventListener("click", onClick);
+	/** The month's arrows and the folded row's: Today's round tools, with a chevron. */
+	private arrow(parent: HTMLElement, label: string, chevron: string, onClick: () => void): HTMLButtonElement {
+		const button = toolButton(parent, label, chevron, onClick);
+		button.addClass("th-cal-arrow");
 		return button;
 	}
 
 	/** Back to the days up to today: today's page from the calendar, its date on it. Away from today only. */
 	private todayButton(parent: HTMLElement): HTMLButtonElement {
-		const button = this.arrow(parent, "Up to today", PAGE, () => this.showLatest());
-		button.addClass("th-cal-latest");
-		const date = button.querySelector("svg")?.appendChild(document.createElementNS(SVG_NS, "text"));
-		date?.setAttribute("x", String(PAGE_DATE.x));
-		date?.setAttribute("y", String(PAGE_DATE.y));
-		date?.setAttribute("font-size", String(PAGE_DATE.size));
-		date?.setAttribute("text-anchor", "middle");
-		date?.setAttribute("dominant-baseline", "central");
+		const button = toolButton(parent, "Up to today", (icon) => this.drawPage(icon), () => this.showLatest());
+		button.addClass("th-cal-arrow", "th-cal-latest");
 		this.writeToday(button);
 		return button;
+	}
+
+	/** A calendar page drawn as Lucide draws its icons, with room for a date on it. */
+	private drawPage(icon: HTMLElement): void {
+		const svg = icon.appendChild(document.createElementNS(SVG_NS, "svg"));
+		svg.setAttribute("viewBox", "0 0 24 24");
+		svg.setAttribute("aria-hidden", "true");
+		svg.setAttribute("class", "th-page-icon");
+		for (const path of PAGE) svg.appendChild(document.createElementNS(SVG_NS, "path")).setAttribute("d", path);
+		const date = svg.appendChild(document.createElementNS(SVG_NS, "text"));
+		date.setAttribute("x", String(PAGE_DATE.x));
+		date.setAttribute("y", String(PAGE_DATE.y));
+		date.setAttribute("font-size", String(PAGE_DATE.size));
+		date.setAttribute("text-anchor", "middle");
+		date.setAttribute("dominant-baseline", "central");
 	}
 
 	private writeToday(button: HTMLButtonElement): void {

@@ -72,6 +72,19 @@ export interface ButtonOptions {
 	onClick(event: MouseEvent): void;
 }
 
+/**
+ * A round tool: Today's buttons and the calendar's arrows alike, a disc with its icon, a Lucide one by name or one that
+ * `glyph` draws.
+ */
+export function toolButton(parent: HTMLElement, label: string, glyph: string | ((icon: HTMLElement) => void), onClick: () => void): HTMLButtonElement {
+	const button = parent.createEl("button", { cls: "th-tool", attr: { "aria-label": label, "data-tooltip-position": "top" } });
+	const icon = button.createSpan("th-tool-icon");
+	if (typeof glyph === "string") setIcon(icon, glyph);
+	else glyph(icon);
+	button.addEventListener("click", onClick);
+	return button;
+}
+
 export function iconButton(parent: HTMLElement, options: ButtonOptions): HTMLButtonElement {
 	const cls = ["th-button"];
 	if (options.primary) cls.push("th-button-primary");
