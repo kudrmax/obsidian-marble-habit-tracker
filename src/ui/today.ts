@@ -45,6 +45,8 @@ export interface StripDay {
 	readonly date: LocalDate;
 	readonly due: number;
 	readonly done: number;
+	/** How many of its habits a past day still waits an answer for. */
+	readonly unanswered: number;
 	readonly future: boolean;
 }
 
@@ -53,12 +55,17 @@ export interface CalendarDay extends StripDay {
 	readonly outside: boolean;
 }
 
+/** A day the calendar knows nothing of, there only to fill a week. */
+export function blankDay(date: LocalDate, today: LocalDate, outside: boolean): CalendarDay {
+	return { date, due: 0, done: 0, unanswered: 0, future: date.isAfter(today), outside };
+}
+
 /** How many days the calendar shows at least, today included. */
 const STRIP_DAYS = 14;
 
 /**
  * The days of Today's calendar, oldest first: from the first marked day, or two weeks back if that is later, to the end
- * of this week. Each day says how many habits were due and how many were done.
+ * of this week. Each day says how many habits were due, how many were done, and how many still wait an answer.
  */
 export function dayStrip(entries: readonly HabitEntry[], today: LocalDate, wins: WinRule = DEFAULT_WIN_RULE): StripDay[] {
 	const habits = visibleEntries(entries).flatMap((entry) => (entry.kind === "ok" ? [entry.habit] : []));
@@ -68,7 +75,13 @@ export function dayStrip(entries: readonly HabitEntry[], today: LocalDate, wins:
 	const days: StripDay[] = [];
 	for (let date = start; !date.isAfter(end); date = date.addDays(1)) {
 		const due = habits.filter((habit) => habit.isScheduled(date) || habit.markOn(date) !== undefined);
-		days.push({ date, due: due.length, done: due.filter((habit) => isWin(habit.markOn(date), wins)).length, future: date.isAfter(today) });
+		days.push({
+			date,
+			due: due.length,
+			done: due.filter((habit) => isWin(habit.markOn(date), wins)).length,
+			unanswered: due.filter((habit) => habit.awaitsAnswer(date, today)).length,
+			future: date.isAfter(today),
+		});
 	}
 	return days;
 }
@@ -110,7 +123,7 @@ export function monthWeeks(days: readonly StripDay[], month: CalendarMonth, toda
 	for (let date = start; !date.isAfter(end); date = date.addDays(1)) {
 		const day = known.get(date.toString());
 		const inMonth = date.year === month.year && date.month === month.month;
-		all.push(day && inMonth ? { ...day, outside: false } : { date, due: 0, done: 0, future: date.isAfter(today), outside: true });
+		all.push(day && inMonth ? { ...day, outside: false } : blankDay(date, today, true));
 	}
 	const weeks: CalendarDay[][] = [];
 	for (let at = 0; at < all.length; at += WEEKDAYS.length) weeks.push(all.slice(at, at + WEEKDAYS.length));
@@ -130,7 +143,7 @@ export function trayWeeks(days: readonly StripDay[], month: CalendarMonth, today
 		week.map((date) => {
 			const outside = date.year !== month.year || date.month !== month.month;
 			const day = known.get(date.toString());
-			return day ? { ...day, outside } : { date, due: 0, done: 0, future: date.isAfter(today), outside };
+			return day ? { ...day, outside } : blankDay(date, today, outside);
 		}),
 	);
 }
@@ -145,7 +158,7 @@ export function calendarWeek(days: readonly StripDay[], day: LocalDate, today: L
 	return WEEKDAYS.map((_, index) => {
 		const date = start.addDays(index);
 		const strip = known.get(date.toString());
-		return strip ? { ...strip, outside: false } : { date, due: 0, done: 0, future: date.isAfter(today), outside: true };
+		return strip ? { ...strip, outside: false } : blankDay(date, today, true);
 	});
 }
 
@@ -162,6 +175,15 @@ export function monthTitle(month: CalendarMonth, today: LocalDate, length: Month
 /** How much of a day was done, as a whole percent; null for a day with nothing due. */
 export function donePercent(day: StripDay): number | null {
 	return day.due === 0 ? null : Math.round((day.done / day.due) * 100);
+}
+
+/** A calendar day in words: its name, how much of it was done, and how many habits it still waits an answer for. */
+export function dayLabel(day: StripDay, today: LocalDate): string {
+	const percent = day.future ? null : donePercent(day);
+	const parts = [dayTitle(day.date, today)];
+	if (percent !== null) parts.push(`${percent}% done`);
+	if (day.unanswered > 0) parts.push(`${day.unanswered} to answer`);
+	return parts.join(", ");
 }
 
 export function todayEntries(entries: readonly HabitEntry[], today: LocalDate): HabitEntry[] {

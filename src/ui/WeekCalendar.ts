@@ -1,6 +1,6 @@
 import { LocalDate } from "../domain/LocalDate";
 import { dayRing, toolButton } from "./components";
-import { CalendarDay, CalendarMonth, StripDay, calendarMonths, calendarWeek, dayTitle, donePercent, monthTitle, monthWeeks } from "./today";
+import { CalendarDay, CalendarMonth, StripDay, calendarMonths, calendarWeek, dayLabel, donePercent, monthTitle, monthWeeks } from "./today";
 import { daysUpTo, mondayOf, stepDays } from "./week";
 
 const WEEK_DAYS = 7;
@@ -171,12 +171,12 @@ export class WeekCalendar {
 	private renderDay(row: HTMLElement, day: CalendarDay, today: LocalDate): void {
 		const off = day.future || day.outside;
 		const percent = off ? null : donePercent(day);
-		const title = dayTitle(day.date, today);
 		const selected = (this.grid ? this.focus : this.shown)?.equals(day.date) ?? false;
-		const button = row.createEl("button", { cls: "th-cal-day", attr: { "aria-label": percent === null ? title : `${title}, ${percent}% done`, "aria-pressed": String(selected), "data-tooltip-position": "top" } });
+		const button = row.createEl("button", { cls: "th-cal-day", attr: { "aria-label": dayLabel(day, today), "aria-pressed": String(selected), "data-tooltip-position": "top" } });
 		button.toggleClass("is-selected", selected);
 		button.toggleClass("is-today", day.date.equals(today));
 		button.toggleClass("is-off", off);
+		button.toggleClass("is-unanswered", !off && !this.grid && day.unanswered > 0);
 		if (!off && !this.grid) dayRing(button, (percent ?? 0) / 100);
 		button.createSpan("th-cal-date").createSpan({ cls: "th-cal-figure", text: String(day.date.day) });
 		button.disabled = off || this.grid;

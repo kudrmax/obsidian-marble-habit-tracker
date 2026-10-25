@@ -2,7 +2,7 @@ import { DayMark } from "../domain/DayMark";
 import { Habit } from "../domain/Habit";
 import { LocalDate, WEEKDAYS } from "../domain/LocalDate";
 import { dayMonth } from "./format";
-import { CalendarDay, CalendarMonth, StripDay } from "./today";
+import { CalendarDay, CalendarMonth, StripDay, blankDay } from "./today";
 
 /** How a habit's day stands in the grid: still to come, not one of its days, or one to answer. */
 export type WeekCellKind = "future" | "off" | "due";
@@ -38,7 +38,7 @@ export function daysUpTo(days: readonly StripDay[], end: LocalDate, today: Local
 	const known = new Map(days.map((day) => [day.date.toString(), day]));
 	return gridDates(end, count).map((date) => {
 		const day = known.get(date.toString());
-		return day ? { ...day, outside: false } : { date, due: 0, done: 0, future: date.isAfter(today), outside: true };
+		return day ? { ...day, outside: false } : blankDay(date, today, true);
 	});
 }
 

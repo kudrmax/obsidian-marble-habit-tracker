@@ -103,6 +103,21 @@ describe("Habit", () => {
 		expect(habit.isScheduled(d("2026-10-10"))).toBe(true);
 	});
 
+	it("awaits an answer for a past day of its own left unmarked, but not for the day it was added", () => {
+		const habit = base()
+			.replaceSchedule(new Schedule(["mon", "tue", "wed", "thu", "fri"]), d("2026-10-01"))
+			.withMark(d("2026-10-06"), TINY, today)
+			.withMark(d("2026-10-07"), missed(), today);
+		expect(habit.awaitsAnswer(d("2026-10-08"), today)).toBe(true);
+		expect(habit.awaitsAnswer(d("2026-10-06"), today)).toBe(false);
+		expect(habit.awaitsAnswer(d("2026-10-07"), today)).toBe(false);
+		expect(habit.awaitsAnswer(d("2026-10-04"), today)).toBe(false);
+		expect(habit.awaitsAnswer(today, today)).toBe(false);
+		expect(habit.awaitsAnswer(created, today)).toBe(false);
+		expect(habit.awaitsAnswer(created.addDays(1), today)).toBe(true);
+		expect(habit.awaitsAnswer(created.addDays(-1), today)).toBe(false);
+	});
+
 	it("rejects blank replacements", () => {
 		expect(() => base().replaceText("anchor", "  ", today)).toThrow(DomainError);
 		expect(() => base().correctText("tiny", "")).toThrow(DomainError);
