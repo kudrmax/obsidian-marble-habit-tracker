@@ -37,6 +37,15 @@ describe("LastAnswer", () => {
 		expect(shown).toEqual([marked, null]);
 	});
 
+	it("lets the answer go at once when dismissed, without undoing it", () => {
+		const shown: (MarkChange | null)[] = [];
+		const last = new LastAnswer((change) => shown.push(change), timers);
+		last.offer(marked);
+		last.dismiss();
+		expect(shown).toEqual([marked, null]);
+		expect(last.take()).toBeNull();
+	});
+
 	it("starts the time over for a new answer", () => {
 		const last = new LastAnswer(() => {}, timers);
 		last.offer(marked);

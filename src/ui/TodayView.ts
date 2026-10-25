@@ -70,7 +70,7 @@ export class TodayView extends ItemView {
 	private scrollEl!: HTMLElement;
 	private columnEl!: HTMLElement;
 	private captionEl: HTMLElement | null = null;
-	/** On a computer, the capsule that offers to undo the last answer; a phone lays its line over the tray's first. */
+	/** On a computer, the capsule that offers to undo the last answer; on a phone its line tops the tray. */
 	private undoEl: HTMLElement | null = null;
 	private jar: JarCanvas | null = null;
 	private chrome: ScreenChrome | null = null;
@@ -1065,12 +1065,12 @@ export class TodayView extends ItemView {
 		return entry?.kind === "ok" ? entry.habit.markOn(day) : undefined;
 	}
 
-	/** Shows the last answer with Undo, or takes it away: on a phone over the tray's first line, on a computer in a capsule. */
+	/** Shows the last answer with Undo, or takes it away: on a phone over the tray's first line, the tray grown by it; on a computer in a capsule. */
 	private showUndo(change: MarkChange | null): void {
 		this.undoEl?.remove();
 		this.undoEl = null;
-		const line = change ? undoLine(change, this.ui.service.today(), () => void this.undo()) : null;
-		if (this.tray) return this.tray.coverFirstLine(line);
+		const line = change ? undoLine(change, this.ui.service.today(), () => void this.undo(), () => this.lastAnswer.dismiss()) : null;
+		if (this.tray) return this.tray.setTopLine(line);
 		this.contentEl.toggleClass("has-undo", line !== null);
 		if (!line) return;
 		line.addClass("is-floating");

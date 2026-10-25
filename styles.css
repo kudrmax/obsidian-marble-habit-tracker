@@ -222,7 +222,6 @@ body {
 	--th-layer-list: 1;
 	--th-layer-carried: 1;
 	--th-layer-grip: 2;
-	--th-layer-cover: 2;
 	--th-layer-sheet: 4;
 	--th-layer-lifted: 5;
 	--th-layer-marbles: 5;
@@ -476,9 +475,10 @@ button.th-choice.has-word:active .th-choice-ball { scale: var(--th-word-press-sc
 .th-caption { position: absolute; left: 0; right: 0; bottom: calc(var(--th-tray-rest) + var(--th-tray-raised, 0px) + var(--th-caption-lift)); z-index: var(--th-layer-caption); width: max-content; max-width: calc(100% - 2 * var(--th-gutter)); height: var(--th-caption-height); margin: 0 auto; padding: 0 var(--th-space-14); display: flex; align-items: center; border: var(--th-line-width) solid var(--th-marble-color); border-radius: var(--th-radius-capsule); background: var(--th-surface); color: var(--th-marble-color); font-size: var(--th-font-small); font-weight: var(--th-weight-semibold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; animation: th-in var(--th-in-quick-time) ease; }
 /* The last answer, with Undo: on a phone over the tray's first line, on a computer in a capsule where the celebration line stands, which then moves up over it. */
 .th-undo { display: flex; align-items: center; gap: var(--th-space-16); box-sizing: border-box; color: var(--th-text); font-size: var(--th-font-answer); animation: th-in var(--th-in-quick-time) ease; }
-.th-undo-text { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.th-undo-name { font-weight: var(--th-weight-semibold); }
-.th-undo-what { color: var(--th-muted); }
+.th-undo-text { flex: 1 1 auto; min-width: 0; display: flex; white-space: nowrap; }
+.th-undo-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: var(--th-weight-semibold); }
+.th-undo-dot, .th-undo-what { flex: none; color: var(--th-muted); }
+.th-undo-dot { white-space: pre; }
 button.th-undo-button { flex: none; align-self: stretch; height: auto; margin: 0; padding: 0 0 0 var(--th-space-16); border: none; border-radius: 0; box-shadow: none; background: transparent; color: var(--th-accent); font-size: var(--th-font-answer); font-weight: var(--th-weight-semibold); cursor: pointer; -webkit-tap-highlight-color: transparent; }
 button.th-undo-button:hover, button.th-undo-button.mobile-tap { background: transparent; }
 .th-undo.is-floating { position: absolute; left: 0; right: 0; bottom: calc(var(--th-tray-rest) + var(--th-caption-lift)); z-index: var(--th-layer-caption); width: max-content; max-width: calc(100% - 2 * var(--th-gutter)); height: var(--th-answer); margin: 0 auto; padding: 0 var(--th-space-16); border: var(--th-line-width) solid var(--th-line); border-radius: var(--th-radius-capsule); background: var(--th-surface); }
@@ -512,7 +512,7 @@ button.th-tray-grip { position: absolute; left: 0; right: 0; top: 0; z-index: va
 button.th-tray-grip:hover { background: transparent; }
 .th-tray.is-dragging, .th-tray.is-dragging button.th-tray-grip { cursor: grabbing; }
 .th-tray-grabber { display: block; width: var(--th-grabber-width); height: var(--th-grabber-height); margin: var(--th-grabber-height) auto 0; border-radius: var(--th-radius-capsule); background: var(--th-faint); opacity: var(--th-grabber-opacity); }
-.th-cal { position: absolute; left: 0; right: 0; top: var(--th-grip); bottom: calc(var(--th-tray-inset) - var(--th-lift, 0px)); overflow: hidden; }
+.th-cal { position: absolute; left: 0; right: 0; top: calc(var(--th-grip) + var(--th-line-room, 0px)); bottom: calc(var(--th-tray-inset) - var(--th-lift, 0px)); overflow: hidden; }
 .th-cal-weeks { position: absolute; left: 0; right: 0; top: var(--th-head-height, 0px); bottom: 0; overflow: hidden; }
 /* The weeks stand on the bottom: folded, only this week's dates show. */
 .th-cal-list { position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; }
@@ -595,9 +595,12 @@ body:not(.is-mobile) .th-today.is-week .th-column > .th-group:first-child { padd
  */
 .th-cal-steps { position: absolute; left: 0; right: 0; bottom: 0; box-sizing: border-box; max-width: var(--th-column); height: var(--th-week-row); margin: 0 auto; padding-left: var(--th-cal-edge, var(--th-gutter)); display: flex; align-items: center; gap: var(--th-space-8); transform: translate(var(--th-steps-x, 0px), var(--th-steps-y, 0px)); pointer-events: none; }
 .th-cal-steps:empty { display: none; }
-.th-cal-cover { position: absolute; left: 0; right: 0; top: 0; z-index: var(--th-layer-cover); box-sizing: border-box; height: var(--th-cover-height); padding-bottom: var(--th-cover-pad); background: var(--th-surface); }
-.th-cal-cover:empty { display: none; }
-.th-cal-cover .th-undo { height: 100%; max-width: var(--th-column); margin: 0 auto; padding: 0 var(--th-cal-edge, var(--th-gutter)); }
+.th-tray-line { position: absolute; left: 0; right: 0; top: var(--th-grip); height: var(--th-line-room, 0px); overflow: hidden; }
+.th-tray-line:empty { display: none; }
+.th-tray-line .th-undo { height: 100%; max-width: var(--th-column); margin: 0 auto; padding: 0 var(--th-cal-edge, var(--th-gutter)); }
+.th-tray-line .th-undo-text { flex-direction: column; justify-content: center; gap: var(--th-space-2); line-height: var(--th-leading-title); }
+.th-tray-line .th-undo-what { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: var(--th-font-small); }
+.th-tray-line .th-undo-dot { display: none; }
 .th-tray:not(.is-up) .th-cal-steps button.th-cal-arrow { pointer-events: auto; }
 /* Folded, they are bare so they don't draw the eye from the days; their discs come in as they rise to the month's. */
 .th-cal-steps button.th-tool, .th-cal-steps button.th-tool:disabled:hover { background: color-mix(in srgb, var(--th-fill) calc(var(--th-steps-fill, 0) * 100%), transparent); }

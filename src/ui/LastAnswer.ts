@@ -62,7 +62,8 @@ export class LastAnswer {
 		this.timers.clearTimeout(this.timer);
 	}
 
-	private dismiss(): void {
+	/** Lets the answer go before its time, as it is. */
+	dismiss(): void {
 		this.timers.clearTimeout(this.timer);
 		if (!this.change) return;
 		this.change = null;
