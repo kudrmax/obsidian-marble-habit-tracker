@@ -11,15 +11,15 @@ import { IconName, icon, iconButton, markCircle, toolButton } from "./components
 import { recipeDays } from "./format";
 import { DESIGN } from "./design";
 import { computeStats } from "../domain/Stats";
-import { MarbleFeel, marbleFeel } from "../settings";
+import { RedesignRule } from "../domain/RedesignRule";
+import { MarbleFeel, marbleFeel, redesignSettings } from "../settings";
 import { DayWatcher } from "./DayWatcher";
-import { EditSheet } from "./EditSheet";
 import { Haptics } from "./Haptics";
 import { Hsl, parseColor } from "./jar/color";
 import { floorScale, scaleSizes } from "./jar/JarAssets";
 import { JarCanvas, JarItem } from "./jar/JarCanvas";
 import { KeyboardWatch } from "./KeyboardWatch";
-import { LEAVE_HOLD_MS, LEAVE_MS, Motion, SETTLE_MS, Side, Slide } from "./Motion";
+import { LEAVE_MS, Motion, SETTLE_MS, Side, Slide } from "./Motion";
 import { PendingMarks } from "./PendingMarks";
 import { CalendarTray } from "./CalendarTray";
 import { TodayPanel } from "./TodayPanel";
@@ -37,7 +37,7 @@ import { MarbleCalibration } from "./MarbleCalibration";
 import { ScreenChrome } from "./ScreenChrome";
 import { WeekCalendar } from "./WeekCalendar";
 import { WeekGrid } from "./WeekGrid";
-import { MARK_WORDS, closedDayLine, dayStrip, dayTitle, winsLabel, offersShrink, todayEntries } from "./today";
+import { MARK_WORDS, closedDayLine, dayStrip, dayTitle, redesignLine, winsLabel, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
 import { daysTitle, daysUpTo, weekCells } from "./week";
 
@@ -97,14 +97,13 @@ export class TodayView extends ItemView {
 	private reasonsOpening = false;
 	/** The menu of reasons on screen, with the layer under it that takes a tap anywhere else. */
 	private reasonsMenu: { menu: HTMLElement; backdrop: HTMLElement } | null = null;
-	private shrink: string | null = null;
 	private showDone = false;
 	/** A past day picked with the arrows, to mark what was forgotten; none means today. */
 	private day: LocalDate | null = null;
 	/** Today's list, or every habit including the ones not due and the archived ones. */
 	private screen: "today" | "all" = "today";
 	private layout: Layout = "day";
-	/** On the week's grid, the day of the circle being answered, its skip's reasons and the offer to shrink; on the list it is the shown day. */
+	/** On the week's grid, the day of the circle being answered and its skip's reasons; on the list it is the shown day. */
 	private answering: LocalDate | null = null;
 	private grid: WeekGrid | null = null;
 	private showArchived = false;
@@ -382,7 +381,6 @@ export class TodayView extends ItemView {
 		const open =(entry: Extract<HabitEntry, { kind: "ok" }>) =>
 			entry.habit.markOn(today) === undefined ||
 			this.menu === entry.path ||
-			this.shrink === entry.path ||
 			this.leaving.has(entry.path);
 		const ordered = groupBySection(
 			all.flatMap((entry) => (entry.kind === "ok" ? [entry] : [])),
@@ -473,7 +471,6 @@ export class TodayView extends ItemView {
 		this.leaving.clear();
 		this.menu = null;
 		this.reasons = null;
-		this.shrink = null;
 		this.answering = null;
 		this.showDone = false;
 		this.wasClosed = null;
@@ -487,7 +484,6 @@ export class TodayView extends ItemView {
 		this.screen = "all";
 		this.menu = null;
 		this.reasons = null;
-		this.shrink = null;
 		this.answering = null;
 		this.render();
 	}
@@ -530,14 +526,21 @@ export class TodayView extends ItemView {
 
 	/**
 	 * A habit's card, the same on Today, on the grid and in All habits: a circle, then its name, which opens its recipe.
-	 * `lead` puts Today's working circle in front, or nothing for null; `trail` puts the grid's circles after the name.
-	 * The card is returned for what goes under it.
+	 * `lead` puts Today's working circle in front, or nothing for null; `trail` puts the grid's circles after the name;
+	 * `attention` is the line under the name saying why the habit needs a change. The card is returned for what goes under it.
 	 */
 	private renderCard(
 		column: HTMLElement,
 		path: string,
 		habit: Habit,
-		options: { dimmed: boolean; sub?: string; attrs?: Record<string, string>; lead?: ((main: HTMLElement) => void) | null; trail?: (main: HTMLElement) => void },
+		options: {
+			dimmed: boolean;
+			sub?: string;
+			attention?: string;
+			attrs?: Record<string, string>;
+			lead?: ((main: HTMLElement) => void) | null;
+			trail?: (main: HTMLElement) => void;
+		},
 	): HTMLElement {
 		const row = column.createDiv({ cls: "th-row", attr: options.attrs ?? {} });
 		row.toggleClass("is-answered", options.dimmed);
@@ -547,6 +550,7 @@ export class TodayView extends ItemView {
 		const text = main.createDiv("th-row-text");
 		text.createDiv({ cls: "th-row-title", text: habit.name });
 		if (options.sub) text.createDiv({ cls: "th-row-sub", text: options.sub });
+		if (options.attention) this.renderAttention(text, path, options.attention);
 		options.trail?.(main);
 		text.setAttribute("aria-expanded", String(this.expanded === path));
 		row.toggleClass("is-expanded", this.expanded === path);
@@ -710,7 +714,6 @@ export class TodayView extends ItemView {
 		this.day = day.isBefore(this.ui.service.today()) ? day : null;
 		this.menu = null;
 		this.reasons = null;
-		this.shrink = null;
 		this.answering = null;
 		this.showDone = false;
 		this.wasClosed = null;
@@ -777,6 +780,26 @@ export class TodayView extends ItemView {
 	}
 
 	/**
+	 * The orange line under a habit that isn't working, saying why; a tap opens the habit to change its recipe. The name
+	 * and the line share the row's own height, so the circles keep their step.
+	 */
+	private renderAttention(text: HTMLElement, path: string, line: string): void {
+		text.addClass("has-attention");
+		const button = text.createEl("button", { cls: "th-row-attention", text: line });
+		setIcon(button.createSpan("th-row-attention-icon"), "chevron-right");
+		button.addEventListener("click", (event) => {
+			event.stopPropagation();
+			this.ui.openHabit(path, this.leaf);
+		});
+	}
+
+	/** Why the habit needs a change, as its line says it, or nothing while it works. */
+	private redesignAttention(habit: Habit): string | undefined {
+		const reason = new RedesignRule(redesignSettings(this.ui.settings())).reasonFor(habit, this.ui.service.today());
+		return reason && redesignLine(reason, this.ui.labels());
+	}
+
+	/**
 	 * A habit's row on Today: on the list its circle for the shown day in front, answered dimmed; on the grid its
 	 * circles for the days on show after the name, and the answers for the day of the one tapped.
 	 */
@@ -787,6 +810,7 @@ export class TodayView extends ItemView {
 		const side: Side = grid ? "right" : "left";
 		const row = this.renderCard(column, path, habit, {
 			dimmed: !grid && mark !== undefined,
+			attention: this.redesignAttention(habit),
 			attrs: { "data-slot": "row", "data-drag": path, "data-section": habit.section ?? "" },
 			lead: grid ? null : (main) => this.renderMark(main, path, habit, mark),
 			trail: grid ? (main) => this.renderDays(main, path, habit) : undefined,
@@ -796,7 +820,6 @@ export class TodayView extends ItemView {
 		const main = row.querySelector<HTMLElement>(".th-row-main");
 		if (main && this.menu === path) this.renderChoices(main, path, habit, mark, side);
 		if (main && this.closing === path) this.refold(main, side);
-		if (this.shrink === path && mark?.kind === "missed") this.renderShrink(row, path, habit);
 	}
 
 	/**
@@ -943,22 +966,9 @@ export class TodayView extends ItemView {
 		else button.addEventListener("click", () => this.showMenu(path));
 	}
 
-	private renderShrink(row: HTMLElement, path: string, habit: Habit): void {
-		const extra = row.createDiv("th-row-extra");
-		const link = extra.createEl("button", { cls: "th-link" });
-		icon(link, "shrink");
-		link.appendText("Make it even tinier");
-		link.addEventListener("click", () => new EditSheet(this.app, this.ui.service, path, habit, "tiny", this.ui.labels()).open());
-	}
-
-	/**
-	 * Opens a row's answers, on the grid for the day of its circle. Another row's offer to shrink goes, its row folding
-	 * away where answered rows leave, so it can't be answered for the wrong habit or day.
-	 */
+	/** Opens a row's answers, on the grid for the day of its circle. */
 	private showMenu(path: string, day: LocalDate | null = null): void {
 		if (this.menu === path && (day === null || this.answering?.equals(day))) return;
-		if (this.shrink === path) this.shrink = null;
-		else this.dropShrink();
 		this.menu = path;
 		this.answering = day;
 		this.reasons = null;
@@ -984,17 +994,16 @@ export class TodayView extends ItemView {
 		return `${path}|${day.toString()}`;
 	}
 
-	/** A click elsewhere closes the answer menu or the offer to shrink. */
+	/** A click elsewhere closes the answer menu. */
 	private closeMenuOutside(event: MouseEvent): void {
-		if (!this.menu && !this.shrink) return;
+		if (!this.menu) return;
 		const target = event.target as HTMLElement | null;
-		if (target?.closest(".th-row-choices, .th-mark-button, .th-grid-cell, .th-row-extra, .th-reasons, .th-reasons-backdrop")) return;
+		if (target?.closest(".th-row-choices, .th-mark-button, .th-grid-cell, .th-reasons, .th-reasons-backdrop")) return;
 		this.takeChoices();
 		this.unfolding?.stop();
 		this.unfolding = null;
 		this.closing = this.menu;
 		this.menu = null;
-		this.dropShrink();
 		this.render();
 	}
 
@@ -1028,7 +1037,7 @@ export class TodayView extends ItemView {
 
 	/**
 	 * A skip with its reason, or none, shown at once and written after: the menu and the answers go, and the row leaves
-	 * like any answered one. A skip that calls for a tinier habit keeps its row and offers that instead.
+	 * like any answered one.
 	 */
 	private skipWith(reason?: string): void {
 		const open = this.reasons;
@@ -1045,19 +1054,9 @@ export class TodayView extends ItemView {
 		this.menu = null;
 		const habit = this.shownHabit(path);
 		if (habit) this.lastAnswer.offer({ path, name: habit.name, day, before, after: mark });
-		const { redesignThreshold, shrinkReason } = this.ui.settings();
-		this.shrink = habit && offersShrink(habit, mark, redesignThreshold, shrinkReason) ? path : null;
-		if (!this.shrink && this.foldsAnswered()) this.startLeaving(path);
+		if (this.foldsAnswered()) this.startLeaving(path);
 		else this.leaving.delete(path);
 		this.render();
-	}
-
-	/** The offer to shrink goes; where answered rows leave the list, its row folds away with it. */
-	private dropShrink(): void {
-		const path = this.shrink;
-		if (!path) return;
-		this.shrink = null;
-		if (this.foldsAnswered() && !this.leaving.has(path)) this.startLeaving(path, false);
 	}
 
 	/**
@@ -1197,7 +1196,6 @@ export class TodayView extends ItemView {
 			this.lastAnswer.offer({ path, name: habit.name, day, before, after: mark });
 			this.menu = null;
 			this.reasons = null;
-			this.shrink = mark && offersShrink(habit, mark, this.ui.settings().redesignThreshold, this.ui.settings().shrinkReason) ? path : null;
 			if (mark && this.foldsAnswered()) this.startLeaving(path);
 			else this.leaving.delete(path);
 			if (win) {
@@ -1239,14 +1237,13 @@ export class TodayView extends ItemView {
 		this.stopCelebrating(this.cellKey(change.path, change.day));
 		this.leaving.delete(change.path);
 		if (this.reasons?.path === change.path) this.reasons = null;
-		if (this.shrink === change.path) this.shrink = null;
 		this.save(change.path, change.day, change.before);
 		this.render();
 	}
 
-	/** The answered row stays while its circle fills, then folds into the done line; unless `held`, it folds at once. */
-	private startLeaving(path: string, held = true): void {
-		const since = Date.now() - (held ? 0 : LEAVE_HOLD_MS);
+	/** The answered row stays while its circle fills, then folds into the done line. */
+	private startLeaving(path: string): void {
+		const since = Date.now();
 		this.leaving.set(path, since);
 		window.setTimeout(() => {
 			if (this.leaving.get(path) !== since) return;

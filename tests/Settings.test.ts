@@ -12,8 +12,9 @@ describe("loadSettings", () => {
 			properties: DEFAULT_PROPERTY_NAMES,
 			labels: { anchor: "trigger", tiny: "tiny action", full: "action", celebration: "celebration", schedule: "days" },
 			redesignThreshold: 3,
+			redesignShare: 50,
+			redesignOffTrigger: true,
 			missReasons: ["Forgot", "Trigger didn't happen", "No energy", "Felt too big"],
-			shrinkReason: "Felt too big",
 			material: "grain",
 			marbleSizes: { small: 24, medium: 44, big: 68 },
 			speed: 100,
@@ -45,8 +46,9 @@ describe("loadSettings", () => {
 				properties: { doneTiny: " done ", missed: "" },
 				labels: { anchor: " после того как ", tiny: "" },
 				redesignThreshold: 5,
+				redesignShare: 0,
+				redesignOffTrigger: false,
 				missReasons: [" Ill ", "", "Ill", "Travel"],
-				shrinkReason: "",
 				material: "halftone",
 				marbleSizes: { small: 20, medium: 48, big: 80 },
 				speed: 150,
@@ -73,8 +75,9 @@ describe("loadSettings", () => {
 			properties: { ...LEGACY_PROPERTY_NAMES, doneTiny: "done" },
 			labels: { anchor: "после того как", tiny: "tiny action", full: "action", celebration: "celebration", schedule: "days" },
 			redesignThreshold: 5,
+			redesignShare: 0,
+			redesignOffTrigger: false,
 			missReasons: ["Ill", "Travel"],
-			shrinkReason: "",
 			material: "halftone",
 			marbleSizes: { small: 20, medium: 48, big: 80 },
 			speed: 150,
@@ -152,10 +155,14 @@ describe("loadSettings", () => {
 			{ ...DEFAULT_SETTINGS, properties: LEGACY_PROPERTY_NAMES },
 		);
 		expect(loadSettings({ redesignThreshold: 2.5 }).redesignThreshold).toBe(3);
+		expect(loadSettings({ redesignShare: 101 }).redesignShare).toBe(50);
+		expect(loadSettings({ redesignShare: -1 }).redesignShare).toBe(50);
+		expect(loadSettings({ redesignOffTrigger: "yes" }).redesignOffTrigger).toBe(true);
 	});
 
 	it("drops settings that no longer exist", () => {
 		expect(loadSettings({ confetti: false })).toEqual({ ...DEFAULT_SETTINGS, properties: LEGACY_PROPERTY_NAMES });
+		expect(loadSettings({ shrinkReason: "Felt too big" })).toEqual({ ...DEFAULT_SETTINGS, properties: LEGACY_PROPERTY_NAMES });
 	});
 
 	it("renames the old default anchor reason to the trigger", () => {

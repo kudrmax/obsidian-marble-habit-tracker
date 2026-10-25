@@ -1,5 +1,6 @@
 import { DEFAULT_WIN_RULE, WinRule } from "./domain/DayMark";
 import { DEFAULT_MERGE_RULE, MergeRule } from "./domain/Jar";
+import { RedesignSettings } from "./domain/RedesignRule";
 import { DEFAULT_PROPERTY_NAMES, LEGACY_PROPERTY_NAMES, PropertyNames } from "./infrastructure/HabitCodec";
 import { DEFAULT_LABELS, LEGACY_LABELS, LabelSet } from "./ui/format";
 import { DEFAULT_MARBLE_SIZES, JarMaterial, MAX_MARBLE, MIN_MARBLE, MarbleSizes, isJarMaterial } from "./ui/jar/JarAssets";
@@ -15,9 +16,13 @@ export interface HabitSettings {
 	properties: PropertyNames;
 	/** What the parts of a recipe are called everywhere. */
 	labels: LabelSet;
+	/** Skips in a row after which Today says a habit needs a change. */
 	redesignThreshold: number;
+	/** A habit done on less than this percent of its recent days needs a change; 0 turns the rule off. */
+	redesignShare: number;
+	/** A habit done away from its trigger more often than at it needs a change. */
+	redesignOffTrigger: boolean;
 	missReasons: string[];
-	shrinkReason: string;
 	material: JarMaterial;
 	marbleSizes: MarbleSizes;
 	/** How fast marbles move, in percent of the speed they were tuned at. */
@@ -52,8 +57,9 @@ export const DEFAULT_SETTINGS: HabitSettings = {
 	properties: DEFAULT_PROPERTY_NAMES,
 	labels: DEFAULT_LABELS,
 	redesignThreshold: 3,
+	redesignShare: 50,
+	redesignOffTrigger: true,
 	missReasons: ["Forgot", "Trigger didn't happen", "No energy", "Felt too big"],
-	shrinkReason: "Felt too big",
 	material: "grain",
 	marbleSizes: DEFAULT_MARBLE_SIZES,
 	speed: 100,
@@ -88,6 +94,11 @@ export function marbleFeel(settings: HabitSettings): MarbleFeel {
 	return { sizes: settings.marbleSizes, speed: settings.speed, gravity: settings.gravity, bounce: settings.bounce };
 }
 
+/** When Today says a habit needs a change, from the settings. */
+export function redesignSettings(settings: HabitSettings): RedesignSettings {
+	return { skipsInARow: settings.redesignThreshold, lowShare: settings.redesignShare, offTrigger: settings.redesignOffTrigger };
+}
+
 export const MAX_DAY_START = 12;
 export const MIN_GRID_DAYS = 3;
 export const MAX_GRID_DAYS = 7;
@@ -98,6 +109,8 @@ export const MAX_GRAVITY = 7000;
 export const MIN_BOUNCE = 0;
 /** A perfectly elastic marble: it keeps all its speed, and with nothing in the air to slow it, bounces for ever. */
 export const MAX_BOUNCE = 100;
+/** A share of days, in percent. */
+export const MAX_SHARE = 100;
 const MIN_MERGE = 2;
 const MAX_MERGE = 30;
 
@@ -115,8 +128,9 @@ export function loadSettings(data: unknown): HabitSettings {
 		properties: loadProperties(raw.properties, data === null || data === undefined ? DEFAULT_PROPERTY_NAMES : LEGACY_PROPERTY_NAMES),
 		labels: loadLabels(raw.labels),
 		redesignThreshold: integer(raw.redesignThreshold, 1, Number.MAX_SAFE_INTEGER, DEFAULT_SETTINGS.redesignThreshold),
+		redesignShare: integer(raw.redesignShare, 0, MAX_SHARE, DEFAULT_SETTINGS.redesignShare),
+		redesignOffTrigger: flag(raw.redesignOffTrigger, DEFAULT_SETTINGS.redesignOffTrigger),
 		missReasons: loadReasons(raw.missReasons),
-		shrinkReason: typeof raw.shrinkReason === "string" ? raw.shrinkReason.trim() : DEFAULT_SETTINGS.shrinkReason,
 		material: isJarMaterial(raw.material) ? raw.material : DEFAULT_SETTINGS.material,
 		marbleSizes: loadMarbleSizes(raw.marbleSizes),
 		speed: integer(raw.speed, MIN_SPEED, MAX_SPEED, DEFAULT_SETTINGS.speed),

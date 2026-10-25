@@ -1,7 +1,8 @@
 import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
 import { JarSize } from "../domain/Jar";
 import { PropertyNames } from "../infrastructure/HabitCodec";
-import { DEFAULT_SETTINGS, HabitSettings, MAX_DAY_START, MAX_GRID_DAYS, MIN_GRID_DAYS, parseReasons } from "../settings";
+import { REDESIGN_WEEKS } from "../domain/RedesignRule";
+import { DEFAULT_SETTINGS, HabitSettings, MAX_DAY_START, MAX_GRID_DAYS, MAX_SHARE, MIN_GRID_DAYS, parseReasons } from "../settings";
 import { DEFAULT_LABELS, LabelSet, RecipeLabels } from "./format";
 import { Hsl, parseColor } from "./jar/color";
 import { DEFAULT_MARBLE_SIZES, JAR_MATERIALS, JarMaterial, assetSvg } from "./jar/JarAssets";
@@ -68,6 +69,7 @@ export class SettingsTab extends PluginSettingTab {
 		this.habits(containerEl);
 		this.today(containerEl);
 		this.skipped(containerEl);
+		this.needsChange(containerEl);
 		this.marbles(containerEl);
 		this.labels(containerEl);
 		this.properties(containerEl);
@@ -191,13 +193,19 @@ export class SettingsTab extends PluginSettingTab {
 					if (reasons.length) void this.save((next) => (next.missReasons = reasons));
 				});
 			});
+	}
+
+	private needsChange(containerEl: HTMLElement): void {
+		const settings = this.host.config;
+		const trigger = new RecipeLabels(settings.labels).of("anchor");
+		const weeks = `${REDESIGN_WEEKS} weeks`;
 		new Setting(containerEl)
-			.setName("Reason that offers a tinier habit")
-			.setDesc("Skipping with this reason suggests making the habit smaller. Leave empty to turn off.")
-			.addText((text) => text.setValue(settings.shrinkReason).onChange((value) => void this.save((next) => (next.shrinkReason = value.trim()))));
+			.setName("Needs a change")
+			.setDesc("On Today, a habit that isn't working gets an orange line under its name saying why; a tap on it opens the habit to change its recipe. Only the days since the recipe last changed count.")
+			.setHeading();
 		new Setting(containerEl)
-			.setName("Suggest a redesign")
-			.setDesc("Also suggest a tinier habit after this many skips in a row.")
+			.setName("Skips in a row")
+			.setDesc("A habit skipped this many times in a row needs a change.")
 			.addText((text) => {
 				text.inputEl.type = "number";
 				text.setValue(String(settings.redesignThreshold)).onChange((value) => {
@@ -205,6 +213,20 @@ export class SettingsTab extends PluginSettingTab {
 					if (Number.isInteger(threshold) && threshold >= 1) void this.save((next) => (next.redesignThreshold = threshold));
 				});
 			});
+		new Setting(containerEl)
+			.setName("Done less than")
+			.setDesc(`A habit done on less than this share of its days over the last ${weeks}, in percent, needs a change. 0 turns it off.`)
+			.addText((text) => {
+				text.inputEl.type = "number";
+				text.setValue(String(settings.redesignShare)).onChange((value) => {
+					const share = Number(value);
+					if (Number.isInteger(share) && share >= 0 && share <= MAX_SHARE) void this.save((next) => (next.redesignShare = share));
+				});
+			});
+		new Setting(containerEl)
+			.setName(`Mostly not at the ${trigger}`)
+			.setDesc(`A habit done away from its ${trigger} more often than at it over the last ${weeks} needs a change.`)
+			.addToggle((toggle) => toggle.setValue(settings.redesignOffTrigger).onChange((value) => void this.save((next) => (next.redesignOffTrigger = value))));
 	}
 
 	private habits(containerEl: HTMLElement): void {
