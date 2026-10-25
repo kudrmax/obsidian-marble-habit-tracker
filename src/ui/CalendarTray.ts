@@ -19,6 +19,11 @@ const REST_LIFT = DESIGN.weekRow / 2 + BOTTOM_GAP - REST_HEIGHT / 2;
 const FIGURES = "0123456789";
 /** How far the tray rises before this week's row is whole. */
 const ROW_WHOLE = DESIGN.weekRow + DESIGN.grip + BOTTOM_GAP - REST_HEIGHT;
+/** Folded, the calendar shows this much under the grabber: this week's row, cut to its dates. */
+const FOLDED_LINE = REST_HEIGHT - DESIGN.grip - BOTTOM_GAP + REST_LIFT;
+/** Where the tray's first line has its middle, below the calendar's top: this week's dates folded, the month's line up. */
+const FOLDED_MIDDLE = FOLDED_LINE - DESIGN.weekRow / 2;
+const OPEN_MIDDLE = HEAD_ROOM + DESIGN.monthLine / 2;
 /** How far the tray rises while the rings draw themselves round: up to its first stop, with the head open. */
 const RINGS_DRAWN = ROW_WHOLE + HEAD;
 /** The furthest the tray goes up: enough for a month of six weeks, and over the week's grid the week before it. */
@@ -106,6 +111,10 @@ export class CalendarTray {
 	private readonly weeks: HTMLElement;
 	/** Over the week's grid, arrows in the folded row that move its days a day at a time. */
 	private readonly steps: HTMLElement;
+	/** Laid over the first line, whatever it shows: see `coverFirstLine`. */
+	private readonly cover: HTMLElement;
+	/** How far the head was open when the cover was last fitted to the first line. */
+	private coveredAt = Number.NaN;
 	private days: readonly StripDay[] = [];
 	/** Over the week's grid, the days the folded row shows. */
 	private stripDays: readonly LocalDate[] = [];
@@ -192,6 +201,7 @@ export class CalendarTray {
 		this.latest = this.todayButton(line);
 		this.tools = line.createDiv("th-cal-tools");
 		this.steps = this.calendar.createDiv("th-cal-steps");
+		this.cover = this.calendar.createDiv("th-cal-cover");
 		this.tray.addEventListener("pointerdown", this.pointerDown);
 		window.addEventListener("pointermove", this.pointerMove);
 		window.addEventListener("pointerup", this.pointerUp);
@@ -215,6 +225,7 @@ export class CalendarTray {
 	destroy(): void {
 		this.resizer.disconnect();
 		cancelAnimationFrame(this.settleFrame);
+		this.settleFrame = 0;
 		window.removeEventListener("pointermove", this.pointerMove);
 		window.removeEventListener("pointerup", this.pointerUp);
 		window.removeEventListener("pointercancel", this.pointerCancel);
@@ -232,6 +243,28 @@ export class CalendarTray {
 		this.tools.empty();
 		this.tools.appendChild(tools);
 		this.fitTitle();
+	}
+
+	/**
+	 * Lays `line` over the tray's first line, or takes it away: folded, over this week's dates, and once the month is up,
+	 * over its line with the arrows and Today's buttons. It rides the tray's top edge as the tray moves, settling onto
+	 * whichever line is first, and the tray moves and folds under the finger with it on as without.
+	 */
+	coverFirstLine(line: HTMLElement | null): void {
+		this.cover.empty();
+		if (line) this.cover.appendChild(line);
+		this.coveredAt = Number.NaN;
+		this.fitCover();
+	}
+
+	/** How far above its rest the tray stands now. */
+	raisedBy(): number {
+		return Math.max(0, this.raised);
+	}
+
+	/** Whether the tray is moving: a finger on it, or settling where it was let go. */
+	isMoving(): boolean {
+		return this.drag !== null || this.bandDrag !== null || this.settleFrame !== 0;
 	}
 
 	/** The tray keeps its place while `held` says so; call `refit` once it no longer holds. */
@@ -771,6 +804,7 @@ export class CalendarTray {
 		const head = `${Math.min(HEAD, Math.max(0, raised - ROW_WHOLE))}px`;
 		this.head.style.setProperty("--th-head-height", head);
 		this.weeks.style.setProperty("--th-head-height", head);
+		this.fitCover();
 		this.tray.style.setProperty("--th-open", String(clamp(raised / SHADOW_FADE)));
 		// Folded, this week's row hangs low so only its dates show; pushed below its rest, the tray takes them down with it.
 		this.calendar.style.setProperty("--th-lift", `${Math.max(0, REST_LIFT - this.raised)}px`);
@@ -778,6 +812,21 @@ export class CalendarTray {
 		if (up === this.tray.hasClass("is-up")) return;
 		this.grip.setAttribute("aria-label", up ? "Hide the month" : "Show the month");
 		this.tray.toggleClass("is-up", up);
+	}
+
+	/**
+	 * Fits the cover to the first line as the head opens: folded it hides the whole of this week's row, its middle on the
+	 * dates' line; open, the head's room and the month's line, its middle on that line.
+	 */
+	private fitCover(): void {
+		if (!this.cover.firstChild) return;
+		const open = clamp((Math.max(0, this.raised) - ROW_WHOLE) / HEAD);
+		if (open === this.coveredAt) return;
+		this.coveredAt = open;
+		const height = FOLDED_LINE + (2 * OPEN_MIDDLE - FOLDED_LINE) * open;
+		const middle = FOLDED_MIDDLE + (OPEN_MIDDLE - FOLDED_MIDDLE) * open;
+		this.cover.style.setProperty("--th-cover-height", `${height.toFixed(2)}px`);
+		this.cover.style.setProperty("--th-cover-pad", `${(height - 2 * middle).toFixed(2)}px`);
 	}
 
 	/** Where the finger puts the tray, giving way less and less past either end of its range. */
@@ -791,6 +840,7 @@ export class CalendarTray {
 	private readonly pointerDown = (event: PointerEvent) => {
 		if (event.button !== 0 || this.grabBand(event)) return;
 		cancelAnimationFrame(this.settleFrame);
+		this.settleFrame = 0;
 		this.drag = { pointer: event.pointerId, startY: event.clientY, startRaised: this.raised, lastY: event.clientY, lastAt: event.timeStamp, speed: 0, moving: false };
 	};
 
@@ -944,6 +994,7 @@ export class CalendarTray {
 			this.raised = from + (to - from) * easeOut(t);
 			this.place();
 			if (t < 1) return void (this.settleFrame = requestAnimationFrame(step));
+			this.settleFrame = 0;
 			this.room();
 			if (to <= 0 && this.revealed()) this.forget();
 		};

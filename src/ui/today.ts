@@ -7,6 +7,9 @@ import { longDate } from "./format";
 import { visibleEntries } from "./order";
 
 
+/** The word for each answer: on its button among the choices, and in the line that offers to undo it. */
+export const MARK_WORDS: Record<DayMark["kind"], string> = { full: "Full", tiny: "Tiny", offTrigger: "Anytime", missed: "Skip" };
+
 /** "Today", "Yesterday", or the date of an earlier day. */
 export function dayTitle(day: LocalDate, today: LocalDate): string {
 	if (day.equals(today)) return "Today";
