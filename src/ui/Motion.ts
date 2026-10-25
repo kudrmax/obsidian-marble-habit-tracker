@@ -3,9 +3,11 @@ export const SETTLE = "cubic-bezier(0.2, 0.8, 0.2, 1)";
 export const SPRING = "cubic-bezier(0.34, 1.4, 0.64, 1)";
 
 /** A just-answered row stays on screen this long, so the filled circle is seen, then folds away. */
-const LEAVE_HOLD_MS = 420;
+export const LEAVE_HOLD_MS = 420;
 const LEAVE_FOLD_MS = 280;
 export const LEAVE_MS = LEAVE_HOLD_MS + LEAVE_FOLD_MS;
+/** Something answered closes as fast as an answered row folds. */
+export const CLOSE_MS = LEAVE_FOLD_MS;
 
 const DAY_MS = 260;
 const PUSH_MS = 380;
@@ -21,6 +23,8 @@ const BUMP_SCALE = 1.08;
  */
 const SLIDE_MS = 320;
 const FADE_MS = 160;
+/** Long enough for any move a tap starts to have played out. */
+export const SETTLE_MS = Math.max(SLIDE_MS, GROW_MS, LEAVE_FOLD_MS);
 /** How far past the view's edge the choices wait. */
 const OFF_EDGE = 4;
 
@@ -77,6 +81,20 @@ export class Motion {
 			],
 			{ duration: GROW_MS, easing: SETTLE },
 		);
+	}
+
+	/** Something answered `since` ms ago folds to nothing at once, carrying on from where it was after a redraw. */
+	close(element: HTMLElement, since: number): void {
+		if (this.reduced()) return;
+		element.addClass("is-closing");
+		const animation = element.animate(
+			[
+				{ height: `${element.offsetHeight}px`, opacity: 1 },
+				{ height: "0px", opacity: 0 },
+			],
+			{ duration: CLOSE_MS, easing: SETTLE, fill: "forwards" },
+		);
+		animation.currentTime = Math.min(Math.max(0, Date.now() - since), CLOSE_MS);
 	}
 
 	/** Something about to close folds away first; resolves when it is gone. */

@@ -95,7 +95,7 @@ export function iconButton(parent: HTMLElement, options: ButtonOptions): HTMLBut
 	return button;
 }
 
-export function chip(parent: HTMLElement, text: string, onClick: () => void, variant?: "ghost" | "strong"): HTMLButtonElement {
+export function chip(parent: HTMLElement, text: string, onClick: () => void, variant?: "quiet" | "strong"): HTMLButtonElement {
 	const button = parent.createEl("button", { cls: variant ? ["th-chip", `th-chip-${variant}`] : "th-chip", text });
 	button.addEventListener("click", onClick);
 	return button;

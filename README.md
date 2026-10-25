@@ -2,7 +2,7 @@
 
 A habit tracker for [Obsidian](https://obsidian.md) where every win drops a marble into a jar.
 
-- **Close the day.** One list of today's habits. Tap the circle and the answers slide into the row as buttons — Full, Tiny or Skip, with a reason for a skip. Tap a marked circle to clear it.
+- **Close the day.** One list of today's habits. Tap the circle and the answers slide into the row as buttons — Full, Tiny or Skip; a skip then asks what got in the way, and “No reason” is one answer. Tap a marked circle to clear it.
 - **Not at the trigger.** Turn on *Done without the trigger* and a habit can get a fourth answer, Anytime, for a day it was done at another moment. Such a day gives no marble and breaks the streak, unless *Not at the trigger is a win* is on.
 - **Watch the jar fill.** Every win is a marble in the habit's colour; the circles and the answers keep to Obsidian's accent, so the colour on Today is the marbles'. Seven marbles of one habit merge into a bigger one, four of those into the biggest.
 - **Tilt to roll.** On a phone the marbles roll with the tilt of the device, with a light vibration.

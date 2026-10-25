@@ -15,6 +15,11 @@ export function missed(reason?: string): DayMark {
 	return text ? { kind: "missed", reason: text } : SKIPPED;
 }
 
+export function sameMark(a: DayMark | undefined, b: DayMark | undefined): boolean {
+	if (a?.kind === "missed" && b?.kind === "missed") return a.reason === b.reason;
+	return a?.kind === b?.kind;
+}
+
 /** Which days are wins: they drop a marble, grow the streak and fill the day's ring. Tiny and full always are. */
 export interface WinRule {
 	readonly offTrigger: boolean;

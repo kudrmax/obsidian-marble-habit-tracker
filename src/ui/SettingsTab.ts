@@ -191,7 +191,7 @@ export class SettingsTab extends PluginSettingTab {
 		new Setting(containerEl).setName("Skipped").setHeading();
 		new Setting(containerEl)
 			.setName("Reasons")
-			.setDesc("Offered when you skip a habit, one per line. “Other…” is always there for anything else.")
+			.setDesc("Offered when you skip a habit, one per line. “No reason” is always there too, and “Other…” for anything else.")
 			.addTextArea((area) => {
 				area.inputEl.rows = 5;
 				area.setValue(settings.missReasons.join("\n")).onChange((value) => {

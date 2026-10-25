@@ -1,11 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_WIN_RULE, FULL, OFF_TRIGGER, TINY, isWin, missed } from "../src/domain/DayMark";
+import { DEFAULT_WIN_RULE, FULL, OFF_TRIGGER, SKIPPED, TINY, isWin, missed, sameMark } from "../src/domain/DayMark";
 
 describe("DayMark", () => {
 	it("keeps the reason of a skipped day, when there is one", () => {
 		expect(missed("  проспал ")).toEqual({ kind: "missed", reason: "проспал" });
 		expect(missed("   ")).toEqual({ kind: "missed" });
 		expect(missed()).toEqual({ kind: "missed" });
+	});
+
+	it("tells two marks apart by kind and by a skip's reason", () => {
+		expect(sameMark(TINY, { kind: "tiny" })).toBe(true);
+		expect(sameMark(TINY, FULL)).toBe(false);
+		expect(sameMark(missed("Forgot"), missed("Forgot"))).toBe(true);
+		expect(sameMark(missed("Forgot"), SKIPPED)).toBe(false);
+		expect(sameMark(undefined, undefined)).toBe(true);
+		expect(sameMark(SKIPPED, undefined)).toBe(false);
 	});
 
 	it("treats tiny and full as wins", () => {

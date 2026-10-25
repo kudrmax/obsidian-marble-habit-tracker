@@ -294,11 +294,14 @@ button.th-button-primary:disabled { background: var(--th-surface); color: var(--
 button.th-button-large { width: var(--th-button-large); height: var(--th-button-large); }
 button.th-button-large svg { width: var(--th-icon-large); height: var(--th-icon-large); }
 
-button.th-chip { height: var(--th-chip); padding: 0 var(--th-space-12); border: var(--th-line-width) solid var(--th-line); border-radius: var(--th-radius-capsule); box-shadow: none; background: var(--th-surface); color: var(--th-text); font-size: var(--th-font-small); cursor: pointer; }
-button.th-chip-ghost { background: transparent; border-style: dashed; color: var(--th-muted); }
-button.th-chip.is-on { border-style: solid; border-color: var(--th-muted); }
-button.th-chip-strong { border: none; background: var(--th-strong); color: var(--th-on-strong); font-weight: var(--th-weight-semibold); }
-button.th-chip-strong:disabled { background: var(--th-surface); color: var(--th-faint); }
+/* A skip's reasons: filled capsules like the answers; the one picked turns the grey of a skip. */
+button.th-chip { height: var(--th-chip); padding: 0 var(--th-space-14); border: none; border-radius: var(--th-radius-capsule); box-shadow: none; background: var(--th-fill); color: var(--th-text); font-size: var(--th-font-answer); letter-spacing: var(--th-tracking-tight); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: scale var(--th-quick-time) ease, background-color var(--th-quick-time) ease, color var(--th-quick-time) ease; }
+@media (hover: hover) { button.th-chip:hover { background: var(--th-fill-hover); } }
+button.th-chip:active { scale: var(--th-word-press-scale); }
+button.th-chip-quiet { color: var(--th-muted); }
+button.th-chip.is-picked, button.th-chip.is-picked:hover { background: var(--th-skip); color: var(--th-on-color); }
+button.th-chip-strong, button.th-chip-strong:hover { background: var(--th-strong); color: var(--th-on-strong); font-weight: var(--th-weight-semibold); }
+button.th-chip-strong:disabled { background: var(--th-fill); color: var(--th-faint); }
 
 button.th-link { display: inline-flex; align-items: center; gap: var(--th-space-6); height: var(--th-link-height); padding: 0; border: none; box-shadow: none; background: transparent; color: var(--th-accent); font-size: var(--th-font-small); cursor: pointer; }
 button.th-link svg { width: var(--th-icon-small); height: var(--th-icon-small); }
@@ -316,7 +319,6 @@ button.th-link svg { width: var(--th-icon-small); height: var(--th-icon-small); 
 .th-mark.is-done svg { stroke-width: var(--th-check-stroke-done); }
 .th-mark.is-missed { position: relative; background: var(--th-skip); }
 .th-mark.is-missed::after { content: ""; width: var(--th-dash-width); height: var(--th-dash-height); border-radius: var(--th-radius-capsule); background: var(--th-on-color); }
-.th-mark.is-asking { border-style: dashed; border-color: var(--th-faint); }
 .th-mark.th-choice-cancel { background: var(--th-fill-solid); color: var(--th-muted); }
 .th-mark.is-off-trigger { border: none; background: var(--th-fill-solid); color: var(--th-accent); }
 .th-mark.is-off-trigger svg { stroke-width: var(--th-check-stroke-done); }
@@ -338,7 +340,8 @@ button.th-mark-button:active .th-mark { transform: scale(var(--th-press-scale));
 .th-field .th-label { margin-bottom: var(--th-space-6); font-size: var(--th-font-ui-small); color: var(--th-muted); }
 .th-field input,
 .th-field textarea { width: 100%; box-sizing: border-box; font-size: var(--th-font-ui-medium); resize: none; }
-input.th-inline-input { flex: 1 1 auto; min-width: 0; height: var(--th-chip); padding: 0 var(--th-space-12); border: var(--th-line-width) solid var(--th-line); border-radius: var(--th-radius-capsule); background: var(--th-surface); font-size: var(--th-font-small); }
+input.th-inline-input { flex: 1 1 auto; min-width: 0; height: var(--th-chip); padding: 0 var(--th-space-14); border: none; border-radius: var(--th-radius-capsule); background: var(--th-fill); font-size: var(--th-font-answer); }
+input.th-inline-input:focus, input.th-inline-input:focus-visible { box-shadow: none; background: var(--th-fill-hover); }
 
 .th-circles { display: flex; justify-content: space-between; gap: var(--th-space-6); margin-top: var(--th-space-10); }
 button.th-day { width: var(--th-answer); height: var(--th-answer); min-height: 0; padding: 0; border: var(--th-stroke) solid var(--th-line); border-radius: var(--th-radius-circle); box-shadow: none; background: transparent; color: var(--th-faint); font-size: var(--th-font-control); font-weight: var(--th-weight-semibold); cursor: pointer; }
@@ -415,8 +418,12 @@ button.th-archived-toggle { display: inline-flex; align-items: center; gap: var(
 .th-row.is-shifting { transition: transform var(--th-shift-time) ease; }
 .th-row-extra { padding: 0 var(--th-gutter) var(--th-space-14) calc(var(--th-gutter) + var(--th-slot) - var(--th-space-6)); animation: th-in var(--th-in-quick-time) ease; }
 .th-row-extra .th-label { margin-bottom: var(--th-space-8); }
-.th-chips { display: flex; flex-wrap: wrap; gap: var(--th-space-6); }
-.th-inline-form { display: flex; gap: var(--th-space-6); margin-top: var(--th-space-8); }
+/* A skip's question grows open once and folds away when answered, so a redraw in between leaves it still. */
+.th-row-extra.th-why { padding-bottom: 0; overflow: hidden; animation: none; }
+.th-why > :last-child { margin-bottom: var(--th-space-14); }
+.th-row-extra.is-closing { pointer-events: none; }
+.th-chips { display: flex; flex-wrap: wrap; gap: var(--th-space-8); }
+.th-inline-form { display: flex; gap: var(--th-space-8); margin-top: var(--th-space-8); }
 /* The new-section zone shows only while a habit is being dragged. */
 .th-section-new { display: none; margin-top: var(--th-space-8); padding: var(--th-space-14) var(--th-space-16); border: var(--th-line-width) dashed var(--th-line); border-radius: var(--th-radius-panel); color: var(--th-faint); font-size: var(--th-font-ui-small); text-align: center; transition: border-color var(--th-fast), color var(--th-fast), background-color var(--th-fast); }
 .is-dragging-row .th-section-new { display: block; }
