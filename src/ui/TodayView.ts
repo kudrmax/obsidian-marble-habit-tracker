@@ -55,6 +55,8 @@ const ORIGIN_TTL_MS = 4000;
 const FALLBACK_COLOR: Hsl = { h: 258, s: 88, l: 66 };
 /** How long to wait for the plugin's stylesheet before reading the colors again. */
 const STYLES_RETRY_MS = 200;
+/** The room kept for the pile grows and shrinks a marble's worth at a time, so a pile that only shifts lays nothing out again. */
+const PILE_STEP = 16;
 
 type Answer = "full" | "tiny" | "offTrigger" | "skip";
 /** Today as the shown day's list, or as its week's grid of every habit. */
@@ -122,6 +124,8 @@ export class TodayView extends ItemView {
 	/** Sizes being tried on the sliders, shown instead of the saved ones until the calibration ends. */
 	private trialSizes: MarbleSizes | null = null;
 	private readonly tilt = new TiltSensor((gravity) => this.jar?.setGravity(gravity));
+	/** How high the marbles last stood, as the list keeps room for them. */
+	private pile = -1;
 
 	constructor(
 		leaf: WorkspaceLeaf,
@@ -1118,7 +1122,10 @@ export class TodayView extends ItemView {
 	 */
 	private makeRoomForPile(top: number | null): void {
 		const floor = this.tray?.box().top ?? this.contentEl.clientHeight;
-		this.contentEl.style.setProperty("--th-pile", `${Math.max(0, top === null ? 0 : floor - top)}px`);
+		const pile = top === null ? 0 : Math.ceil(Math.max(0, floor - top) / PILE_STEP) * PILE_STEP;
+		if (pile === this.pile || !this.columnEl) return;
+		this.pile = pile;
+		this.columnEl.style.setProperty("--th-pile", `${pile}px`);
 	}
 
 	/** On a computer the marbles grow with the view's width, so a wide floor still holds a pile and not a sparse line. */

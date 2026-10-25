@@ -48,13 +48,15 @@ export interface TrayRange {
 	readonly move: (end: LocalDate) => void;
 }
 
-/** A day on show over the grid, its date and ring carried from its place in the folded row up to its own on the month. */
+/**
+ * A day on show over the grid, its date and ring carried between its place in the folded row and its own on the month:
+ * the week and the column it has there, and its place among the days on show.
+ */
 interface Carried {
 	readonly cell: HTMLElement;
 	readonly week: number;
-	/** How far its place in the folded row lies from its own on the month. */
-	readonly across: number;
-	readonly down: number;
+	readonly column: number;
+	readonly place: number;
 }
 
 /** A date's ring: its track all the way round, and the part of it the day was done, if any. */
@@ -101,11 +103,11 @@ export class CalendarTray {
 	/** Today's buttons, on the month's line. */
 	private readonly tools: HTMLElement;
 	private readonly weeks: HTMLElement;
-	/** Over the week's grid, the places of the grid's own days in the folded row. */
-	private readonly strip: HTMLElement;
 	/** Over the week's grid, arrows in the folded row that move its days a day at a time. */
 	private readonly steps: HTMLElement;
 	private days: readonly StripDay[] = [];
+	/** Over the week's grid, the days the folded row shows. */
+	private stripDays: readonly LocalDate[] = [];
 	private months: CalendarMonth[] = [];
 	/** The month on show, as an index into `months`; folded, it is always this month. */
 	private monthIndex = -1;
@@ -123,17 +125,29 @@ export class CalendarTray {
 	private readonly figureShifts = new Map<string, number>();
 	/** How much of the view's bottom Obsidian's bars cover. */
 	private inset = 0;
+	/** The view's size as last read, before the tray was placed. */
+	private width = 0;
+	private height = 0;
 	private rows = 1;
 	private rings: Ring[] = [];
 	/** Over the week's grid, the days on show, marked on the month with a band. */
 	private range: TrayRange | null = null;
 	/** The dates of each week the month lays out, over the grid the week before it first. */
 	private weekDates: LocalDate[][] = [];
-	/** Each week's band, over the grid. */
+	/** Each week's row, and over the grid its band. */
+	private weekRows: HTMLElement[] = [];
 	private bands: HTMLElement[] = [];
 	/** How far up the tray was when the band was last drawn. */
 	private bandDrawn = -1;
 	private carried: Carried[] = [];
+	/** How far up the tray was when the rings, the carried days and the arrows were last moved; each frame moves them once. */
+	private ringsAt = Number.NaN;
+	private carriedAt = Number.NaN;
+	private stepsAt = Number.NaN;
+	/** What the view was last told of the tray: its height at rest, under the list, and how high it stands over the bars. */
+	private roomHeight = -1;
+	private restHeight = -1;
+	private insetHeight = -1;
 	/** How far across the folded row's arrows travel to the month's, and how far they are now. */
 	private stepsAcross = 0;
 	private stepsShift = 0;
@@ -176,7 +190,6 @@ export class CalendarTray {
 		this.next = this.arrow(line, "Next month", "chevron-right", () => this.turn(1));
 		this.latest = this.todayButton(line);
 		this.tools = line.createDiv("th-cal-tools");
-		this.strip = this.calendar.createDiv("th-cal-strip");
 		this.steps = this.calendar.createDiv("th-cal-steps");
 		this.tray.addEventListener("pointerdown", this.pointerDown);
 		window.addEventListener("pointermove", this.pointerMove);
@@ -188,9 +201,13 @@ export class CalendarTray {
 		this.tray.addEventListener("touchmove", (event) => {
 			if (this.drag?.moving || this.bandDrag) event.stopPropagation();
 		});
-		this.resizer = new ResizeObserver(() => this.placeRest());
+		this.resizer = new ResizeObserver(() => {
+			this.placeRest();
+			this.measureSteps();
+		});
 		this.resizer.observe(root);
 		this.place();
+		this.room();
 		this.ready = true;
 	}
 
@@ -231,7 +248,7 @@ export class CalendarTray {
 
 	/** The tray where it is now, as the box the marbles stand on. */
 	box(): Box {
-		return { left: 0, top: this.restTop - this.raised, right: this.root.clientWidth, bottom: this.root.clientHeight, radius: DESIGN.trayCorner };
+		return { left: 0, top: this.restTop - this.raised, right: this.width, bottom: this.height, radius: DESIGN.trayCorner };
 	}
 
 	/**
@@ -280,14 +297,10 @@ export class CalendarTray {
 	 * each travels to its place on the month, its ring and the band drawing round it, and the rest of the month comes in.
 	 */
 	setStrip(strip: TrayStrip | null): void {
-		this.strip.empty();
 		this.steps.empty();
 		this.focus = strip?.focus ?? null;
+		this.stripDays = strip?.days.map((day) => day.date) ?? [];
 		const range = this.range;
-		if (strip) {
-			const places = this.strip.createDiv("th-cal-strip-days");
-			for (const day of strip.days) places.createDiv({ cls: "th-cal-day", attr: { "data-date": day.date.toString() } });
-		}
 		if (strip && range && this.today) {
 			const first = this.months[0];
 			const earliest = first ? LocalDate.of(first.year, first.month, 1) : this.today;
@@ -307,6 +320,7 @@ export class CalendarTray {
 		const first = this.steps.querySelector<HTMLElement>(".th-cal-arrow");
 		if (!first) return;
 		this.stepsAcross = this.previous.getBoundingClientRect().left - first.getBoundingClientRect().left + this.stepsShift;
+		this.stepsAt = Number.NaN;
 		this.moveSteps();
 	}
 
@@ -315,6 +329,8 @@ export class CalendarTray {
 	 * wait hidden until then, and the folded ones hide once they are there.
 	 */
 	private moveSteps(): void {
+		if (!this.steps.firstChild || this.raised === this.stepsAt) return;
+		this.stepsAt = this.raised;
 		const raised = Math.max(0, this.raised);
 		const travel = clamp(raised / (ROW_WHOLE + HEAD));
 		const head = Math.min(HEAD, Math.max(0, raised - ROW_WHOLE));
@@ -423,17 +439,21 @@ export class CalendarTray {
 		const weeks = trayWeeks(this.days, month, today, this.range ? 1 : 0);
 		this.weeks.empty();
 		this.rings = [];
+		this.ringsAt = Number.NaN;
+		this.weekRows = [];
 		this.bands = [];
 		this.weekDates = weeks.map((week) => week.map((day) => day.date));
 		const list = this.weeks.createDiv("th-cal-list");
 		weeks.forEach((week, index) => {
 			const row = list.createDiv("th-cal-week");
+			this.weekRows.push(row);
 			if (this.range) this.bands.push(row.createDiv("th-cal-band"));
 			for (const day of week) {
 				if (this.range) this.renderBandDay(row, day, index, today);
 				else this.renderDay(row, day, index, this.shownDay?.equals(day.date) ?? false, today);
 			}
 		});
+		this.alignToGrid();
 		this.fitTitle();
 		this.previous.disabled = this.monthIndex === 0;
 		this.next.disabled = this.monthIndex === this.months.length - 1;
@@ -472,6 +492,7 @@ export class CalendarTray {
 			band.toggleClass("is-empty", held.length === 0);
 		});
 		this.bandDrawn = -1;
+		this.ringsAt = Number.NaN;
 		this.drawBand();
 	}
 
@@ -504,26 +525,38 @@ export class CalendarTray {
 		return !!range && !date.isAfter(range.end) && !date.isBefore(range.end.addDays(1 - range.count));
 	}
 
-	/** Finds how far each day on show lies from its place in the folded row, to carry it between the two. */
+	/**
+	 * Tells each day on show where its place in the folded row stands against its own on the month: how many columns in
+	 * from the row's end it is, how many places in from the folded row's end, and how many weeks up. The styles carry it
+	 * between the two from that alone, so nothing is measured, and no change of width or late stylesheet leaves it behind.
+	 */
 	private carry(): void {
-		for (const item of this.carried) {
-			item.cell.removeClass("is-carried");
-			item.cell.removeClass("is-selected");
-		}
+		for (const item of this.carried) item.cell.removeClass("is-carried", "is-selected");
 		this.carried = [];
-		const places = this.range ? Array.from(this.strip.querySelectorAll<HTMLElement>(".th-cal-day")) : [];
-		const cells = places.map((place) => this.weeks.querySelector<HTMLElement>(`.th-cal-day[data-date="${place.dataset.date ?? ""}"]`));
-		places.forEach((place, index) => {
-			const cell = cells[index];
-			const date = cell?.dataset.date ? LocalDate.parse(cell.dataset.date) : null;
-			const week = date ? this.weekDates.findIndex((dates) => dates.some((day) => day.equals(date))) : -1;
-			if (!cell || !date || week < 0) return;
-			const from = place.getBoundingClientRect();
-			const to = cell.getBoundingClientRect();
-			cell.addClass("is-carried");
-			cell.toggleClass("is-selected", this.focus?.equals(date) ?? false);
-			this.carried.push({ cell, week, across: from.left + from.width / 2 - to.left - to.width / 2, down: from.top + from.height / 2 - to.top - to.height / 2 });
+		const count = this.stripDays.length;
+		if (this.range)
+			this.stripDays.forEach((date, place) => {
+				const week = this.weekDates.findIndex((dates) => dates.some((day) => day.equals(date)));
+				const column = week < 0 ? -1 : this.weekDates[week].findIndex((day) => day.equals(date));
+				const cell = this.weekRows[week]?.querySelector<HTMLElement>(`.th-cal-day[data-date="${date.toString()}"]`);
+				if (!cell) return;
+				cell.addClass("is-carried");
+				cell.toggleClass("is-selected", this.focus?.equals(date) ?? false);
+				cell.style.setProperty("--th-carry-columns", String(WEEK_DAYS - column - 0.5));
+				cell.style.setProperty("--th-carry-places", String(count - place - 0.5));
+				this.carried.push({ cell, week, column, place });
+			});
+		this.weekRows.forEach((row, week) => row.style.setProperty("--th-carry-weeks", String(this.weekDates.length - 1 - week)));
+		const columns = (item: Carried | undefined) => String(item ? (WEEK_DAYS - item.column - 0.5) / WEEK_DAYS : 0);
+		const places = (item: Carried | undefined) => String(item ? count - item.place - 0.5 : 0);
+		this.bands.forEach((band, week) => {
+			const held = this.carried.filter((item) => item.week === week);
+			band.style.setProperty("--th-band-first-columns", columns(held[0]));
+			band.style.setProperty("--th-band-first-places", places(held[0]));
+			band.style.setProperty("--th-band-last-columns", columns(held[held.length - 1]));
+			band.style.setProperty("--th-band-last-places", places(held[held.length - 1]));
 		});
+		this.carriedAt = Number.NaN;
 		this.moveCarried();
 	}
 
@@ -533,26 +566,16 @@ export class CalendarTray {
 	 * the first of them there to the last.
 	 */
 	private moveCarried(): void {
-		const opened = Math.max(0, this.raised) - ROW_WHOLE - HEAD;
-		const shifts = new Map<number, { first: number; last: number; up: number }>();
+		if (!this.range || this.raised === this.carriedAt) return;
+		this.carriedAt = this.raised;
 		let carrying = false;
-		for (const item of this.carried) {
-			const travel = this.travel(item.week);
-			const x = item.across * (1 - travel);
-			const y = item.down * (1 - travel);
-			carrying ||= travel < 1;
-			item.cell.style.setProperty("--th-carry-x", `${x.toFixed(2)}px`);
-			item.cell.style.setProperty("--th-carry-y", `${y.toFixed(2)}px`);
-			shifts.set(item.week, { first: shifts.get(item.week)?.first ?? x, last: x, up: y });
-		}
-		this.bands.forEach((band, week) => {
-			const shift = shifts.get(week);
-			band.style.setProperty("--th-band-first-x", `${(shift?.first ?? 0).toFixed(2)}px`);
-			band.style.setProperty("--th-band-last-x", `${(shift?.last ?? 0).toFixed(2)}px`);
-			band.style.setProperty("--th-band-y", `${(shift?.up ?? 0).toFixed(2)}px`);
+		this.weekRows.forEach((row, week) => {
+			const travel = this.travel(week);
+			carrying ||= travel < 1 && this.carried.some((item) => item.week === week);
+			row.style.setProperty("--th-carry", (1 - travel).toFixed(3));
 		});
 		this.tray.toggleClass("is-carrying", carrying);
-		this.tray.style.setProperty("--th-month-in", clamp(opened / DESIGN.weekRow).toFixed(3));
+		this.tray.style.setProperty("--th-month-in", clamp((Math.max(0, this.raised) - ROW_WHOLE - HEAD) / DESIGN.weekRow).toFixed(3));
 	}
 
 	/** The month's whole name, or its short one when the whole one leaves the buttons no room on its line. */
@@ -664,6 +687,8 @@ export class CalendarTray {
 	 * days on show draw round their dates as those travel up to them.
 	 */
 	private drawRings(round: number): void {
+		if (this.raised === this.ringsAt) return;
+		this.ringsAt = this.raised;
 		for (const ring of this.rings) {
 			const drawn = this.onShow(ring.date) ? this.travel(ring.week) : round;
 			if (drawn === ring.drawn) continue;
@@ -697,19 +722,44 @@ export class CalendarTray {
 	private placeRest(): void {
 		if (this.held()) return;
 		this.place();
+		this.alignToGrid();
+		this.room();
 	}
 
+	/**
+	 * Tells the view how high the tray stands, so the list keeps room under its last row: only where the tray comes to
+	 * rest, not every frame it moves, so the list isn't laid out again all the way.
+	 */
+	private room(): void {
+		const height = Math.round(this.root.clientHeight - this.restTop + this.raised);
+		if (height === this.roomHeight) return;
+		this.roomHeight = height;
+		this.root.style.setProperty("--th-tray-height", `${height}px`);
+	}
+
+	/**
+	 * Puts the tray where it is now, every frame it moves. The view's size is read first, before anything is written,
+	 * so the browser lays nothing out again mid-frame.
+	 */
 	private place(): void {
 		const height = this.root.clientHeight;
+		this.height = height;
+		this.width = this.root.clientWidth;
 		const restTop = height - this.inset - REST_HEIGHT;
 		this.restTop = restTop;
 		const top = restTop - this.raised;
-		this.root.style.setProperty("--th-tray-top", `${top}px`);
+		// The tray's own position goes on the tray, so only it is styled again as it moves, not the whole view.
+		this.tray.style.setProperty("--th-tray-top", `${top}px`);
 		if (this.ready && top !== this.lastTop) this.onMove();
 		this.lastTop = top;
-		this.root.style.setProperty("--th-tray-rest", `${height - restTop}px`);
-		this.root.style.setProperty("--th-tray-height", `${height - top}px`);
-		this.root.style.setProperty("--th-tray-inset", `${this.inset + BOTTOM_GAP}px`);
+		if (height - restTop !== this.restHeight) {
+			this.restHeight = height - restTop;
+			this.root.style.setProperty("--th-tray-rest", `${this.restHeight}px`);
+		}
+		if (this.inset + BOTTOM_GAP !== this.insetHeight) {
+			this.insetHeight = this.inset + BOTTOM_GAP;
+			this.calendar.style.setProperty("--th-tray-inset", `${this.insetHeight}px`);
+		}
 		const raised = Math.max(0, this.raised);
 		// Rising, the room under this week's row grows back first and the row becomes whole; then the head opens over it, so
 		// it never lies over a week; the earlier weeks get the rest. All the while, up to the first stop, the rings draw round.
@@ -717,13 +767,16 @@ export class CalendarTray {
 		this.drawBand();
 		this.moveCarried();
 		this.moveSteps();
-		this.tray.style.setProperty("--th-head-height", `${Math.min(HEAD, Math.max(0, raised - ROW_WHOLE))}px`);
+		const head = `${Math.min(HEAD, Math.max(0, raised - ROW_WHOLE))}px`;
+		this.head.style.setProperty("--th-head-height", head);
+		this.weeks.style.setProperty("--th-head-height", head);
 		this.tray.style.setProperty("--th-open", String(clamp(raised / SHADOW_FADE)));
 		// Folded, this week's row hangs low so only its dates show; pushed below its rest, the tray takes them down with it.
-		this.tray.style.setProperty("--th-lift", `${Math.max(0, REST_LIFT - this.raised)}px`);
-		this.alignToGrid();
-		this.grip.setAttribute("aria-label", this.raised > 1 ? "Hide the month" : "Show the month");
-		this.tray.toggleClass("is-up", this.raised > 1);
+		this.calendar.style.setProperty("--th-lift", `${Math.max(0, REST_LIFT - this.raised)}px`);
+		const up = this.raised > 1;
+		if (up === this.tray.hasClass("is-up")) return;
+		this.grip.setAttribute("aria-label", up ? "Hide the month" : "Show the month");
+		this.tray.toggleClass("is-up", up);
 	}
 
 	/** Where the finger puts the tray, giving way less and less past either end of its range. */
@@ -889,8 +942,9 @@ export class CalendarTray {
 			const t = Math.min(1, (now - start) / SETTLE_MS);
 			this.raised = from + (to - from) * easeOut(t);
 			this.place();
-			if (t < 1) this.settleFrame = requestAnimationFrame(step);
-			else if (to <= 0 && this.revealed()) this.forget();
+			if (t < 1) return void (this.settleFrame = requestAnimationFrame(step));
+			this.room();
+			if (to <= 0 && this.revealed()) this.forget();
 		};
 		this.settleFrame = requestAnimationFrame(step);
 	}
