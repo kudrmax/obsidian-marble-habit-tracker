@@ -32,7 +32,7 @@ export class WeekGrid {
 	}
 
 	private renderCell(strip: HTMLElement, path: string, cell: WeekCell, state: WeekGridState): void {
-		if (cell.kind === "future") {
+		if (cell.kind !== "due") {
 			strip.createDiv("th-grid-cell");
 			return;
 		}

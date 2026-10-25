@@ -27,16 +27,19 @@ describe("weekCell", () => {
 	const habit = weekdays.kind === "ok" ? weekdays.habit : null;
 	const cell = (text: string) => weekCell(habit!, d(text), thursday);
 
-	it("answers every day up to today with its mark, if any", () => {
+	it("answers the habit's days with their mark, if any", () => {
+		expect(cell("2026-10-09")).toMatchObject({ kind: "due", mark: undefined });
 		expect(cell("2026-10-12")).toMatchObject({ kind: "due", mark: { kind: "tiny" } });
-		expect(cell("2026-10-13")).toMatchObject({ kind: "due", mark: { kind: "full" } });
 		expect(cell("2026-10-14")).toMatchObject({ kind: "due", mark: { kind: "missed", reason: "Forgot" } });
-		expect(cell("2026-10-15")).toMatchObject({ kind: "due", mark: undefined });
 	});
 
-	it("answers a day that isn't one of the habit's days, and a day before it began, like any other", () => {
-		expect(cell("2026-10-15").kind).toBe("due");
-		expect(cell("2026-09-30").kind).toBe("due");
+	it("answers a day that isn't one of the habit's days once it is marked, as Today does", () => {
+		expect(cell("2026-10-13")).toMatchObject({ kind: "due", mark: { kind: "full" } });
+	});
+
+	it("leaves a day that isn't one of the habit's days, and a day before it began, empty", () => {
+		expect(cell("2026-10-15")).toEqual({ date: d("2026-10-15"), kind: "off" });
+		expect(cell("2026-10-05")).toEqual({ date: d("2026-10-05"), kind: "off" });
 	});
 
 	it("leaves the days to come empty", () => {
