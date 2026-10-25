@@ -7,8 +7,9 @@ import { HabitColor } from "../domain/HabitColor";
 import { HabitBlock } from "./HabitBlock";
 import { buildJar } from "../domain/Jar";
 import { colorClass } from "./colors";
-import { IconName, chip, icon, iconButton, markCircle, toolButton } from "./components";
+import { IconName, icon, iconButton, markCircle, toolButton } from "./components";
 import { recipeDays } from "./format";
+import { DESIGN } from "./design";
 import { computeStats } from "../domain/Stats";
 import { MarbleFeel, marbleFeel } from "../settings";
 import { DayWatcher } from "./DayWatcher";
@@ -18,7 +19,8 @@ import { Hsl, parseColor } from "./jar/color";
 import { floorScale, scaleSizes } from "./jar/JarAssets";
 import { JarCanvas, JarItem } from "./jar/JarCanvas";
 import { KeyboardWatch } from "./KeyboardWatch";
-import { LEAVE_MS, Motion, Side, Slide } from "./Motion";
+import { LEAVE_HOLD_MS, LEAVE_MS, Motion, SETTLE_MS, Side, Slide } from "./Motion";
+import { PendingMarks } from "./PendingMarks";
 import { CalendarTray } from "./CalendarTray";
 import { TodayPanel } from "./TodayPanel";
 import { Box } from "./jar/JarPhysics";
@@ -62,6 +64,16 @@ const STYLES_RETRY_MS = 200;
 const PILE_STEP = 16;
 
 type Answer = "full" | "tiny" | "offTrigger" | "skip";
+/** The answers to what got in the way of a skip that aren't a reason from the settings. */
+const NO_REASON = "No reason";
+const OTHER_REASON = "Other…";
+
+/** The menu of reasons open from a row's Skip; while Other is open, `other` is what is typed in its field. */
+interface Reasons {
+	readonly path: string;
+	other?: string;
+}
+
 /** Today as the shown day's list, or as its week's grid of every habit. */
 type Layout = "day" | "week";
 const isLayout = (value: unknown): value is Layout => value === "day" || value === "week";
@@ -80,9 +92,11 @@ export class TodayView extends ItemView {
 	/** A redraw was asked for while a row was being dragged; it runs on drop. */
 	private stale = false;
 	private menu: string | null = null;
-	private asking: string | null = null;
-	private other: string | null = null;
-	private otherText = "";
+	private reasons: Reasons | null = null;
+	/** The menu of reasons just opened, to grow it out of its Skip once. */
+	private reasonsOpening = false;
+	/** The menu of reasons on screen, with the layer under it that takes a tap anywhere else. */
+	private reasonsMenu: { menu: HTMLElement; backdrop: HTMLElement } | null = null;
 	private shrink: string | null = null;
 	private showDone = false;
 	/** A past day picked with the arrows, to mark what was forgotten; none means today. */
@@ -109,6 +123,12 @@ export class TodayView extends ItemView {
 	private readonly motion = new Motion(() => this.ui.settings().reduceMotion);
 	/** Rows just answered, with when: they stay in the list until they have folded away. */
 	private readonly leaving = new Map<string, number>();
+	/** Marks chosen here and shown at once, ahead of their notes. */
+	private readonly pending = new PendingMarks();
+	/** Marks waiting to be written, by `cellKey`. */
+	private readonly unwritten = new Map<string, DayMark | undefined>();
+	/** The last note being written; the next waits for it. */
+	private writing: Promise<unknown> = Promise.resolve();
 	/** How the next redraw arrives: from an earlier or later day, or into and out of All habits. */
 	private slide: Slide | null = null;
 	/** The card just opened, to grow its recipe in once. */
@@ -227,6 +247,11 @@ export class TodayView extends ItemView {
 			}),
 		);
 		this.registerDomEvent(root, "click", (event) => this.closeMenuOutside(event));
+		this.registerDomEvent(document, "keydown", (event) => {
+			if (event.key !== "Escape" || !this.reasons) return;
+			event.preventDefault();
+			this.closeReasons();
+		});
 		if (!Platform.isMobile) {
 			this.registerDomEvent(root, "pointermove", (event) => {
 				if (event.pointerType === "mouse" && this.cursorPushEnabled()) this.jar?.setPusher({ x: event.clientX, y: event.clientY });
@@ -312,6 +337,7 @@ export class TodayView extends ItemView {
 		const scrolled = this.scrollEl.scrollTop;
 		this.draw(this.columnEl);
 		this.scrollEl.scrollTop = scrolled;
+		this.placeReasons();
 	}
 
 	/** A value in an open card's panel is being typed: a redraw now would throw the unsaved text away. */
@@ -323,7 +349,7 @@ export class TodayView extends ItemView {
 	private draw(column: HTMLElement): void {
 		column.empty();
 		this.renderingRows = new Set();
-		const all = visibleEntries(this.ui.repository.list());
+		const all = this.pending.apply(visibleEntries(this.ui.repository.list()), this.ui.service.today());
 		this.syncJar(all);
 		this.contentEl.toggleClass("is-week", this.showsWeek() && all.length > 0);
 		if (all.length === 0) {
@@ -356,7 +382,6 @@ export class TodayView extends ItemView {
 		const open =(entry: Extract<HabitEntry, { kind: "ok" }>) =>
 			entry.habit.markOn(today) === undefined ||
 			this.menu === entry.path ||
-			this.asking === entry.path ||
 			this.shrink === entry.path ||
 			this.leaving.has(entry.path);
 		const ordered = groupBySection(
@@ -447,9 +472,7 @@ export class TodayView extends ItemView {
 		this.day = null;
 		this.leaving.clear();
 		this.menu = null;
-		this.asking = null;
-		this.other = null;
-		this.otherText = "";
+		this.reasons = null;
 		this.shrink = null;
 		this.answering = null;
 		this.showDone = false;
@@ -463,7 +486,7 @@ export class TodayView extends ItemView {
 		this.slide = this.screen === "all" ? null : "push";
 		this.screen = "all";
 		this.menu = null;
-		this.asking = null;
+		this.reasons = null;
 		this.shrink = null;
 		this.answering = null;
 		this.render();
@@ -561,7 +584,7 @@ export class TodayView extends ItemView {
 		const pick = (day: LocalDate) => this.showDay(day);
 		const grid = this.showsWeek();
 		const count = this.ui.settings().gridDays;
-		const focus = grid && (this.menu ?? this.asking) ? this.answering : null;
+		const focus = grid && this.menu !== null ? this.answering : null;
 		if (grid) this.tray?.showRange(days, today, { end: shown, count, move: (end) => this.moveDays(end) });
 		else this.tray?.show(days, shown, today, pick);
 		this.tray?.setStrip(grid ? { days: daysUpTo(days, shown, today, count), focus } : null);
@@ -686,9 +709,7 @@ export class TodayView extends ItemView {
 		this.leaving.clear();
 		this.day = day.isBefore(this.ui.service.today()) ? day : null;
 		this.menu = null;
-		this.asking = null;
-		this.other = null;
-		this.otherText = "";
+		this.reasons = null;
 		this.shrink = null;
 		this.answering = null;
 		this.showDone = false;
@@ -775,7 +796,6 @@ export class TodayView extends ItemView {
 		const main = row.querySelector<HTMLElement>(".th-row-main");
 		if (main && this.menu === path) this.renderChoices(main, path, habit, mark, side);
 		if (main && this.closing === path) this.refold(main, side);
-		if (this.asking === path) this.renderReasons(row, path);
 		if (this.shrink === path && mark?.kind === "missed") this.renderShrink(row, path, habit);
 	}
 
@@ -795,7 +815,9 @@ export class TodayView extends ItemView {
 		const addCancel = () => this.answerButton(bar, "Cancel", ["th-choice-cancel"], "x").addEventListener("click", () => this.closeChoices());
 		const addAnswer = ({ answer, label, look, sign }: ReturnType<TodayView["answers"]>[number]) => {
 			const button = this.answerButton(bar, label, look, sign, MARK_WORDS[ANSWER_MARKS[answer].kind]);
+			button.dataset.answer = answer;
 			button.setAttr("aria-pressed", String(mark?.kind === ANSWER_MARKS[answer].kind));
+			button.toggleClass("is-picked", answer === "skip" && this.reasons?.path === path);
 			button.addEventListener("click", (event) => {
 				this.unfolding?.stop();
 				this.unfolding = null;
@@ -912,7 +934,6 @@ export class TodayView extends ItemView {
 		button.createSpan({ cls: "th-sr-only", text: hint });
 		const circle = markCircle(button, mark);
 		circle.toggleClass("is-popping", this.celebrating.has(this.cellKey(path, this.shownDay())));
-		if (!mark && this.asking === path) circle.addClass("is-asking");
 
 		button.addEventListener("contextmenu", (event) => {
 			event.preventDefault();
@@ -920,39 +941,6 @@ export class TodayView extends ItemView {
 		});
 		if (mark) this.hold?.attach(button, () => this.clearMark(path));
 		else button.addEventListener("click", () => this.showMenu(path));
-	}
-
-	private renderReasons(row: HTMLElement, path: string): void {
-		const extra = row.createDiv("th-row-extra");
-		extra.createDiv({ cls: "th-label", text: "What got in the way? · optional" });
-		const chips = extra.createDiv("th-chips");
-		for (const reason of this.ui.settings().missReasons) chip(chips, reason, () => void this.answer(path, missed(reason)));
-		const other = chip(chips, "Other…", () => {
-			this.other = path;
-			this.render();
-		}, "ghost");
-		other.toggleClass("is-on", this.other === path);
-		if (this.other !== path) return;
-		const form = extra.createDiv("th-inline-form");
-		const input = form.createEl("input", { cls: "th-inline-input", type: "text", attr: { placeholder: "What happened?", "aria-label": "Your reason" } });
-		input.value = this.otherText;
-		const save = chip(form, "Save", () => void submit(), "strong");
-		const sync = () => {
-			this.otherText = input.value;
-			save.disabled = input.value.trim() === "";
-		};
-		const submit = async () => {
-			const reason = input.value.trim();
-			if (reason) await this.answer(path, missed(reason));
-		};
-		input.addEventListener("input", sync);
-		input.addEventListener("keydown", (event) => {
-			if (event.key !== "Enter") return;
-			event.preventDefault();
-			void submit();
-		});
-		sync();
-		window.setTimeout(() => input.focus(), 0);
 	}
 
 	private renderShrink(row: HTMLElement, path: string, habit: Habit): void {
@@ -964,17 +952,16 @@ export class TodayView extends ItemView {
 	}
 
 	/**
-	 * Opens a row's answers, on the grid for the day of its circle. Another row's skip reasons or offer to shrink close, so
-	 * they can't be answered for the wrong habit or day.
+	 * Opens a row's answers, on the grid for the day of its circle. Another row's offer to shrink goes, its row folding
+	 * away where answered rows leave, so it can't be answered for the wrong habit or day.
 	 */
 	private showMenu(path: string, day: LocalDate | null = null): void {
 		if (this.menu === path && (day === null || this.answering?.equals(day))) return;
+		if (this.shrink === path) this.shrink = null;
+		else this.dropShrink();
 		this.menu = path;
 		this.answering = day;
-		this.asking = null;
-		this.other = null;
-		this.otherText = "";
-		this.shrink = null;
+		this.reasons = null;
 		this.menuOpening = true;
 		this.haptics.tap();
 		this.render();
@@ -997,35 +984,202 @@ export class TodayView extends ItemView {
 		return `${path}|${day.toString()}`;
 	}
 
-	/** A click elsewhere closes the answer menu, and the optional reasons of a skip. */
+	/** A click elsewhere closes the answer menu or the offer to shrink. */
 	private closeMenuOutside(event: MouseEvent): void {
-		if (!this.menu && !this.asking) return;
+		if (!this.menu && !this.shrink) return;
 		const target = event.target as HTMLElement | null;
-		if (target?.closest(".th-row-choices, .th-mark-button, .th-grid-cell, .th-row-extra")) return;
+		if (target?.closest(".th-row-choices, .th-mark-button, .th-grid-cell, .th-row-extra, .th-reasons, .th-reasons-backdrop")) return;
 		this.takeChoices();
 		this.unfolding?.stop();
 		this.unfolding = null;
 		this.closing = this.menu;
 		this.menu = null;
-		this.asking = null;
-		this.other = null;
-		this.otherText = "";
+		this.dropShrink();
 		this.render();
 	}
 
 	private async choose(path: string, answer: Answer, current: DayMark | undefined, event: MouseEvent): Promise<void> {
 		const mark = ANSWER_MARKS[answer];
 		if (current?.kind === mark.kind) return this.answer(path, undefined);
-		if (answer === "skip") {
-			await this.answer(path, mark, undefined, false);
-			this.asking = path;
-			this.render();
-			return;
-		}
+		if (answer === "skip") return this.openReasons(path);
 		return this.answer(path, mark, event);
 	}
 
-	private async answer(path: string, mark: DayMark | undefined, event?: MouseEvent, leave = true): Promise<void> {
+	/** Skip asks what got in the way: a menu grows out of it, the answers staying behind it. */
+	private openReasons(path: string): void {
+		this.reasons = { path };
+		this.reasonsOpening = true;
+		this.render();
+	}
+
+	/** The menu goes without an answer, back to the answers it came from. */
+	private closeReasons(): void {
+		if (!this.reasons) return;
+		this.reasons = null;
+		this.render();
+	}
+
+	private openOtherReason(): void {
+		if (!this.reasons) return;
+		this.haptics.tap();
+		this.reasons.other = "";
+		this.render();
+	}
+
+	/**
+	 * A skip with its reason, or none, shown at once and written after: the menu and the answers go, and the row leaves
+	 * like any answered one. A skip that calls for a tinier habit keeps its row and offers that instead.
+	 */
+	private skipWith(reason?: string): void {
+		const open = this.reasons;
+		if (!open) return;
+		const { path } = open;
+		const day = this.answerDay();
+		const mark = missed(reason);
+		const before = this.markOn(path, day);
+		this.haptics.tap();
+		this.save(path, day, mark);
+		this.origins.delete(path);
+		this.stopCelebrating(this.cellKey(path, day));
+		this.reasons = null;
+		this.menu = null;
+		const habit = this.shownHabit(path);
+		if (habit) this.lastAnswer.offer({ path, name: habit.name, day, before, after: mark });
+		const { redesignThreshold, shrinkReason } = this.ui.settings();
+		this.shrink = habit && offersShrink(habit, mark, redesignThreshold, shrinkReason) ? path : null;
+		if (!this.shrink && this.foldsAnswered()) this.startLeaving(path);
+		else this.leaving.delete(path);
+		this.render();
+	}
+
+	/** The offer to shrink goes; where answered rows leave the list, its row folds away with it. */
+	private dropShrink(): void {
+		const path = this.shrink;
+		if (!path) return;
+		this.shrink = null;
+		if (this.foldsAnswered() && !this.leaving.has(path)) this.startLeaving(path, false);
+	}
+
+	/**
+	 * The menu of reasons over Today, grown out of the Skip it belongs to: under it where there is room above the calendar
+	 * and Obsidian's bars, over it where there isn't; lined up with the Skip's right edge, or its left one where that
+	 * would leave the view. A tap anywhere else lands on the layer under the menu and closes just the menu.
+	 */
+	private placeReasons(): void {
+		const open = this.reasons;
+		const anchor = open && this.contentEl.querySelector<HTMLElement>('.th-row-choices [data-answer="skip"] .th-choice-ball');
+		const shown = this.reasonsMenu;
+		this.reasonsMenu = null;
+		shown?.backdrop.remove();
+		if (!open || !anchor) {
+			this.reasons = null;
+			if (shown) void this.motion.fadeOut(shown.menu).then(() => shown.menu.remove());
+			return;
+		}
+		shown?.menu.remove();
+		const backdrop = this.contentEl.createDiv("th-reasons-backdrop");
+		backdrop.addEventListener("click", () => this.closeReasons());
+		const menu = this.contentEl.createDiv({ cls: "th-reasons", attr: { role: "menu" } });
+		this.renderReasons(menu, open);
+		const view = this.contentEl.getBoundingClientRect();
+		const skip = anchor.getBoundingClientRect();
+		const floor = Math.min(this.tray ? this.tray.box().top : view.height, ...this.shelves.map((shelf) => shelf.top));
+		const width = menu.offsetWidth;
+		const height = menu.offsetHeight;
+		const below = skip.bottom - view.top + DESIGN.reasonsOffset;
+		const down = below + height <= floor - DESIGN.reasonsOffset;
+		const under = skip.right - view.left - width >= DESIGN.gutter ? skip.right - width : skip.left;
+		const left = Math.min(Math.max(DESIGN.gutter, under - view.left), view.width - DESIGN.gutter - width);
+		const top = down ? below : Math.max(DESIGN.reasonsOffset, skip.top - view.top - DESIGN.reasonsOffset - height);
+		menu.style.left = `${left}px`;
+		menu.style.top = `${top}px`;
+		menu.style.transformOrigin = `${skip.left + skip.width / 2 - view.left - left}px ${down ? 0 : height}px`;
+		this.reasonsMenu = { menu, backdrop };
+		if (!this.reasonsOpening) return;
+		this.reasonsOpening = false;
+		this.motion.popOut(menu);
+	}
+
+	/** The question on top, then No reason on its own, the reasons from the settings, and Other for one of its own. */
+	private renderReasons(menu: HTMLElement, open: Reasons): void {
+		menu.createDiv({ cls: "th-reasons-title", text: "What got in the way?" });
+		if (open.other !== undefined) return this.renderOtherReason(menu, open);
+		const item = (text: string, pick: () => void, sign?: IconName) => {
+			const button = menu.createEl("button", { cls: "th-reasons-item", attr: { role: "menuitem" } });
+			button.createSpan({ cls: "th-reasons-text", text });
+			if (sign) icon(button.createSpan("th-reasons-sign"), sign);
+			button.addEventListener("click", pick);
+		};
+		item(NO_REASON, () => this.skipWith(), "minus");
+		menu.createDiv("th-reasons-gap");
+		for (const reason of this.ui.settings().missReasons) item(reason, () => this.skipWith(reason));
+		menu.createDiv("th-reasons-gap");
+		item(OTHER_REASON, () => this.openOtherReason(), "pencil");
+	}
+
+	/** Other's own reason: a field in the menu, saved with Save or Return. */
+	private renderOtherReason(menu: HTMLElement, open: Reasons): void {
+		const form = menu.createEl("form", { cls: "th-reasons-other" });
+		const input = form.createEl("input", { cls: "th-reasons-input", type: "text", attr: { placeholder: "What happened?", "aria-label": "Your reason" } });
+		input.value = open.other ?? "";
+		const save = form.createEl("button", { cls: "th-reasons-save", text: "Save", attr: { type: "submit" } });
+		const sync = () => {
+			open.other = input.value;
+			save.disabled = input.value.trim() === "";
+		};
+		input.addEventListener("input", sync);
+		form.addEventListener("submit", (event) => {
+			event.preventDefault();
+			const reason = input.value.trim();
+			if (reason) this.skipWith(reason);
+		});
+		sync();
+		window.setTimeout(() => input.focus(), 0);
+	}
+
+	/**
+	 * Shows a mark at once and writes it to the note once the move it started has played, as writing a note holds the
+	 * screen up for a moment. A mark chosen again before then is written instead, so a skip and its reason are one write;
+	 * an answer written straight away takes its place.
+	 */
+	private save(path: string, day: LocalDate, mark: DayMark | undefined): void {
+		this.pending.set(path, day, mark);
+		const cell = this.cellKey(path, day);
+		const waiting = this.unwritten.has(cell);
+		this.unwritten.set(cell, mark);
+		if (waiting) return;
+		window.setTimeout(() => {
+			if (!this.unwritten.has(cell)) return;
+			const latest = this.unwritten.get(cell);
+			this.unwritten.delete(cell);
+			this.write(path, day, latest).catch((error: unknown) => {
+				this.pending.drop(path, day);
+				new Notice(error instanceof Error ? error.message : String(error));
+				this.render();
+			});
+		}, SETTLE_MS);
+	}
+
+	/** Writes a mark to the note after any still being written, so a later mark never lands before an earlier one. */
+	private write(path: string, day: LocalDate, mark: DayMark | undefined): Promise<Habit> {
+		const written = this.writing.then(() => this.ui.service.setMark(path, day, mark));
+		this.writing = written.catch(() => undefined);
+		return written;
+	}
+
+	/** A habit as Today shows it, with the marks just chosen ahead of its note. */
+	private shownHabit(path: string): Habit | undefined {
+		const entry = this.ui.repository.get(path);
+		const [shown] = entry ? this.pending.apply([entry], this.ui.service.today()) : [];
+		return shown?.kind === "ok" ? shown.habit : undefined;
+	}
+
+	/** Answered habits leave Today's list, unless the settings keep them or the done ones are on show. */
+	private foldsAnswered(): boolean {
+		return this.layout === "day" && this.ui.settings().hideDone && !this.showDone;
+	}
+
+	private async answer(path: string, mark: DayMark | undefined, event?: MouseEvent): Promise<void> {
 		const day = this.answerDay();
 		const cell = this.cellKey(path, day);
 		const before = this.markOn(path, day);
@@ -1037,14 +1191,14 @@ export class TodayView extends ItemView {
 			this.origins.set(path, { point: { x: box.left + box.width / 2, y: box.top + box.height / 2 }, at: Date.now() });
 		}
 		try {
-			const habit = await this.ui.service.setMark(path, day, mark);
+			this.unwritten.delete(cell);
+			this.pending.set(path, day, mark);
+			const habit = await this.write(path, day, mark);
 			this.lastAnswer.offer({ path, name: habit.name, day, before, after: mark });
 			this.menu = null;
-			this.asking = null;
-			this.other = null;
-			this.otherText = "";
+			this.reasons = null;
 			this.shrink = mark && offersShrink(habit, mark, this.ui.settings().redesignThreshold, this.ui.settings().shrinkReason) ? path : null;
-			if (mark && leave && this.layout === "day" && this.ui.settings().hideDone && !this.showDone) this.startLeaving(path);
+			if (mark && this.foldsAnswered()) this.startLeaving(path);
 			else this.leaving.delete(path);
 			if (win) {
 				this.haptics.tap();
@@ -1054,22 +1208,22 @@ export class TodayView extends ItemView {
 			}
 			else this.stopCelebrating(cell);
 		} catch (error) {
+			this.pending.drop(path, day);
 			new Notice(error instanceof Error ? error.message : String(error));
 		}
 		this.render();
 	}
 
-	/** A habit's answer for a day, as the vault has it now. */
+	/** A habit's answer for a day, as Today shows it: the vault's, or one just chosen and not yet written. */
 	private markOn(path: string, day: LocalDate): DayMark | undefined {
-		const entry = this.ui.repository.get(path);
-		return entry?.kind === "ok" ? entry.habit.markOn(day) : undefined;
+		return this.shownHabit(path)?.markOn(day);
 	}
 
 	/** Shows the last answer with Undo, or takes it away: on a phone over the tray's first line, the tray grown by it; on a computer in a capsule. */
 	private showUndo(change: MarkChange | null): void {
 		this.undoEl?.remove();
 		this.undoEl = null;
-		const line = change ? undoLine(change, this.ui.service.today(), () => void this.undo(), () => this.lastAnswer.dismiss()) : null;
+		const line = change ? undoLine(change, this.ui.service.today(), () => this.undo(), () => this.lastAnswer.dismiss()) : null;
 		if (this.tray) return this.tray.setTopLine(line);
 		this.contentEl.toggleClass("has-undo", line !== null);
 		if (!line) return;
@@ -1077,36 +1231,28 @@ export class TodayView extends ItemView {
 		this.undoEl = this.contentEl.appendChild(line);
 	}
 
-	/** Puts the last answer's habit and day back the way they were before it. */
-	private async undo(): Promise<void> {
+	/** Puts the last answer's habit and day back the way they were before it, at once, the note written after. */
+	private undo(): void {
 		const change = this.lastAnswer.take();
 		if (!change) return;
 		this.haptics.tap();
 		this.stopCelebrating(this.cellKey(change.path, change.day));
 		this.leaving.delete(change.path);
-		if (this.asking === change.path) {
-			this.asking = null;
-			this.other = null;
-			this.otherText = "";
-		}
+		if (this.reasons?.path === change.path) this.reasons = null;
 		if (this.shrink === change.path) this.shrink = null;
-		try {
-			await this.ui.service.setMark(change.path, change.day, change.before);
-		} catch (error) {
-			new Notice(error instanceof Error ? error.message : String(error));
-		}
+		this.save(change.path, change.day, change.before);
 		this.render();
 	}
 
-	/** The answered row stays while its circle fills, then folds into the done line. */
-	private startLeaving(path: string): void {
-		const since = Date.now();
+	/** The answered row stays while its circle fills, then folds into the done line; unless `held`, it folds at once. */
+	private startLeaving(path: string, held = true): void {
+		const since = Date.now() - (held ? 0 : LEAVE_HOLD_MS);
 		this.leaving.set(path, since);
 		window.setTimeout(() => {
 			if (this.leaving.get(path) !== since) return;
 			this.leaving.delete(path);
 			this.render();
-		}, LEAVE_MS);
+		}, since + LEAVE_MS - Date.now());
 	}
 
 	/** Keeps a habit's day popping for a moment; `cell` is from `cellKey`. */

@@ -29,6 +29,10 @@ body {
 	--th-fill: rgba(118, 118, 128, 0.12);
 	--th-fill-hover: rgba(118, 118, 128, 0.18);
 	--th-fill-solid: color-mix(in srgb, rgb(118, 118, 128) 30%, var(--background-secondary));
+	/* iOS's menu: the surface let through a little, the list under it frosted, and a soft lift. */
+	--th-reasons-ground: color-mix(in srgb, var(--th-surface) 82%, transparent);
+	--th-reasons-frost: blur(40px) saturate(1.8);
+	--th-reasons-shadow: 0 10px 40px rgba(var(--th-shadow-rgb), 0.18), 0 0 0 var(--th-line-width) var(--th-line);
 	/*
 	 * The tiny answer: the accent faded toward the page. A light page fades it toward white, where the accent's own check
 	 * reads; a dark one fades it less and toward black, where a white check does.
@@ -83,7 +87,7 @@ body {
 	--th-button-large: 64px;
 	--th-answer: 44px;
 	--th-answer-width: 92px;
-	--th-chip: 34px;
+	--th-reasons-width: 250px;
 	--th-control: 30px;
 	--th-dot: 16px;
 	--th-ring: 40px;
@@ -121,6 +125,7 @@ body {
 	--th-icon-check: 14px;
 	--th-icon-chevron: 14px;
 	--th-icon-small: 13px;
+	--th-icon-menu: 18px;
 	--th-icon-chip-x: 10px;
 
 	/* Type */
@@ -293,11 +298,6 @@ button.th-button-primary:disabled { background: var(--th-surface); color: var(--
 button.th-button-large { width: var(--th-button-large); height: var(--th-button-large); }
 button.th-button-large svg { width: var(--th-icon-large); height: var(--th-icon-large); }
 
-button.th-chip { height: var(--th-chip); padding: 0 var(--th-space-12); border: var(--th-line-width) solid var(--th-line); border-radius: var(--th-radius-capsule); box-shadow: none; background: var(--th-surface); color: var(--th-text); font-size: var(--th-font-small); cursor: pointer; }
-button.th-chip-ghost { background: transparent; border-style: dashed; color: var(--th-muted); }
-button.th-chip.is-on { border-style: solid; border-color: var(--th-muted); }
-button.th-chip-strong { border: none; background: var(--th-strong); color: var(--th-on-strong); font-weight: var(--th-weight-semibold); }
-button.th-chip-strong:disabled { background: var(--th-surface); color: var(--th-faint); }
 
 button.th-link { display: inline-flex; align-items: center; gap: var(--th-space-6); height: var(--th-link-height); padding: 0; border: none; box-shadow: none; background: transparent; color: var(--th-accent); font-size: var(--th-font-small); cursor: pointer; }
 button.th-link svg { width: var(--th-icon-small); height: var(--th-icon-small); }
@@ -315,7 +315,6 @@ button.th-link svg { width: var(--th-icon-small); height: var(--th-icon-small); 
 .th-mark.is-done svg { stroke-width: var(--th-check-stroke-done); }
 .th-mark.is-missed { position: relative; background: var(--th-skip); }
 .th-mark.is-missed::after { content: ""; width: var(--th-dash-width); height: var(--th-dash-height); border-radius: var(--th-radius-capsule); background: var(--th-on-color); }
-.th-mark.is-asking { border-style: dashed; border-color: var(--th-faint); }
 .th-mark.th-choice-cancel { background: var(--th-fill-solid); color: var(--th-muted); }
 .th-mark.is-off-trigger { border: none; background: var(--th-fill-solid); color: var(--th-accent); }
 .th-mark.is-off-trigger svg { stroke-width: var(--th-check-stroke-done); }
@@ -337,7 +336,6 @@ button.th-mark-button:active .th-mark { transform: scale(var(--th-press-scale));
 .th-field .th-label { margin-bottom: var(--th-space-6); font-size: var(--th-font-ui-small); color: var(--th-muted); }
 .th-field input,
 .th-field textarea { width: 100%; box-sizing: border-box; font-size: var(--th-font-ui-medium); resize: none; }
-input.th-inline-input { flex: 1 1 auto; min-width: 0; height: var(--th-chip); padding: 0 var(--th-space-12); border: var(--th-line-width) solid var(--th-line); border-radius: var(--th-radius-capsule); background: var(--th-surface); font-size: var(--th-font-small); }
 
 .th-circles { display: flex; justify-content: space-between; gap: var(--th-space-6); margin-top: var(--th-space-10); }
 button.th-day { width: var(--th-answer); height: var(--th-answer); min-height: 0; padding: 0; border: var(--th-stroke) solid var(--th-line); border-radius: var(--th-radius-circle); box-shadow: none; background: transparent; color: var(--th-faint); font-size: var(--th-font-control); font-weight: var(--th-weight-semibold); cursor: pointer; }
@@ -414,8 +412,6 @@ button.th-archived-toggle { display: inline-flex; align-items: center; gap: var(
 .th-row.is-shifting { transition: transform var(--th-shift-time) ease; }
 .th-row-extra { padding: 0 var(--th-gutter) var(--th-space-14) calc(var(--th-gutter) + var(--th-slot) - var(--th-space-6)); animation: th-in var(--th-in-quick-time) ease; }
 .th-row-extra .th-label { margin-bottom: var(--th-space-8); }
-.th-chips { display: flex; flex-wrap: wrap; gap: var(--th-space-6); }
-.th-inline-form { display: flex; gap: var(--th-space-6); margin-top: var(--th-space-8); }
 /* The new-section zone shows only while a habit is being dragged. */
 .th-section-new { display: none; margin-top: var(--th-space-8); padding: var(--th-space-14) var(--th-space-16); border: var(--th-line-width) dashed var(--th-line); border-radius: var(--th-radius-panel); color: var(--th-faint); font-size: var(--th-font-ui-small); text-align: center; transition: border-color var(--th-fast), color var(--th-fast), background-color var(--th-fast); }
 .is-dragging-row .th-section-new { display: block; }
@@ -469,6 +465,25 @@ button.th-choice.has-word:active .th-choice-ball { scale: var(--th-word-press-sc
 .th-row-choices.is-mirrored button.th-choice.has-word { margin-right: 0; margin-left: var(--th-space-8); }
 .th-row-choices.is-mirrored.is-crowded button.th-choice.has-word { margin-right: 0; margin-left: var(--th-space-6); }
 .th-row-choices.is-mirrored.is-crowded button.th-choice.has-word:first-child { margin-left: 0; }
+
+/*
+ * What got in the way of a skip: iOS's menu, grown out of the Skip it belongs to over the frosted list. The question on
+ * top, then No reason on its own, the reasons, and Other. The layer under it takes a tap anywhere else.
+ */
+.th-reasons-backdrop { position: absolute; inset: 0; z-index: var(--th-layer-overlay); }
+.th-reasons { position: absolute; z-index: var(--th-layer-overlay); width: var(--th-reasons-width); max-width: calc(100% - 2 * var(--th-gutter)); border-radius: var(--th-radius-overlay); overflow: hidden; background: var(--th-reasons-ground); -webkit-backdrop-filter: var(--th-reasons-frost); backdrop-filter: var(--th-reasons-frost); box-shadow: var(--th-reasons-shadow); }
+.th-reasons-title { padding: var(--th-space-10) var(--th-space-16) var(--th-space-8); font-size: var(--th-font-small); color: var(--th-muted); }
+button.th-reasons-item { display: flex; align-items: center; justify-content: flex-start; gap: var(--th-space-10); width: 100%; height: var(--th-button); padding: 0 var(--th-space-16); border: none; border-top: var(--th-line-width) solid var(--th-line); border-radius: 0; box-shadow: none; background: transparent; color: var(--th-text); font-size: var(--th-font-body); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.th-reasons-gap + button.th-reasons-item { border-top: none; }
+button.th-reasons-item:hover, button.th-reasons-item:active { background: var(--th-hover); }
+.th-reasons-text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.th-reasons-sign { flex: none; display: inline-flex; }
+.th-reasons-sign svg { width: var(--th-icon-menu); height: var(--th-icon-menu); }
+.th-reasons-gap { height: var(--th-space-8); background: var(--th-fill); }
+.th-reasons-other { display: flex; align-items: center; gap: var(--th-space-8); height: var(--th-button); padding: 0 var(--th-space-8) 0 var(--th-space-16); border-top: var(--th-line-width) solid var(--th-line); }
+input.th-reasons-input, input.th-reasons-input:focus, input.th-reasons-input:focus-visible { flex: 1 1 auto; min-width: 0; height: var(--th-control); padding: 0; border: none; border-radius: 0; box-shadow: none; background: transparent; color: var(--th-text); font-size: var(--th-font-body); }
+button.th-reasons-save, button.th-reasons-save:hover { flex: none; height: var(--th-control); padding: 0 var(--th-space-10); border: none; border-radius: var(--th-radius-capsule); box-shadow: none; background: transparent; color: var(--th-accent-text); font-size: var(--th-font-body); font-weight: var(--th-weight-semibold); cursor: pointer; }
+button.th-reasons-save:disabled { color: var(--th-faint); cursor: default; }
 
 /* The marbles fall over the list; the celebration line stands over them. */
 .th-jar { position: absolute; top: 0; left: 0; z-index: var(--th-layer-marbles); width: 100%; height: 100%; pointer-events: none; }

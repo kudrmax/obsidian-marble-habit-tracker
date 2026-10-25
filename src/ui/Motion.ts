@@ -3,7 +3,7 @@ export const SETTLE = "cubic-bezier(0.2, 0.8, 0.2, 1)";
 export const SPRING = "cubic-bezier(0.34, 1.4, 0.64, 1)";
 
 /** A just-answered row stays on screen this long, so the filled circle is seen, then folds away. */
-const LEAVE_HOLD_MS = 420;
+export const LEAVE_HOLD_MS = 420;
 const LEAVE_FOLD_MS = 280;
 export const LEAVE_MS = LEAVE_HOLD_MS + LEAVE_FOLD_MS;
 
@@ -21,6 +21,11 @@ const BUMP_SCALE = 1.08;
  */
 const SLIDE_MS = 320;
 const FADE_MS = 160;
+/** A menu grows out of its control from this share of its size, and fades when it goes. */
+const MENU_MS = 240;
+const MENU_FROM = 0.5;
+/** Long enough for any move a tap starts to have played out. */
+export const SETTLE_MS = Math.max(SLIDE_MS, GROW_MS, LEAVE_FOLD_MS, MENU_MS);
 /** How far past the view's edge the choices wait. */
 const OFF_EDGE = 4;
 
@@ -76,6 +81,28 @@ export class Motion {
 				{ height: `${element.offsetHeight}px`, opacity: 1 },
 			],
 			{ duration: GROW_MS, easing: SETTLE },
+		);
+	}
+
+	/** A menu grows out of the control it belongs to, from the point its transform-origin names, as on iOS. */
+	popOut(menu: HTMLElement): void {
+		if (this.reduced()) return;
+		menu.animate(
+			[
+				{ opacity: 0, transform: `scale(${MENU_FROM})` },
+				{ opacity: 1, transform: "none" },
+			],
+			{ duration: MENU_MS, easing: SETTLE },
+		);
+	}
+
+	/** Something going away fades where it is; resolves when it has. */
+	fadeOut(element: HTMLElement): Promise<void> {
+		if (this.reduced()) return Promise.resolve();
+		const animation = element.animate([{ opacity: 1 }, { opacity: 0 }], { duration: FADE_MS, easing: SETTLE, fill: "forwards" });
+		return animation.finished.then(
+			() => undefined,
+			() => undefined,
 		);
 	}
 
