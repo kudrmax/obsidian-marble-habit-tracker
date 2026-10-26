@@ -170,7 +170,7 @@ export class SettingsTab extends PluginSettingTab {
 			);
 		new Setting(containerEl)
 			.setName("Fold answered habits")
-			.setDesc("Done and skipped habits leave the list; the ✓ button above it says how many and shows them again.")
+			.setDesc("Done and skipped habits leave the list, and a habit leaves the week's grid once every circle on it is answered; the ✓ button above says how many and shows them again.")
 			.addToggle((toggle) => toggle.setValue(settings.hideDone).onChange((value) => void this.save((next) => (next.hideDone = value))));
 		new Setting(containerEl)
 			.setName("Celebration line")

@@ -33,6 +33,11 @@ export function weekCells(habit: Habit, end: LocalDate, today: LocalDate, count:
 	return gridDates(end, count).map((date) => weekCell(habit, date, today));
 }
 
+/** A habit's row on the grid has nothing left to answer: every circle on it is marked, or it has none. */
+export function allAnswered(cells: readonly WeekCell[]): boolean {
+	return cells.every((cell) => cell.kind !== "due" || cell.mark !== undefined);
+}
+
 /** The calendar's `count` days up to `end`, for the dates over the grid's columns; days before the calendar starts are outside. */
 export function daysUpTo(days: readonly StripDay[], end: LocalDate, today: LocalDate, count: number): CalendarDay[] {
 	const known = new Map(days.map((day) => [day.date.toString(), day]));
