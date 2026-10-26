@@ -39,7 +39,7 @@ import { WeekCalendar } from "./WeekCalendar";
 import { WeekGrid } from "./WeekGrid";
 import { MARK_WORDS, closedDayLine, dayStrip, dayTitle, redesignLine, winsLabel, todayEntries } from "./today";
 import { UiContext } from "./UiContext";
-import { daysTitle, daysUpTo, weekCells } from "./week";
+import { allAnswered, daysTitle, daysUpTo, weekCells } from "./week";
 
 export const HABITS_VIEW = "tiny-habits-grid";
 /** The tool that turns Today into the week's grid and back. */
@@ -73,6 +73,9 @@ interface Reasons {
 	readonly path: string;
 	other?: string;
 }
+
+/** A habit read from its note. */
+type OkEntry = Extract<HabitEntry, { kind: "ok" }>;
 
 /** Today as the shown day's list, or as its week's grid of every habit. */
 type Layout = "day" | "week";
@@ -366,34 +369,45 @@ export class TodayView extends ItemView {
 		const today = this.shownDay();
 		const entries = todayEntries(all, today);
 		const habits = entries.flatMap((entry) => (entry.kind === "ok" ? [entry] : []));
-		const answeredHabits = habits.filter((entry) => entry.habit.markOn(today) !== undefined);
-		const closed = habits.length > 0 && answeredHabits.length === habits.length && this.leaving.size === 0;
+		const closed = habits.length > 0 && habits.every((entry) => this.isAnswered(entry.habit)) && this.leaving.size === 0;
 		this.renderCalendar(all);
 		this.renderHead();
 		this.renderDayChip(column);
-		const hideDone = this.ui.settings().hideDone;
-		const hidden = hideDone && !this.showDone ? answeredHabits.filter((entry) => !this.leaving.has(entry.path)).length : 0;
-		this.showTools(this.renderTools(hidden, hideDone && answeredHabits.length > 0));
 		if (closed) this.renderRing(column, habits.map((entry) => entry.habit), this.wasClosed === false);
 		this.wasClosed = closed;
 		if (habits.length === 0) column.createDiv("th-ring-block").createEl("h2", { cls: "th-title", text: "Nothing for today" });
 
-		const open =(entry: Extract<HabitEntry, { kind: "ok" }>) =>
-			entry.habit.markOn(today) === undefined ||
-			this.menu === entry.path ||
-			this.leaving.has(entry.path);
 		const ordered = groupBySection(
 			all.flatMap((entry) => (entry.kind === "ok" ? [entry] : [])),
 			(entry) => entry.habit.section,
 		).flatMap((group) => group.items.filter((item) => habits.some((habit) => habit.path === item.path)));
-		this.renderRows(column, ordered.filter((entry) => !hideDone || this.showDone || open(entry)), entries);
+		this.renderRows(column, this.foldAnswered(ordered), entries);
+	}
+
+	/**
+	 * Answered habits fold away, on the list and on the grid alike, unless the settings keep them: the ✓ tool says how many
+	 * and shows them again. A row stays while its answers are open or while it is still folding away.
+	 */
+	private foldAnswered(rows: readonly OkEntry[]): OkEntry[] {
+		const hideDone = this.ui.settings().hideDone;
+		const answered = rows.filter((entry) => this.isAnswered(entry.habit));
+		const folds = hideDone && !this.showDone;
+		this.showTools(this.renderTools(folds ? answered.filter((entry) => !this.leaving.has(entry.path)).length : 0, hideDone && answered.length > 0));
+		if (!folds) return [...rows];
+		return rows.filter((entry) => !answered.includes(entry) || this.menu === entry.path || this.leaving.has(entry.path));
+	}
+
+	/** A habit with nothing left to answer: on the list its circle for the shown day, on the grid every circle on it. */
+	private isAnswered(habit: Habit): boolean {
+		if (!this.showsWeek()) return habit.markOn(this.shownDay()) !== undefined;
+		return allAnswered(weekCells(habit, this.shownDay(), this.ui.service.today(), this.ui.settings().gridDays));
 	}
 
 	/**
 	 * Habits in order, each section's header over its rows, the ones that can't be read under them and the zone to drop
 	 * a row on for a new section: the list and the grid lay them out alike, so both are rearranged by dragging alike.
 	 */
-	private renderRows(column: HTMLElement, rows: readonly Extract<HabitEntry, { kind: "ok" }>[], entries: readonly HabitEntry[]): void {
+	private renderRows(column: HTMLElement, rows: readonly OkEntry[], entries: readonly HabitEntry[]): void {
 		let section: string | undefined | null = null;
 		for (const entry of rows) {
 			if (entry.habit.section !== section) {
@@ -439,8 +453,8 @@ export class TodayView extends ItemView {
 	/**
 	 * The days up to the shown day as a grid, as many as the settings say: Today's rows for every habit, by section,
 	 * each with a circle for each day on its right, answered right there as on the list, the answers sliding over the
-	 * row while the calendar picks the day they are for. A computer names the days in a chip that goes back to today; a
-	 * phone's tray has a button for that.
+	 * row while the calendar picks the day they are for. A habit with every circle answered folds away as an answered one
+	 * does on the list. A computer names the days in a chip that goes back to today; a phone's tray has a button for that.
 	 */
 	private renderWeek(column: HTMLElement, all: readonly HabitEntry[]): void {
 		const today = this.ui.service.today();
@@ -448,9 +462,10 @@ export class TodayView extends ItemView {
 		this.renderCalendar(all);
 		this.renderHead();
 		if (!shown.equals(today) && !this.tray) column.appendChild(this.backChip(daysTitle(shown, today, this.ui.settings().gridDays), "Back to today"));
-		this.showTools(this.renderTools(0, false));
 		const habits = all.flatMap((entry) => (entry.kind === "ok" ? [entry] : []));
-		this.renderRows(column, groupBySection(habits, (entry) => entry.habit.section).flatMap((group) => group.items), all);
+		const rows = this.foldAnswered(groupBySection(habits, (entry) => entry.habit.section).flatMap((group) => group.items));
+		if (rows.length === 0 && habits.length > 0) column.createDiv("th-ring-block").createEl("h2", { cls: "th-title", text: "Days closed" });
+		this.renderRows(column, rows, all);
 	}
 
 	private showsWeek(): boolean {
@@ -796,8 +811,8 @@ export class TodayView extends ItemView {
 	}
 
 	/**
-	 * A habit's row on Today: on the list its circle for the shown day in front, answered dimmed; on the grid its
-	 * circles for the days on show after the name, and the answers for the day of the one tapped.
+	 * A habit's row on Today: on the list its circle for the shown day in front; on the grid its circles for the days on
+	 * show after the name, and the answers for the day of the one tapped. Once nothing is left to answer it is dimmed.
 	 */
 	private renderRow(column: HTMLElement, path: string, habit: Habit): void {
 		const grid = this.showsWeek();
@@ -805,7 +820,7 @@ export class TodayView extends ItemView {
 		const mark = day ? habit.markOn(day) : undefined;
 		const side: Side = grid ? "right" : "left";
 		const row = this.renderCard(column, path, habit, {
-			dimmed: !grid && mark !== undefined,
+			dimmed: this.isAnswered(habit),
 			attention: this.redesignAttention(habit),
 			attrs: { "data-slot": "row", "data-drag": path, "data-section": habit.section ?? "" },
 			lead: grid ? null : (main) => this.renderMark(main, path, habit, mark),
@@ -1050,7 +1065,7 @@ export class TodayView extends ItemView {
 		this.menu = null;
 		const habit = this.shownHabit(path);
 		if (habit) this.lastAnswer.offer({ path, name: habit.name, day, before, after: mark });
-		if (this.foldsAnswered()) this.startLeaving(path);
+		if (this.foldsAway(path)) this.startLeaving(path);
 		else this.leaving.delete(path);
 		this.render();
 	}
@@ -1169,9 +1184,13 @@ export class TodayView extends ItemView {
 		return shown?.kind === "ok" ? shown.habit : undefined;
 	}
 
-	/** Answered habits leave Today's list, unless the settings keep them or the done ones are on show. */
-	private foldsAnswered(): boolean {
-		return this.layout === "day" && this.ui.settings().hideDone && !this.showDone;
+	/**
+	 * An answer folds its habit's row away once the habit has nothing left to answer, on the list and on the grid alike,
+	 * unless the settings keep answered habits or they are on show.
+	 */
+	private foldsAway(path: string): boolean {
+		const habit = this.shownHabit(path);
+		return this.ui.settings().hideDone && !this.showDone && habit !== undefined && this.isAnswered(habit);
 	}
 
 	private async answer(path: string, mark: DayMark | undefined, event?: MouseEvent): Promise<void> {
@@ -1192,7 +1211,7 @@ export class TodayView extends ItemView {
 			this.lastAnswer.offer({ path, name: habit.name, day, before, after: mark });
 			this.menu = null;
 			this.reasons = null;
-			if (mark && this.foldsAnswered()) this.startLeaving(path);
+			if (mark && this.foldsAway(path)) this.startLeaving(path);
 			else this.leaving.delete(path);
 			if (win) {
 				this.haptics.tap();

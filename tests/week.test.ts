@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HabitEntry } from "../src/application/ports";
 import { dayStrip } from "../src/ui/today";
-import { daysTitle, daysUpTo, mondayOf, weekCell, weekCells } from "../src/ui/week";
+import { allAnswered, daysTitle, daysUpTo, mondayOf, weekCell, weekCells } from "../src/ui/week";
 import { d } from "./support/dates";
 import { habitNote } from "./support/habits";
 
@@ -54,6 +54,26 @@ describe("weekCells", () => {
 		expect(dates(cells)).toEqual(["2026-10-11", "2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15"]);
 		expect(cells.every((cell) => cell.kind === "due")).toBe(true);
 		expect(cells[2]).toMatchObject({ mark: { kind: "tiny" } });
+	});
+});
+
+describe("allAnswered", () => {
+	const cells = (extra = {}) => {
+		const entry = ok("Gym", { schedule: [{ value: ["mon", "wed", "fri"], since: "2026-10-07" }], ...extra });
+		return weekCells(entry.kind === "ok" ? entry.habit : habitNote("Gym"), thursday, thursday, 5);
+	};
+
+	it("waits while a circle on the grid is empty", () => {
+		expect(allAnswered(cells({ done_tiny: ["2026-10-12"] }))).toBe(false);
+	});
+
+	it("is answered once every circle is marked, a skip too, its other days and the days to come left out", () => {
+		expect(allAnswered(cells({ done_tiny: ["2026-10-12"], missed: [{ date: "2026-10-14", reason: "Forgot" }] }))).toBe(true);
+	});
+
+	it("has nothing to answer on days with no circle", () => {
+		const entry = ok("Gym", { schedule: [{ value: ["sat"], since: "2026-10-07" }] });
+		expect(allAnswered(weekCells(entry.kind === "ok" ? entry.habit : habitNote("Gym"), thursday, thursday, 4))).toBe(true);
 	});
 });
 
