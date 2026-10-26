@@ -201,7 +201,7 @@ export class SettingsTab extends PluginSettingTab {
 		const weeks = `${REDESIGN_WEEKS} weeks`;
 		new Setting(containerEl)
 			.setName("Needs a change")
-			.setDesc("On Today, a habit that isn't working gets an orange line under its name saying why; a tap on it opens the habit to change its recipe. Only the days since the recipe last changed count.")
+			.setDesc("On Today, a habit that isn't working gets an orange line under its name saying why; a tap on it opens its recipe. Only the days since the recipe last changed count.")
 			.setHeading();
 		new Setting(containerEl)
 			.setName("Skips in a row")

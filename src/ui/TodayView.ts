@@ -550,7 +550,7 @@ export class TodayView extends ItemView {
 		const text = main.createDiv("th-row-text");
 		text.createDiv({ cls: "th-row-title", text: habit.name });
 		if (options.sub) text.createDiv({ cls: "th-row-sub", text: options.sub });
-		if (options.attention) this.renderAttention(text, path, options.attention);
+		if (options.attention) this.renderAttention(text, options.attention);
 		options.trail?.(main);
 		text.setAttribute("aria-expanded", String(this.expanded === path));
 		row.toggleClass("is-expanded", this.expanded === path);
@@ -780,17 +780,13 @@ export class TodayView extends ItemView {
 	}
 
 	/**
-	 * The orange line under a habit that isn't working, saying why; a tap opens the habit to change its recipe. The name
-	 * and the line share the row's own height, so the circles keep their step.
+	 * The orange line under a habit that isn't working, saying why; a tap opens its recipe, as a tap on the name does. The
+	 * name and the line share the row's own height, so the circles keep their step.
 	 */
-	private renderAttention(text: HTMLElement, path: string, line: string): void {
+	private renderAttention(text: HTMLElement, line: string): void {
 		text.addClass("has-attention");
 		const button = text.createEl("button", { cls: "th-row-attention", text: line });
 		setIcon(button.createSpan("th-row-attention-icon"), "chevron-right");
-		button.addEventListener("click", (event) => {
-			event.stopPropagation();
-			this.ui.openHabit(path, this.leaf);
-		});
 	}
 
 	/** Why the habit needs a change, as its line says it, or nothing while it works. */
