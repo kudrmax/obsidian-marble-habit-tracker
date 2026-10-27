@@ -24,5 +24,13 @@ A branch build is tried on this laptop in a separate Obsidian, the phone view an
 
 - The separate Obsidian runs with its own profile and a scratch vault: `open -n -a Obsidian --args --user-data-dir=<scratch>/obsidian-user --remote-debugging-port=9333`, the vault registered in that profile's `obsidian.json`, holding copies of Max's habit notes and the plugin's `data.json`, with the branch build in its `.obsidian/plugins/marble-habit-tracker/`. Reuse one that is already running (`ps aux | grep remote-debugging-port`); never open a scratch vault with `obsidian://open`.
 - Check the build there first yourself, over the debugging port: the phone view (window 402×874, then `app.emulateMobile(true)`) and the desktop view. Then leave it open for Max to click through, with a checklist of what to try.
-- `~/Obsidian/.obsidian/plugins/marble-habit-tracker/` only ever gets released versions, downloaded from the GitHub release. Never copy a branch build there, never touch its `data.json`.
+- `~/Obsidian/.obsidian/plugins/marble-habit-tracker/` only ever gets released versions, pulled in as "Releasing" says. Never copy a branch build there, never touch its `data.json`.
 - A page in a browser is not a check: it runs the code outside Obsidian and misses what Obsidian adds.
+
+## Releasing
+
+Release and installation follow Max's global `~/.claude/CLAUDE.md`, section «Свои плагины Obsidian»: the agent releases a merged version and pulls it into his Obsidian himself; Max installs nothing. For this plugin:
+
+- The version lives in `manifest.json`, `package.json` and `versions.json`.
+- There is no CI: `npm run build`, then `gh release create <version> main.js manifest.json styles.css --title <version>` with short notes.
+- BRAT lists it as `kudrmax/obsidian-marble-habit-tracker`; the plugin id is `marble-habit-tracker`.
