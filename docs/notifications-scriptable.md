@@ -83,15 +83,30 @@ if (config.runsInApp) {
 Script.complete();
 ```
 
-## What a notification can and can't do
+## What Scriptable can do
 
-From the [Notification docs](https://docs.scriptable.app/notification/):
+The lists below are a rough map of what came up on 2026-10-27, not the full set. The source of truth is the [Scriptable docs](https://docs.scriptable.app/): read them before deciding something can't be done, and before relying on anything below.
 
-- Can: `title`, `subtitle`, `body`, `sound`, `badge` (number on Scriptable's icon), `threadIdentifier` (grouping), `openURL` on tap (any scheme: `obsidian://`, `shortcuts://`, `https://`), up to 10 long-press buttons via `addAction(title, url, destructive)`, a script drawn inside the expanded notification via `scriptName`.
-- Can't: its own icon or image (always Scriptable's), Time Sensitive level, buttons that act without opening an app. iOS keeps at most 64 pending notifications per app.
-- Breaking through Focus: add Scriptable to the allowed apps of each Focus.
-- Alarms (iOS 26 AlarmKit) aren't in Scriptable. A real Clock alarm can come from the Shortcuts action "Create Alarm", fed by the script's `Script.setShortcutOutput(...)`; it has a time of day only and always creates a new alarm.
+### Notifications
 
-## Widgets
+See [Notification](https://docs.scriptable.app/notification/). Among other things:
 
-Scriptable also draws home and lock screen widgets: a script builds a static layout (`ListWidget`, stacks, text, images) and iOS re-runs it when it decides (`refreshAfterDate` is only a hint). A tap opens a URL: per element on medium and large widgets, the whole widget on small. No in-place buttons: a "checkbox" is a `scriptable:///run/...` link that opens Scriptable, and the widget redraws later.
+- Text and look: `title`, `subtitle`, `body`, `sound`, `badge` (a number on Scriptable's icon), `threadIdentifier` (grouping).
+- Tap: `openURL` opens any URL scheme (`obsidian://`, `shortcuts://`, `https://`).
+- Long press: buttons via `addAction(title, url, destructive)`, each opening a URL; a script drawn inside the expanded notification via `scriptName`.
+- Triggers: one date, daily, weekly.
+
+Limits found so far: the icon is always Scriptable's and there's no image attachment; no Time Sensitive level (to break through Focus, add Scriptable to each Focus's allowed apps); a button can only open a URL, so it always switches to an app; iOS keeps at most 64 pending notifications per app.
+
+### Alarms
+
+Alarm-style alerts (full screen, ring in silent mode and Focus) are iOS 26 [AlarmKit](https://developer.apple.com/documentation/alarmkit), which each app has to adopt; Scriptable's docs don't have it. A real alarm in the Clock app can come from Shortcuts instead:
+
+1. The automation runs the Scriptable script, which returns the alarms with `Script.setShortcutOutput(...)`, e.g. `["07:30 Встать"]`.
+2. The same automation goes over the list: "Repeat with Each" → "Create Alarm" with that time and label.
+
+A Clock alarm has a time of day and no date, so only alarms within the next 24 hours make sense. "Create Alarm" always adds a new one, so the automation has to skip times already set ("Get All Alarms") or it piles up duplicates. Not tried yet.
+
+### Widgets
+
+See [ListWidget](https://docs.scriptable.app/listwidget/) and its neighbours. A script builds a static layout (stacks, text, images, dates, SF Symbols) for home and lock screen widgets, and iOS re-runs it when it decides (`refreshAfterDate` is only a hint). A tap opens a URL: per element on medium and large widgets, the whole widget on small. No in-place buttons: a "checkbox" is a `scriptable:///run/...` link that opens Scriptable, and the widget redraws later.

@@ -29,7 +29,7 @@ A branch build is tried on this laptop in a separate Obsidian, the phone view an
 
 ## Notifications
 
-Obsidian gives plugins no system notifications on iOS. Real ones go through the [Scriptable](https://docs.scriptable.app/notification/) app: the plugin writes what to remind and when into a vault file, a Scriptable script schedules iOS notifications from it, and a Shortcuts automation re-runs the script when Obsidian closes. The working example, the script and the limits are in `docs/notifications-scriptable.md`.
+Obsidian gives plugins no system notifications on iOS. Real ones go through the [Scriptable](https://docs.scriptable.app/notification/) app: the plugin writes what to remind and when into a vault file, a Scriptable script schedules iOS notifications from it, and a Shortcuts automation re-runs the script when Obsidian closes. The working example, the script and a rough map of what Scriptable can do (notifications, alarms, widgets) are in `docs/notifications-scriptable.md`; the full truth is its docs.
 
 ## Releasing
 
