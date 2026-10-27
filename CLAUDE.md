@@ -27,6 +27,10 @@ A branch build is tried on this laptop in a separate Obsidian, the phone view an
 - `~/Obsidian/.obsidian/plugins/marble-habit-tracker/` only ever gets released versions, pulled in as "Releasing" says. Never copy a branch build there, never touch its `data.json`.
 - A page in a browser is not a check: it runs the code outside Obsidian and misses what Obsidian adds.
 
+## Notifications
+
+Obsidian gives plugins no system notifications on iOS. Real ones go through the [Scriptable](https://docs.scriptable.app/notification/) app: the plugin writes what to remind and when into a vault file, a Scriptable script schedules iOS notifications from it, and a Shortcuts automation re-runs the script when Obsidian closes. The working example, the script and the limits are in `docs/notifications-scriptable.md`.
+
 ## Releasing
 
 Release and installation follow Max's global `~/.claude/CLAUDE.md`, section «Свои плагины Obsidian»: the agent releases a merged version and pulls it into his Obsidian himself; Max installs nothing. For this plugin:
